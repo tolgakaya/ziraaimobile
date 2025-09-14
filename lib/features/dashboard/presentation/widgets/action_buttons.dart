@@ -13,7 +13,14 @@ class ActionButtons extends StatelessWidget {
           child: _ActionButton(
             icon: Icons.camera_alt,
             label: 'Bitki Analizi',
-            backgroundColor: const Color(0xFF22C55E), // primary-500
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF22C55E), // green-500
+                Color(0xFF16A34A), // green-600
+              ],
+            ),
             textColor: Colors.white,
             onTap: () {
               Navigator.push(
@@ -31,8 +38,15 @@ class ActionButtons extends StatelessWidget {
           child: _ActionButton(
             icon: Icons.qr_code_scanner,
             label: 'QR Kodu Tara',
-            backgroundColor: const Color(0xFFF3F4F6), // gray-100
-            textColor: const Color(0xFF1F2937), // gray-800
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF3B82F6), // blue-500
+                Color(0xFF2563EB), // blue-600
+              ],
+            ),
+            textColor: Colors.white,
             onTap: () {
               // Navigate to QR scanner
             },
@@ -46,14 +60,14 @@ class ActionButtons extends StatelessWidget {
 class _ActionButton extends StatefulWidget {
   final IconData icon;
   final String label;
-  final Color backgroundColor;
+  final LinearGradient gradient;
   final Color textColor;
   final VoidCallback onTap;
 
   const _ActionButton({
     required this.icon,
     required this.label,
-    required this.backgroundColor,
+    required this.gradient,
     required this.textColor,
     required this.onTap,
   });
@@ -116,14 +130,19 @@ class _ActionButtonState extends State<_ActionButton>
             onTapCancel: _onTapCancel,
             onTap: widget.onTap,
             child: Container(
-              height: 96,
+              height: 110,
               decoration: BoxDecoration(
-                color: widget.backgroundColor,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
+                gradient: widget.gradient,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x1A000000),
-                    blurRadius: 6,
+                    color: widget.gradient.colors.first.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                  const BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 8,
                     offset: Offset(0, 2),
                   ),
                 ],
@@ -131,19 +150,28 @@ class _ActionButtonState extends State<_ActionButton>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    widget.icon,
-                    size: 32,
-                    color: widget.textColor,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      widget.icon,
+                      size: 28,
+                      color: widget.textColor,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
                     widget.label,
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                       color: widget.textColor,
+                      letterSpacing: 0.5,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
