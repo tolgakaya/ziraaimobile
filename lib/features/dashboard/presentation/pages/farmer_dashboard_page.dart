@@ -3,7 +3,7 @@ import '../widgets/action_buttons.dart';
 import '../widgets/subscription_plan_card.dart';
 import '../widgets/recent_analyses_grid.dart';
 import '../widgets/bottom_navigation.dart';
-import '../../../plant_analysis/presentation/pages/plant_analysis_page.dart';
+import '../../../plant_analysis/presentation/pages/capture_screen.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   const FarmerDashboardPage({super.key});
@@ -20,12 +20,12 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
       _selectedIndex = index;
     });
 
-    // Navigate to plant analysis page when analysis tab is tapped
+    // Navigate to capture screen when analysis tab is tapped
     if (index == 3) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const PlantAnalysisPage(),
+          builder: (context) => const CaptureScreen(),
         ),
       );
     }

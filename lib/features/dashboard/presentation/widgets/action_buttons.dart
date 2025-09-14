@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../plant_analysis/presentation/pages/plant_analysis_page.dart';
+import '../../../plant_analysis/presentation/pages/capture_screen.dart';
 
 class ActionButtons extends StatelessWidget {
   const ActionButtons({super.key});
@@ -26,7 +26,7 @@ class ActionButtons extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const PlantAnalysisPage(),
+                  builder: (context) => const CaptureScreen(),
                 ),
               );
             },

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../plant_analysis/presentation/pages/analysis_results_screen.dart';
 
 class RecentAnalysesGrid extends StatelessWidget {
   const RecentAnalysesGrid({super.key});
@@ -55,6 +56,7 @@ class RecentAnalysesGrid extends StatelessWidget {
       ),
     ];
   }
+
 }
 
 class _AnalysisCard extends StatelessWidget {
@@ -68,7 +70,20 @@ class _AnalysisCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigate to analysis details
+        // Navigate to analysis results screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AnalysisResultsScreen(
+              analysisId: analysis.id,
+              imageUrl: analysis.imageUrl,
+              confidence: _MockDataHelper.getConfidenceFromStatus(analysis.status),
+              diseases: _MockDataHelper.getMockDiseases(analysis.status),
+              recommendations: _MockDataHelper.getMockRecommendations(analysis.status),
+              analysisDate: DateTime.now().subtract(const Duration(days: 2)),
+            ),
+          ),
+        );
       },
       child: Container(
         decoration: BoxDecoration(
@@ -261,4 +276,80 @@ enum AnalysisStatus {
   healthy,
   warning,
   disease,
+}
+
+// Helper class for mock data generation
+class _MockDataHelper {
+  static double getConfidenceFromStatus(AnalysisStatus status) {
+    switch (status) {
+      case AnalysisStatus.healthy:
+        return 95.0;
+      case AnalysisStatus.warning:
+        return 78.0;
+      case AnalysisStatus.disease:
+        return 87.0;
+    }
+  }
+
+  static List<DiseaseDetection> getMockDiseases(AnalysisStatus status) {
+    switch (status) {
+      case AnalysisStatus.healthy:
+        return [];
+      case AnalysisStatus.warning:
+        return [
+          DiseaseDetection(
+            name: 'Nutrient Deficiency',
+            severity: 'Medium',
+            confidence: 78.0,
+          ),
+        ];
+      case AnalysisStatus.disease:
+        return [
+          DiseaseDetection(
+            name: 'Fungal Infection',
+            severity: 'High',
+            confidence: 87.0,
+          ),
+        ];
+    }
+  }
+
+  static List<TreatmentRecommendation> getMockRecommendations(AnalysisStatus status) {
+    switch (status) {
+      case AnalysisStatus.healthy:
+        return [
+          TreatmentRecommendation(
+            name: 'Continue Current Care',
+            description: 'Your plant is healthy! Continue with current watering and fertilization schedule.',
+            isOrganic: true,
+          ),
+        ];
+      case AnalysisStatus.warning:
+        return [
+          TreatmentRecommendation(
+            name: 'Balanced Fertilizer',
+            description: 'Apply balanced NPK fertilizer to address nutrient deficiency.',
+            isOrganic: true,
+          ),
+          TreatmentRecommendation(
+            name: 'Soil Test Kit',
+            description: 'Test soil pH and nutrient levels for targeted treatment.',
+            isOrganic: false,
+          ),
+        ];
+      case AnalysisStatus.disease:
+        return [
+          TreatmentRecommendation(
+            name: 'Neem Oil Treatment',
+            description: 'Apply neem oil solution every 7 days until symptoms disappear.',
+            isOrganic: true,
+          ),
+          TreatmentRecommendation(
+            name: 'Copper Fungicide',
+            description: 'Use copper-based fungicide for severe fungal infections.',
+            isOrganic: false,
+          ),
+        ];
+    }
+  }
 }
