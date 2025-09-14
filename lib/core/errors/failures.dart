@@ -56,3 +56,8 @@ class PlantAnalysisFailure extends Failure {
 class ImageProcessingFailure extends Failure {
   const ImageProcessingFailure([String message = 'Image Processing Failed']) : super(message);
 }
+
+// Additional failures needed for authentication domain
+class UnexpectedFailure extends Failure {
+  const UnexpectedFailure([String message = 'An unexpected error occurred']) : super(message);
+}

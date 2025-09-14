@@ -45,6 +45,16 @@ dependencies:
   get_it: ^8.2.0
   injectable: ^2.5.1
 
+  # Security dependencies
+  local_auth: ^2.3.0              # Biometric authentication
+  crypto: ^3.0.3                  # Cryptographic functions
+  jwt_decoder: ^2.0.1             # JWT token validation
+  pretty_dio_logger: ^1.4.0       # Secure API logging
+  connectivity_plus: ^6.1.0       # Network connectivity monitoring
+
+  # Functional programming
+  dartz: ^0.10.1                  # Either/Option types
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
