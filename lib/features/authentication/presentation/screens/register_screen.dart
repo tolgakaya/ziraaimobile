@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
+import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -179,7 +180,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          _showErrorSnackBar('Kayıt başarılı! Giriş yapılıyor...');
+          // Navigate to dashboard on successful registration and login
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const FarmerDashboardPage(),
+            ),
+          );
         } else if (state is AuthError) {
           _showErrorSnackBar(state.message);
         }
