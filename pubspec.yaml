@@ -55,6 +55,10 @@ dependencies:
   # Functional programming
   dartz: ^0.10.1                  # Either/Option types
 
+  # Camera & Image
+  image_picker: ^1.0.8            # Camera and gallery image selection
+  permission_handler: ^11.3.0     # Camera and storage permissions
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

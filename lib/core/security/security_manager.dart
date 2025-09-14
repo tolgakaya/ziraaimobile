@@ -128,7 +128,7 @@ class SecurityManager {
 
       if (authenticated) {
         // Load stored user info
-        final userEmail = await _secureStorage.read(SecureStorageKeys.userEmail);
+        final userEmail = await _secureStorage.read(key: SecureStorageKeys.userEmail);
         if (userEmail != null) {
           await _createSecureSession(userEmail, true);
           _startSessionMonitoring();
@@ -183,8 +183,8 @@ class SecurityManager {
   Future<void> setSecurityLevel(SecurityLevel level) async {
     _currentSecurityLevel = level;
     await _secureStorage.write(
-      SecureStorageKeys.securityLevel,
-      level.level.toString(),
+      key: SecureStorageKeys.securityLevel,
+      value: level.toString(),
     );
 
     // Apply security level settings
@@ -269,19 +269,19 @@ class SecurityManager {
     final sessionId = await _generateSecureSessionId();
     final sessionStartTime = DateTime.now();
 
-    await _secureStorage.write(SecureStorageKeys.sessionId, sessionId);
+    await _secureStorage.write(key: SecureStorageKeys.sessionId, value: sessionId);
     await _secureStorage.write(
-      SecureStorageKeys.sessionStartTime,
-      sessionStartTime.millisecondsSinceEpoch.toString(),
+      key: SecureStorageKeys.sessionStartTime,
+      value: sessionStartTime.millisecondsSinceEpoch.toString(),
     );
-    await _secureStorage.write(SecureStorageKeys.userEmail, userEmail);
+    await _secureStorage.write(key: SecureStorageKeys.userEmail, value: userEmail);
     await _secureStorage.write(
-      SecureStorageKeys.rememberMe,
-      rememberMe.toString(),
+      key: SecureStorageKeys.rememberMe,
+      value: rememberMe.toString(),
     );
     await _secureStorage.write(
-      SecureStorageKeys.lastLoginTime,
-      sessionStartTime.millisecondsSinceEpoch.toString(),
+      key: SecureStorageKeys.lastLoginTime,
+      value: sessionStartTime.millisecondsSinceEpoch.toString(),
     );
 
     _lastActivity = sessionStartTime;
@@ -289,11 +289,11 @@ class SecurityManager {
 
   /// Clear secure session
   Future<void> _clearSecureSession() async {
-    await _secureStorage.delete(SecureStorageKeys.sessionId);
-    await _secureStorage.delete(SecureStorageKeys.sessionStartTime);
-    await _secureStorage.delete(SecureStorageKeys.userEmail);
-    await _secureStorage.delete(SecureStorageKeys.rememberMe);
-    await _secureStorage.delete(SecureStorageKeys.backgroundTime);
+    await _secureStorage.delete(key: SecureStorageKeys.sessionId);
+    await _secureStorage.delete(key: SecureStorageKeys.sessionStartTime);
+    await _secureStorage.delete(key: SecureStorageKeys.userEmail);
+    await _secureStorage.delete(key: SecureStorageKeys.rememberMe);
+    await _secureStorage.delete(key: SecureStorageKeys.backgroundTime);
   }
 
   /// Start session monitoring
@@ -375,7 +375,7 @@ class SecurityManager {
 
     // Check device fingerprint
     final currentFingerprint = await _generateDeviceFingerprint();
-    final storedFingerprint = await _secureStorage.read(SecureStorageKeys.deviceFingerprint);
+    final storedFingerprint = await _secureStorage.read(key: SecureStorageKeys.deviceFingerprint);
 
     if (storedFingerprint != null && storedFingerprint != currentFingerprint) {
       await _logSecurityEvent('Device fingerprint mismatch', SecurityEventLevel.high);
@@ -384,7 +384,7 @@ class SecurityManager {
 
   /// Load security settings
   Future<void> _loadSecuritySettings() async {
-    final levelString = await _secureStorage.read(SecureStorageKeys.securityLevel);
+    final levelString = await _secureStorage.read(key: SecureStorageKeys.securityLevel);
     if (levelString != null) {
       final levelInt = int.tryParse(levelString) ?? 1;
       _currentSecurityLevel = SecurityLevel.values.firstWhere(
@@ -393,7 +393,7 @@ class SecurityManager {
       );
     }
 
-    final failedAttemptsString = await _secureStorage.read(SecureStorageKeys.failedLoginAttempts);
+    final failedAttemptsString = await _secureStorage.read(key: SecureStorageKeys.failedLoginAttempts);
     if (failedAttemptsString != null) {
       _failedLoginAttempts = int.tryParse(failedAttemptsString) ?? 0;
     }
@@ -426,8 +426,8 @@ class SecurityManager {
   Future<void> _handleFailedLogin() async {
     _failedLoginAttempts++;
     await _secureStorage.write(
-      SecureStorageKeys.failedLoginAttempts,
-      _failedLoginAttempts.toString(),
+      key: SecureStorageKeys.failedLoginAttempts,
+      value: _failedLoginAttempts.toString(),
     );
 
     await _logSecurityEvent(
@@ -444,9 +444,9 @@ class SecurityManager {
   /// Reset failed login attempts
   Future<void> _resetFailedLoginAttempts() async {
     _failedLoginAttempts = 0;
-    await _secureStorage.delete(SecureStorageKeys.failedLoginAttempts);
-    await _secureStorage.delete(SecureStorageKeys.accountLocked);
-    await _secureStorage.delete(SecureStorageKeys.lockoutTime);
+    await _secureStorage.delete(key: SecureStorageKeys.failedLoginAttempts);
+    await _secureStorage.delete(key: SecureStorageKeys.accountLocked);
+    await _secureStorage.delete(key: SecureStorageKeys.lockoutTime);
     _isAccountLocked = false;
   }
 
@@ -455,10 +455,10 @@ class SecurityManager {
     _isAccountLocked = true;
     final lockoutTime = DateTime.now().add(const Duration(minutes: 15));
 
-    await _secureStorage.write(SecureStorageKeys.accountLocked, 'true');
+    await _secureStorage.write(key: SecureStorageKeys.accountLocked, value: 'true');
     await _secureStorage.write(
-      SecureStorageKeys.lockoutTime,
-      lockoutTime.millisecondsSinceEpoch.toString(),
+      key: SecureStorageKeys.lockoutTime,
+      value: lockoutTime.millisecondsSinceEpoch.toString(),
     );
 
     await _logSecurityEvent('Account locked due to failed attempts', SecurityEventLevel.high);
@@ -468,7 +468,7 @@ class SecurityManager {
   Future<bool> _isAccountCurrentlyLocked() async {
     if (!_isAccountLocked) return false;
 
-    final lockoutTimeString = await _secureStorage.read(SecureStorageKeys.lockoutTime);
+    final lockoutTimeString = await _secureStorage.read(key: SecureStorageKeys.lockoutTime);
     if (lockoutTimeString == null) return false;
 
     final lockoutTime = DateTime.fromMillisecondsSinceEpoch(int.parse(lockoutTimeString));
@@ -483,7 +483,7 @@ class SecurityManager {
 
   /// Check account lock status on initialization
   Future<void> _checkAccountLockStatus() async {
-    final isLocked = await _secureStorage.read(SecureStorageKeys.accountLocked);
+    final isLocked = await _secureStorage.read(key: SecureStorageKeys.accountLocked);
     _isAccountLocked = isLocked == 'true';
 
     if (_isAccountLocked) {
@@ -494,7 +494,7 @@ class SecurityManager {
   /// Initialize device fingerprint
   Future<void> _initializeDeviceFingerprint() async {
     final fingerprint = await _generateDeviceFingerprint();
-    await _secureStorage.write(SecureStorageKeys.deviceFingerprint, fingerprint);
+    await _secureStorage.write(key: SecureStorageKeys.deviceFingerprint, value: fingerprint);
   }
 
   /// Generate device fingerprint

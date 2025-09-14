@@ -83,11 +83,7 @@ void _initCore() {
 
 void _initSecurity() {
   // Token manager
-  sl.registerLazySingleton<TokenManager>(() => TokenManager(
-    secureStorage: sl(),
-    apiClient: sl(),
-    dio: sl(),
-  ));
+  sl.registerLazySingleton<TokenManager>(() => TokenManager(sl()));
 
   // Biometric service
   sl.registerLazySingleton<BiometricService>(() => BiometricService(
@@ -111,7 +107,7 @@ void _initSecurity() {
 
 void _initAuth() {
   // Repository
-  sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl());
+  sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(sl(), sl()));
 
   // Use cases
   sl.registerLazySingleton(() => LoginUser(sl()));
@@ -123,15 +119,7 @@ void _initAuth() {
   sl.registerLazySingleton(() => AuthenticateWithBiometrics(sl()));
 
   // BLoC
-  sl.registerFactory(() => AuthBloc(
-    sl<LoginUser>(),
-    sl<RegisterUser>(),
-    sl<LogoutUser>(),
-    sl<GetCurrentUser>(),
-    sl<ResetPassword>(),
-    sl<ValidateSession>(),
-    sl<AuthenticateWithBiometrics>(),
-  ));
+  sl.registerFactory(() => AuthBloc(sl()));
 }
 
 /// Initialize security services at app startup

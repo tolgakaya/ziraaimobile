@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:get_it/get_it.dart';
 
+import '../../../../core/di/simple_injection.dart';
 import '../bloc/auth_bloc.dart';
+import '../bloc/auth_state.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/forgot_password_screen.dart';
 
 class AuthRouter {
-  static final _getIt = GetIt.instance;
 
   static List<RouteBase> get routes => [
     GoRoute(
       path: '/login',
       name: 'login',
       builder: (context, state) => BlocProvider(
-        create: (context) => _getIt<AuthBloc>(),
+        create: (context) => getIt<AuthBloc>(),
         child: const LoginScreen(),
       ),
     ),
@@ -24,7 +24,7 @@ class AuthRouter {
       path: '/register',
       name: 'register',
       builder: (context, state) => BlocProvider(
-        create: (context) => _getIt<AuthBloc>(),
+        create: (context) => getIt<AuthBloc>(),
         child: const RegisterScreen(),
       ),
     ),
@@ -32,7 +32,7 @@ class AuthRouter {
       path: '/forgot-password',
       name: 'forgot-password',
       builder: (context, state) => BlocProvider(
-        create: (context) => _getIt<AuthBloc>(),
+        create: (context) => getIt<AuthBloc>(),
         child: const ForgotPasswordScreen(),
       ),
     ),
@@ -41,10 +41,10 @@ class AuthRouter {
 
 class AuthGuard {
   static String? redirect(BuildContext context, GoRouterState state) {
-    // TODO: Implement authentication check
-    // This is a simplified example - in a real app, you'd check the auth state
+    // Check authentication state from BlocProvider
+    final authState = context.read<AuthBloc>().state;
+    final isAuthenticated = authState is AuthAuthenticated;
 
-    final isAuthenticated = false; // Replace with actual auth check
     final isGoingToAuth = state.uri.toString().startsWith('/login') ||
                          state.uri.toString().startsWith('/register') ||
                          state.uri.toString().startsWith('/forgot-password');

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
 
 import '../features/authentication/presentation/presentation.dart';
+import '../features/authentication/presentation/bloc/auth_event.dart';
+import '../features/dashboard/presentation/pages/farmer_dashboard_page.dart';
 
 class AppRouter {
   static final _getIt = GetIt.instance;
@@ -23,7 +25,7 @@ class AppRouter {
       GoRoute(
         path: '/home',
         name: 'home',
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const FarmerDashboardPage(),
       ),
       GoRoute(
         path: '/splash',

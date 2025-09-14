@@ -55,3 +55,12 @@ class AuthLogoutRequested extends AuthEvent {
 class AuthCheckStatusRequested extends AuthEvent {
   const AuthCheckStatusRequested();
 }
+
+class AuthResetPasswordRequested extends AuthEvent {
+  final String email;
+
+  const AuthResetPasswordRequested({required this.email});
+
+  @override
+  List<Object?> get props => [email];
+}

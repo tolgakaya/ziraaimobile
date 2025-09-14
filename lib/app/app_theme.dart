@@ -233,16 +233,13 @@ class AppTheme {
     ),
 
     // Card Theme
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 2,
       shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.0),
       ),
-      margin: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
+      // margin is not a valid parameter for CardThemeData
     ),
 
     // Checkbox Theme
@@ -281,7 +278,7 @@ class AppTheme {
         borderRadius: BorderRadius.circular(8),
       ),
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(16),
+      // margin parameter removed - not valid for SnackBarThemeData
     ),
 
     // Divider Theme
