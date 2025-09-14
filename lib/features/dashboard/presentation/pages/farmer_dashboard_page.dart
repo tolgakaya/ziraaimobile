@@ -61,27 +61,79 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                       ),
                     ),
                     SizedBox(
-                      width: 48,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.settings,
-                              color: Color(0xFF6B7280),
-                              size: 24,
+                      width: 96,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          // Notifications Icon
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            onPressed: () {
-                              // Settings functionality
-                            },
+                            child: Stack(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.notifications_outlined,
+                                    color: Color(0xFF6B7280),
+                                    size: 24,
+                                  ),
+                                  onPressed: () {
+                                    // Notifications functionality
+                                  },
+                                ),
+                                // Notification badge (example with 3 notifications)
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: const Text(
+                                      '3',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          // Settings Icon
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.settings,
+                                color: Color(0xFF6B7280),
+                                size: 24,
+                              ),
+                              onPressed: () {
+                                // Settings functionality
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
