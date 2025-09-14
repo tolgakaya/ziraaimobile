@@ -50,9 +50,9 @@ class DashboardBottomNavigation extends StatelessWidget {
                 onTap: () => onTap(2),
               ),
               _NavigationItem(
-                icon: Icons.person_outline,
-                iconSelected: Icons.person,
-                label: 'Profil',
+                icon: Icons.analytics_outlined,
+                iconSelected: Icons.analytics,
+                label: 'Analiz',
                 isSelected: currentIndex == 3,
                 onTap: () => onTap(3),
               ),

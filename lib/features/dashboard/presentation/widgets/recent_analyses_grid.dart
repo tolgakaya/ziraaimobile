@@ -7,16 +7,11 @@ class RecentAnalysesGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final analyses = _getMockAnalyses();
 
-    return GridView.builder(
+    return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
-      ),
       itemCount: analyses.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final analysis = analyses[index];
         return _AnalysisCard(analysis: analysis);
@@ -31,7 +26,8 @@ class RecentAnalysesGrid extends StatelessWidget {
         plantName: 'Domates Bitkisi',
         analysisDate: '2 gün önce',
         status: AnalysisStatus.healthy,
-        imageUrl: 'assets/images/mock_plant1.jpg', // Mock image path
+        imageUrl: 'assets/images/mock_plant1.jpg',
+        description: 'Genel sağlık durumu iyi, büyüme oranları normal seviyede',
       ),
       AnalysisItem(
         id: '2',
@@ -39,6 +35,7 @@ class RecentAnalysesGrid extends StatelessWidget {
         analysisDate: '3 gün önce',
         status: AnalysisStatus.warning,
         imageUrl: 'assets/images/mock_plant2.jpg',
+        description: 'Hafif beslenme eksikliği tespit edildi, gübreleme önerisi',
       ),
       AnalysisItem(
         id: '3',
@@ -46,6 +43,7 @@ class RecentAnalysesGrid extends StatelessWidget {
         analysisDate: '5 gün önce',
         status: AnalysisStatus.healthy,
         imageUrl: 'assets/images/mock_plant3.jpg',
+        description: 'Mükemmel gelişim gösteriyor, hasat zamanı yaklaşıyor',
       ),
       AnalysisItem(
         id: '4',
@@ -53,6 +51,7 @@ class RecentAnalysesGrid extends StatelessWidget {
         analysisDate: '1 hafta önce',
         status: AnalysisStatus.disease,
         imageUrl: 'assets/images/mock_plant4.jpg',
+        description: 'Fungal enfeksiyon riski, acil müdahale gerekiyor',
       ),
     ];
   }
@@ -87,71 +86,82 @@ class _AnalysisCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image Section
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                color: const Color(0xFFF3F4F6), // Placeholder color
+              ),
+              child: Stack(
+                children: [
+                  // Plant Image (using placeholder for now)
+                  Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFFF3F4F6),
+                          const Color(0xFFE5E7EB),
+                        ],
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.local_florist,
+                      size: 48,
+                      color: Color(0xFF9CA3AF),
+                    ),
                   ),
-                  color: const Color(0xFFF3F4F6), // Placeholder color
-                ),
-                child: Stack(
-                  children: [
-                    // Plant Image (using placeholder for now)
-                    Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            const Color(0xFFF3F4F6),
-                            const Color(0xFFE5E7EB),
-                          ],
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.local_florist,
-                        size: 48,
-                        color: Color(0xFF9CA3AF),
-                      ),
-                    ),
-                    // Status Badge
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: _StatusBadge(status: analysis.status),
-                    ),
-                  ],
-                ),
+                  // Status Badge
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: _StatusBadge(status: analysis.status),
+                  ),
+                ],
               ),
             ),
             // Plant Info
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     analysis.plantName,
                     style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                       color: Color(0xFF1F2937),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
+                  Text(
+                    analysis.description,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF4B5563),
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     analysis.analysisDate,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF6B7280),
+                      color: Color(0xFF9CA3AF),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -235,6 +245,7 @@ class AnalysisItem {
   final String analysisDate;
   final AnalysisStatus status;
   final String imageUrl;
+  final String description;
 
   AnalysisItem({
     required this.id,
@@ -242,6 +253,7 @@ class AnalysisItem {
     required this.analysisDate,
     required this.status,
     required this.imageUrl,
+    required this.description,
   });
 }
 
