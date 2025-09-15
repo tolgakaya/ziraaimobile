@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../../../plant_analysis/presentation/pages/analysis_results_screen.dart';
+import '../../../plant_analysis/data/repositories/plant_analysis_repository.dart' as repo;
 
 class RecentAnalysesGrid extends StatelessWidget {
   const RecentAnalysesGrid({super.key});
@@ -75,12 +77,8 @@ class _AnalysisCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => AnalysisResultsScreen(
-              analysisId: analysis.id,
-              imageUrl: analysis.imageUrl,
-              confidence: _MockDataHelper.getConfidenceFromStatus(analysis.status),
-              diseases: _MockDataHelper.getMockDiseases(analysis.status),
-              recommendations: _MockDataHelper.getMockRecommendations(analysis.status),
-              analysisDate: DateTime.now().subtract(const Duration(days: 2)),
+              analysisResult: _MockDataHelper.getMockAnalysisResult(analysis),
+              originalImage: File('mock_image_path'), // Mock file for testing
             ),
           ),
         );
@@ -291,13 +289,13 @@ class _MockDataHelper {
     }
   }
 
-  static List<DiseaseDetection> getMockDiseases(AnalysisStatus status) {
+  static List<repo.DiseaseDetection> getMockDiseases(AnalysisStatus status) {
     switch (status) {
       case AnalysisStatus.healthy:
         return [];
       case AnalysisStatus.warning:
         return [
-          DiseaseDetection(
+          repo.DiseaseDetection(
             name: 'Nutrient Deficiency',
             severity: 'Medium',
             confidence: 78.0,
@@ -305,7 +303,7 @@ class _MockDataHelper {
         ];
       case AnalysisStatus.disease:
         return [
-          DiseaseDetection(
+          repo.DiseaseDetection(
             name: 'Fungal Infection',
             severity: 'High',
             confidence: 87.0,
@@ -314,11 +312,11 @@ class _MockDataHelper {
     }
   }
 
-  static List<TreatmentRecommendation> getMockRecommendations(AnalysisStatus status) {
+  static List<repo.TreatmentRecommendation> getMockRecommendations(AnalysisStatus status) {
     switch (status) {
       case AnalysisStatus.healthy:
         return [
-          TreatmentRecommendation(
+          repo.TreatmentRecommendation(
             name: 'Continue Current Care',
             description: 'Your plant is healthy! Continue with current watering and fertilization schedule.',
             isOrganic: true,
@@ -326,12 +324,12 @@ class _MockDataHelper {
         ];
       case AnalysisStatus.warning:
         return [
-          TreatmentRecommendation(
+          repo.TreatmentRecommendation(
             name: 'Balanced Fertilizer',
             description: 'Apply balanced NPK fertilizer to address nutrient deficiency.',
             isOrganic: true,
           ),
-          TreatmentRecommendation(
+          repo.TreatmentRecommendation(
             name: 'Soil Test Kit',
             description: 'Test soil pH and nutrient levels for targeted treatment.',
             isOrganic: false,
@@ -339,17 +337,65 @@ class _MockDataHelper {
         ];
       case AnalysisStatus.disease:
         return [
-          TreatmentRecommendation(
+          repo.TreatmentRecommendation(
             name: 'Neem Oil Treatment',
             description: 'Apply neem oil solution every 7 days until symptoms disappear.',
             isOrganic: true,
           ),
-          TreatmentRecommendation(
+          repo.TreatmentRecommendation(
             name: 'Copper Fungicide',
             description: 'Use copper-based fungicide for severe fungal infections.',
             isOrganic: false,
           ),
         ];
     }
+  }
+
+  static repo.PlantAnalysisResult getMockAnalysisResult(AnalysisItem analysis) {
+    return repo.PlantAnalysisResult(
+      id: analysis.id,
+      status: 'completed',
+      confidence: getConfidenceFromStatus(analysis.status),
+      diseases: getMockDiseases(analysis.status).map((d) => repo.PlantDisease(
+        name: d.name,
+        severity: d.severity,
+        confidence: d.confidence,
+        description: d.description,
+        severityColor: analysis.status == AnalysisStatus.disease ? '#DC2626' :
+                      analysis.status == AnalysisStatus.warning ? '#D97706' : '#16A34A',
+      )).toList(),
+      treatments: [],
+      organicTreatments: getMockRecommendations(analysis.status).where((t) => t.isOrganic).map((t) => repo.PlantTreatment(
+        name: t.name,
+        type: 'Organik',
+        instructions: t.description,
+        frequency: t.frequency,
+        isOrganic: t.isOrganic,
+        treatmentIcon: '🌿',
+      )).toList(),
+      chemicalTreatments: getMockRecommendations(analysis.status).where((t) => !t.isOrganic).map((t) => repo.PlantTreatment(
+        name: t.name,
+        type: 'Kimyasal',
+        instructions: t.description,
+        frequency: t.frequency,
+        isOrganic: t.isOrganic,
+        treatmentIcon: '🧪',
+      )).toList(),
+      createdAt: DateTime.now().subtract(Duration(days: analysis.analysisDate.contains('gün') ?
+        int.parse(analysis.analysisDate.split(' ')[0]) : 7)).toIso8601String(),
+      visualIndicators: analysis.status != AnalysisStatus.healthy ? [
+        repo.VisualIndicator(
+          type: 'Görsel Belirti',
+          location: 'Yaprak yüzeyi',
+          confidence: 85.0,
+          details: analysis.description,
+        ),
+      ] : null,
+      metadata: repo.AnalysisMetadata(
+        cropType: analysis.plantName,
+        processingTime: 5.2,
+        modelVersion: 'v2.1.0',
+      ),
+    );
   }
 }

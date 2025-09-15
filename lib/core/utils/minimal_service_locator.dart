@@ -8,6 +8,7 @@ import '../storage/storage_service.dart';
 import '../../features/authentication/data/repositories/auth_repository_impl.dart';
 import '../../features/authentication/domain/repositories/auth_repository.dart';
 import '../../features/authentication/presentation/bloc/auth_bloc.dart';
+import '../../features/plant_analysis/data/repositories/plant_analysis_repository.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -53,6 +54,11 @@ Future<void> setupMinimalServiceLocator() async {
       getIt<NetworkClient>(),
       getIt<SecureStorageService>(),
     ),
+  );
+
+  // Plant Analysis repository - Mock for now
+  getIt.registerLazySingleton<PlantAnalysisRepository>(
+    () => PlantAnalysisRepository(),
   );
 
   // BLoCs
