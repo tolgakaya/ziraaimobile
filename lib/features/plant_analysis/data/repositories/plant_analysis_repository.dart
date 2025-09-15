@@ -1,87 +1,261 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
+import 'package:dio/dio.dart';
 import '../../../../core/error/plant_analysis_exceptions.dart';
+import '../../../../core/services/image_processing_service.dart';
+import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../core/config/api_config.dart';
+import '../../../../core/network/network_client.dart';
 
-/// Mock repository for testing Plant Analysis functionality
+/// Real API repository for Plant Analysis functionality
 class PlantAnalysisRepository {
+  final NetworkClient _networkClient;
+  final SecureStorageService _storageService;
 
-  /// Submit plant analysis (mock implementation)
+  PlantAnalysisRepository(this._networkClient, this._storageService);
+
+  /// Submit plant analysis using real API
   Future<Result<PlantAnalysisAsyncResponse>> submitPlantAnalysis({
     required File imageFile,
     String? cropType,
     String? location,
     String? notes,
   }) async {
-    // Simulate API delay
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Get authentication token
+      final token = await _storageService.getToken();
+      if (token == null) {
+        return Result.error(
+          'Authentication required',
+          exception: AuthenticationException('User not authenticated'),
+        );
+      }
 
-    // Mock success response
-    final response = PlantAnalysisAsyncResponse(
-      analysisId: 'mock-analysis-${DateTime.now().millisecondsSinceEpoch}',
-      estimatedTime: '30 saniye',
-      queuePosition: 1,
-    );
+      // Convert image to base64
+      final base64Image = await ImageProcessingService.convertToBase64(imageFile);
 
-    return Result.success(response);
+      // Prepare request data - API expects 'Image' field
+      final requestData = {
+        'Image': base64Image,
+        'CropType': cropType,
+        'Location': location,
+        'Notes': notes,
+      };
+
+      // Make API call
+      final response = await _networkClient.post(
+        ApiConfig.plantAnalyzeAsync,
+        data: requestData,
+        options: Options(
+          headers: ApiConfig.authHeader(token),
+        ),
+      );
+
+      // Parse response
+      if (response.data['success'] == true) {
+        final analysisResponse = PlantAnalysisAsyncResponse(
+          analysisId: response.data['analysis_id'],
+          estimatedTime: response.data['estimated_processing_time'],
+          queuePosition: null, // API doesn't return queue position
+        );
+        return Result.success(analysisResponse);
+      } else {
+        return Result.error(
+          response.data['message'] ?? 'Analysis submission failed',
+          exception: AnalysisSubmissionException(
+            response.data['message'] ?? 'Unknown error',
+          ),
+        );
+      }
+    } catch (e) {
+      if (e is DioException) {
+        // Handle 403 Forbidden specifically
+        if (e.response?.statusCode == 403) {
+          return Result.error(
+            'Quota exceeded',
+            exception: QuotaExceededException(
+              'Analysis quota exceeded',
+              quotaType: 'daily', // This will be determined by real API response
+              errorCode: '403',
+              originalError: e,
+            ),
+          );
+        }
+
+        return Result.error(
+          'Network error: ${e.message}',
+          exception: NetworkException(
+            'Failed to submit analysis: ${e.message}',
+            originalError: e,
+          ),
+        );
+      }
+      return Result.error(
+        'Unexpected error: ${e.toString()}',
+        exception: NetworkException(
+          'Unexpected error during analysis submission',
+          originalError: e,
+        ),
+      );
+    }
   }
 
-  /// Poll analysis result (mock implementation)
+  /// Poll analysis result using real API
   Stream<AnalysisStatusUpdate> pollAnalysisResult(
     String analysisId, {
     Duration interval = const Duration(seconds: 3),
     Duration timeout = const Duration(minutes: 10),
   }) async* {
-    // Simulate processing states
-    yield AnalysisStatusUpdate.processing();
-    await Future.delayed(const Duration(seconds: 3));
+    final startTime = DateTime.now();
 
-    yield AnalysisStatusUpdate.processing();
-    await Future.delayed(const Duration(seconds: 3));
+    while (DateTime.now().difference(startTime) < timeout) {
+      try {
+        // Get authentication token
+        final token = await _storageService.getToken();
+        if (token == null) {
+          yield AnalysisStatusUpdate.error(
+            AuthenticationException('User not authenticated'),
+          );
+          return;
+        }
 
-    // Mock completed result
-    final mockResult = PlantAnalysisResult(
-      id: analysisId,
-      status: 'completed',
-      confidence: 95.5,
-      diseases: [
-        PlantDisease(
-          name: 'Yaprak Leke Hastalığı',
-          severity: 'Orta',
-          confidence: 89.2,
-          description: 'Yapraklarda kahverengi lekeler görülmektedir.',
-          severityColor: '#FFA500',
-        ),
-      ],
-      treatments: [],
-      organicTreatments: [
-        PlantTreatment(
-          name: 'Neem Yağı Uygulaması',
-          type: 'Organik',
-          instructions: 'Haftada 2 kez yapraklara püskürtün.',
-          frequency: 'Haftada 2 kez',
-          isOrganic: true,
-          treatmentIcon: '🌿',
-        ),
-      ],
-      chemicalTreatments: [],
-      createdAt: DateTime.now().toIso8601String(),
-      visualIndicators: [
-        VisualIndicator(
-          type: 'Leke',
-          location: 'Yaprak üst yüzeyi',
-          confidence: 85.0,
-          details: 'Kahverengi lekeler tespit edildi',
-        ),
-      ],
-      metadata: AnalysisMetadata(
-        cropType: 'Domates',
-        location: 'Test Alanı',
-        processingTime: 8.3,
-        modelVersion: 'v2.1.0',
-      ),
+        // Make API call to check status
+        final response = await _networkClient.get(
+          '${ApiConfig.plantAnalysisDetail}/$analysisId',
+          options: Options(
+            headers: ApiConfig.authHeader(token),
+          ),
+        );
+
+        if (response.data['success'] == true) {
+          final data = response.data['data'];
+          final status = data['status']?.toString().toLowerCase();
+
+          if (status == 'completed') {
+            // Parse completed result
+            final result = _parseAnalysisResult(data);
+            yield AnalysisStatusUpdate.completed(result);
+            return;
+          } else if (status == 'failed' || status == 'error') {
+            yield AnalysisStatusUpdate.error(
+              AnalysisProcessingException(
+                data['errorMessage'] ?? 'Analysis failed',
+              ),
+            );
+            return;
+          } else {
+            // Still processing
+            yield AnalysisStatusUpdate.processing();
+          }
+        } else {
+          yield AnalysisStatusUpdate.error(
+            NetworkException(
+              response.data['message'] ?? 'Failed to get analysis status',
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        if (e is DioException) {
+          yield AnalysisStatusUpdate.error(
+            NetworkException(
+              'Network error: ${e.message}',
+              originalError: e,
+            ),
+          );
+          return;
+        }
+        yield AnalysisStatusUpdate.error(
+          NetworkException(
+            'Unexpected error: ${e.toString()}',
+            originalError: e,
+          ),
+        );
+        return;
+      }
+
+      // Wait before next poll
+      await Future.delayed(interval);
+    }
+
+    // Timeout reached
+    yield AnalysisStatusUpdate.error(
+      AnalysisTimeoutException('Analysis timed out after ${timeout.inMinutes} minutes'),
     );
+  }
 
-    yield AnalysisStatusUpdate.completed(mockResult);
+  /// Parse API response to PlantAnalysisResult
+  PlantAnalysisResult _parseAnalysisResult(Map<String, dynamic> data) {
+    try {
+      return PlantAnalysisResult(
+        id: data['id']?.toString() ?? '',
+        status: data['status']?.toString() ?? 'unknown',
+        confidence: (data['confidence'] ?? 0.0).toDouble(),
+        diseases: _parseDiseases(data['diseases'] ?? []),
+        treatments: _parseTreatments(data['treatments'] ?? []),
+        organicTreatments: _parseTreatments(data['organicTreatments'] ?? []),
+        chemicalTreatments: _parseTreatments(data['chemicalTreatments'] ?? []),
+        createdAt: data['createdAt']?.toString() ?? DateTime.now().toIso8601String(),
+        visualIndicators: _parseVisualIndicators(data['visualIndicators'] ?? []),
+        metadata: _parseMetadata(data['metadata'] ?? {}),
+      );
+    } catch (e) {
+      throw AnalysisParsingException(
+        'Failed to parse analysis result: ${e.toString()}',
+        originalError: e,
+      );
+    }
+  }
+
+  /// Parse diseases from API response
+  List<PlantDisease> _parseDiseases(List<dynamic> diseasesData) {
+    return diseasesData.map((disease) {
+      return PlantDisease(
+        name: disease['name']?.toString() ?? '',
+        severity: disease['severity']?.toString() ?? '',
+        confidence: (disease['confidence'] ?? 0.0).toDouble(),
+        description: disease['description']?.toString(),
+        severityColor: disease['severityColor']?.toString() ?? '#FFA500',
+      );
+    }).toList();
+  }
+
+  /// Parse treatments from API response
+  List<PlantTreatment> _parseTreatments(List<dynamic> treatmentsData) {
+    return treatmentsData.map((treatment) {
+      return PlantTreatment(
+        name: treatment['name']?.toString() ?? '',
+        type: treatment['type']?.toString() ?? '',
+        instructions: treatment['instructions']?.toString() ?? '',
+        frequency: treatment['frequency']?.toString(),
+        isOrganic: treatment['isOrganic'] == true,
+        treatmentIcon: treatment['treatmentIcon']?.toString() ?? '💊',
+      );
+    }).toList();
+  }
+
+  /// Parse visual indicators from API response
+  List<VisualIndicator> _parseVisualIndicators(List<dynamic> indicatorsData) {
+    return indicatorsData.map((indicator) {
+      return VisualIndicator(
+        type: indicator['type']?.toString() ?? '',
+        location: indicator['location']?.toString() ?? '',
+        confidence: (indicator['confidence'] ?? 0.0).toDouble(),
+        details: indicator['details']?.toString(),
+      );
+    }).toList();
+  }
+
+  /// Parse metadata from API response
+  AnalysisMetadata _parseMetadata(Map<String, dynamic> metadataData) {
+    return AnalysisMetadata(
+      cropType: metadataData['cropType']?.toString(),
+      location: metadataData['location']?.toString(),
+      notes: metadataData['notes']?.toString(),
+      processingTime: (metadataData['processingTime'] ?? 0.0).toDouble(),
+      modelVersion: metadataData['modelVersion']?.toString(),
+    );
   }
 }
 

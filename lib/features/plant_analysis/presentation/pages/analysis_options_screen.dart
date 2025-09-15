@@ -5,6 +5,7 @@ import '../../../../core/services/image_processing_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/error/plant_analysis_exceptions.dart';
 import '../../../../core/widgets/error_widgets.dart';
+import '../../../subscription/presentation/screens/subscription_status_screen.dart';
 
 class AnalysisOptionsScreen extends StatefulWidget {
   final File selectedImage;
@@ -126,14 +127,20 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
         // Navigate back to dashboard - async analysis runs in background
         Navigator.of(context).popUntil((route) => route.isFirst);
       } else {
-        // Show error message
-        setState(() {
-          _currentError = result.exception != null
-            ? result.exception as PlantAnalysisException?
-            : UnknownException(
-                result.error ?? 'Analiz başlatılamadı. Lütfen tekrar deneyin.',
-              );
-        });
+        // Handle specific error types
+        if (result.exception is QuotaExceededException) {
+          // Navigate to subscription status screen for 403 errors
+          _navigateToSubscriptionStatus();
+        } else {
+          // Show other errors normally
+          setState(() {
+            _currentError = result.exception != null
+              ? result.exception as PlantAnalysisException?
+              : UnknownException(
+                  result.error ?? 'Analiz başlatılamadı. Lütfen tekrar deneyin.',
+                );
+          });
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -528,6 +535,17 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Navigate to subscription status screen for 403 errors
+  void _navigateToSubscriptionStatus() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SubscriptionStatusScreen(
+          scenario: 'daily_exceeded', // Mock scenario for testing
         ),
       ),
     );

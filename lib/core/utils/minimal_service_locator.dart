@@ -56,9 +56,12 @@ Future<void> setupMinimalServiceLocator() async {
     ),
   );
 
-  // Plant Analysis repository - Mock for now
+  // Plant Analysis repository - Real API implementation
   getIt.registerLazySingleton<PlantAnalysisRepository>(
-    () => PlantAnalysisRepository(),
+    () => PlantAnalysisRepository(
+      getIt<NetworkClient>(),
+      getIt<SecureStorageService>(),
+    ),
   );
 
   // BLoCs

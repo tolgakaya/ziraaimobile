@@ -43,8 +43,13 @@ Future<void> setupSimpleDI() async {
   // Auth repository
   getIt.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(getIt(), getIt()));
 
-  // Plant Analysis repository - Mock for now (working implementation)
-  getIt.registerLazySingleton<PlantAnalysisRepository>(() => PlantAnalysisRepository());
+  // Plant Analysis repository - Real API implementation
+  getIt.registerLazySingleton<PlantAnalysisRepository>(
+    () => PlantAnalysisRepository(
+      getIt<NetworkClient>(),
+      getIt<SecureStorageService>(),
+    ),
+  );
 
   // Auth bloc
   getIt.registerFactory<AuthBloc>(() => AuthBloc(getIt()));
