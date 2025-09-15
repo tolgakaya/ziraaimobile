@@ -129,8 +129,10 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
       } else {
         // Handle specific error types
         if (result.exception is QuotaExceededException) {
-          // Navigate to subscription status screen for 403 errors
-          _navigateToSubscriptionStatus();
+          // Navigate to subscription status screen for 403 errors with real scenario
+          final quotaException = result.exception as QuotaExceededException;
+          final scenario = _determineScenarioFromException(quotaException);
+          _navigateToSubscriptionStatus(scenario);
         } else {
           // Show other errors normally
           setState(() {
@@ -541,13 +543,29 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   }
 
   /// Navigate to subscription status screen for 403 errors
-  void _navigateToSubscriptionStatus() {
+  void _navigateToSubscriptionStatus([String? scenario]) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const SubscriptionStatusScreen(
-          scenario: 'daily_exceeded', // Mock scenario for testing
+        builder: (context) => SubscriptionStatusScreen(
+          scenario: scenario ?? 'daily_exceeded', // Fallback to default scenario
         ),
       ),
     );
+  }
+
+  /// Determine the appropriate scenario based on quota exception details
+  String _determineScenarioFromException(QuotaExceededException exception) {
+    // If we have subscription tier information but quotas are exceeded
+    if (exception.subscriptionTier != null) {
+      if (exception.quotaType == 'daily') {
+        return 'daily_exceeded';
+      } else if (exception.quotaType == 'monthly') {
+        return 'monthly_exceeded';
+      }
+      return 'basic_active'; // Has subscription but some other issue
+    }
+
+    // No subscription tier information means likely no active subscription
+    return 'no_subscription';
   }
 }

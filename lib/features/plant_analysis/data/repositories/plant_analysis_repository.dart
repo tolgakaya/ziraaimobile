@@ -7,6 +7,7 @@ import '../../../../core/services/image_processing_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/network/network_client.dart';
+import '../../../subscription/services/subscription_service.dart';
 
 /// Real API repository for Plant Analysis functionality
 class PlantAnalysisRepository {
@@ -70,13 +71,14 @@ class PlantAnalysisRepository {
       }
     } catch (e) {
       if (e is DioException) {
-        // Handle 403 Forbidden specifically
+        // Handle 403 Forbidden specifically with enhanced parsing
         if (e.response?.statusCode == 403) {
+          final parsedException = SubscriptionService.parse403Error(e);
           return Result.error(
             'Quota exceeded',
-            exception: QuotaExceededException(
+            exception: parsedException ?? QuotaExceededException(
               'Analysis quota exceeded',
-              quotaType: 'daily', // This will be determined by real API response
+              quotaType: 'daily',
               errorCode: '403',
               originalError: e,
             ),

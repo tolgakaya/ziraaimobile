@@ -9,6 +9,7 @@ import '../../features/authentication/data/repositories/auth_repository_impl.dar
 import '../../features/authentication/domain/repositories/auth_repository.dart';
 import '../../features/authentication/presentation/bloc/auth_bloc.dart';
 import '../../features/plant_analysis/data/repositories/plant_analysis_repository.dart';
+import '../../features/subscription/services/subscription_service.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -59,6 +60,14 @@ Future<void> setupMinimalServiceLocator() async {
   // Plant Analysis repository - Real API implementation
   getIt.registerLazySingleton<PlantAnalysisRepository>(
     () => PlantAnalysisRepository(
+      getIt<NetworkClient>(),
+      getIt<SecureStorageService>(),
+    ),
+  );
+
+  // Subscription service - Real API implementation
+  getIt.registerLazySingleton<SubscriptionService>(
+    () => SubscriptionService(
       getIt<NetworkClient>(),
       getIt<SecureStorageService>(),
     ),
