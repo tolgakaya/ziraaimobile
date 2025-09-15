@@ -15,20 +15,7 @@ class AnalysisOptionsScreen extends StatefulWidget {
 }
 
 class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
-  String _selectedAnalysisType = 'Quick';
-  String? _selectedPlantType;
   final TextEditingController _notesController = TextEditingController();
-
-  final List<String> _plantTypes = [
-    'Domates',
-    'Mısır',
-    'Buğday',
-    'Pamuk',
-    'Biber',
-    'Patlıcan',
-    'Salatalık',
-    'Diğer',
-  ];
 
   void _startAnalysis() {
     Navigator.push(
@@ -36,8 +23,8 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
       MaterialPageRoute(
         builder: (context) => AnalysisProcessingScreen(
           selectedImage: widget.selectedImage,
-          analysisType: _selectedAnalysisType,
-          plantType: _selectedPlantType,
+          analysisType: 'Standard',
+          plantType: null,
           additionalNotes: _notesController.text,
         ),
       ),
@@ -187,164 +174,6 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
                   ),
                 ),
               ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Analysis Type
-            const Text(
-              'Analysis Type',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedAnalysisType = 'Quick';
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _selectedAnalysisType == 'Quick'
-                            ? const Color(0xFF22C55E).withOpacity(0.1)
-                            : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _selectedAnalysisType == 'Quick'
-                              ? const Color(0xFF22C55E)
-                              : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.flash_on,
-                            color: _selectedAnalysisType == 'Quick'
-                                ? const Color(0xFF22C55E)
-                                : const Color(0xFF9CA3AF),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Quick',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: _selectedAnalysisType == 'Quick'
-                                  ? const Color(0xFF22C55E)
-                                  : const Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedAnalysisType = 'Detailed';
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _selectedAnalysisType == 'Detailed'
-                            ? const Color(0xFF3B82F6).withOpacity(0.1)
-                            : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _selectedAnalysisType == 'Detailed'
-                              ? const Color(0xFF3B82F6)
-                              : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.science,
-                            color: _selectedAnalysisType == 'Detailed'
-                                ? const Color(0xFF3B82F6)
-                                : const Color(0xFF9CA3AF),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Detailed',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: _selectedAnalysisType == 'Detailed'
-                                  ? const Color(0xFF3B82F6)
-                                  : const Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Plant Type
-            const Text(
-              'Plant Type (Optional)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF374151),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFE5E7EB),
-                ),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedPlantType,
-                  hint: const Text(
-                    'Select Plant Type',
-                    style: TextStyle(
-                      color: Color(0xFF9CA3AF),
-                    ),
-                  ),
-                  isExpanded: true,
-                  items: _plantTypes.map((String type) {
-                    return DropdownMenuItem<String>(
-                      value: type,
-                      child: Text(type),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedPlantType = newValue;
-                    });
-                  },
-                ),
-              ),
             ),
 
             const SizedBox(height: 24),
