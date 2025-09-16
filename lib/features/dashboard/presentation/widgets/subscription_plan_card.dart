@@ -24,6 +24,31 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
     _subscriptionFuture = _loadSubscriptionData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when coming back to this screen
+    setState(() {
+      _subscriptionFuture = _loadSubscriptionData();
+    });
+  }
+
+  @override
+  void didUpdateWidget(SubscriptionPlanCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Force refresh on widget update
+    setState(() {
+      _subscriptionFuture = _loadSubscriptionData();
+    });
+  }
+
+  /// Refresh subscription data
+  void refreshSubscriptionData() {
+    setState(() {
+      _subscriptionFuture = _loadSubscriptionData();
+    });
+  }
+
   Future<Map<String, dynamic>?> _loadSubscriptionData() async {
     try {
       print('🔵 SubscriptionPlanCard: Loading subscription data...');

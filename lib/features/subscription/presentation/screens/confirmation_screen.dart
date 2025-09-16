@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/subscription_tier.dart';
 import '../../services/mock_payment_service.dart';
+import '../../services/subscription_service.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
 import 'result_screen.dart';
 
 class ConfirmationScreen extends StatefulWidget {
@@ -363,18 +365,50 @@ class _ConfirmationScreenState extends State<ConfirmationScreen> {
   
   Future<void> _confirmPayment() async {
     setState(() => _isProcessing = true);
-    
-    // Process payment with mock service
-    final result = await MockPaymentService.processPayment(
-      cardNumber: widget.cardNumber,
-      cardHolder: widget.cardHolder,
-      expiryDate: '12/25', // Mock expiry
-      cvv: '123', // Mock CVV
-      amount: widget.totalAmount,
-      currency: 'TRY',
-      tierId: widget.tier.id,
-    );
-    
+
+    PaymentResult result;
+
+    try {
+      print('🔵 ConfirmationScreen: Starting payment for tier ${widget.tier.id} - ${widget.tier.name}');
+
+      // Get subscription service from service locator
+      final subscriptionService = getIt<SubscriptionService>();
+
+      // Process real payment with API
+      final success = await subscriptionService.subscribeTo(
+        widget.tier.id,
+        durationMonths: 1,
+        autoRenew: true,
+        paymentMethod: 'CreditCard',
+        paymentReference: 'PAY_${DateTime.now().millisecondsSinceEpoch}',
+        paidAmount: widget.totalAmount,
+        currency: 'TRY',
+      );
+
+      // Create result object similar to mock service
+      result = PaymentResult(
+        success: success,
+        message: success
+            ? 'Ödemeniz başarıyla tamamlandı!'
+            : 'Ödeme işlemi başarısız oldu. Lütfen tekrar deneyiniz.',
+        transactionId: success ? 'TXN_${DateTime.now().millisecondsSinceEpoch}' : null,
+        invoiceUrl: success ? 'https://api.ziraai.com/invoices/invoice_${DateTime.now().millisecondsSinceEpoch}' : null,
+      );
+
+      print('✅ ConfirmationScreen: Payment ${success ? 'successful' : 'failed'}');
+
+    } catch (e) {
+      print('❌ ConfirmationScreen: Payment error: $e');
+
+      // Create error result
+      result = PaymentResult(
+        success: false,
+        message: 'Ödeme işlemi sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
+        transactionId: null,
+        invoiceUrl: null,
+      );
+    }
+
     if (!mounted) return;
     
     // Navigate to result screen

@@ -27,11 +27,11 @@ class SubscriptionTier {
   factory SubscriptionTier.fromJson(Map<String, dynamic> json) {
     return SubscriptionTier(
       id: json['id'] ?? 0,
-      name: json['name'] ?? '',
+      name: json['tierName'] ?? json['displayName'] ?? '',
       description: json['description'] ?? '',
-      price: (json['price'] ?? 0.0).toDouble(),
-      dailyAnalysisLimit: json['dailyAnalysisLimit'] ?? 0,
-      monthlyAnalysisLimit: json['monthlyAnalysisLimit'] ?? 0,
+      price: (json['monthlyPrice'] ?? 0.0).toDouble(),
+      dailyAnalysisLimit: json['dailyRequestLimit'] ?? 0,
+      monthlyAnalysisLimit: json['monthlyRequestLimit'] ?? 0,
       features: List<String>.from(json['features'] ?? []),
       isRecommended: json['isRecommended'] ?? false,
       durationDays: json['durationDays'] ?? 30,

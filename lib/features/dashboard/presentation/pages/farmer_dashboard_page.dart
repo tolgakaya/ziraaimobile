@@ -12,8 +12,31 @@ class FarmerDashboardPage extends StatefulWidget {
   State<FarmerDashboardPage> createState() => _FarmerDashboardPageState();
 }
 
-class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
+class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsBindingObserver {
   int _selectedIndex = 0;
+  Key _subscriptionCardKey = UniqueKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Force refresh subscription card when app resumes
+      setState(() {
+        _subscriptionCardKey = UniqueKey();
+      });
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -154,7 +177,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                   const SizedBox(height: 24),
 
                   // Subscription Plan Card
-                  const SubscriptionPlanCard(),
+                  SubscriptionPlanCard(key: _subscriptionCardKey),
 
                   const SizedBox(height: 24),
 

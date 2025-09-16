@@ -219,8 +219,8 @@ class ResultScreen extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () {
                           if (isSuccess) {
-                            // Return true to indicate success
-                            Navigator.pop(context, true);
+                            // Navigate back to dashboard (root screen)
+                            Navigator.of(context).popUntil((route) => route.isFirst);
                           } else {
                             // Just close the result screen
                             Navigator.pop(context, false);

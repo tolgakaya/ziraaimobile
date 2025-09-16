@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import '../../models/usage_status.dart';
 import '../../models/subscription_tier.dart';
-import '../../services/mock_subscription_service.dart';
 import '../../services/subscription_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
+import '../../../../core/error/subscription_exceptions.dart';
 import 'sponsor_request_screen.dart';
 import 'payment_screen.dart';
 
@@ -36,6 +36,15 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
     _loadUsageStatus();
   }
 
+  String _getTimeUntilDailyReset() {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final timeUntil = tomorrow.difference(now);
+    final hours = timeUntil.inHours;
+    final minutes = timeUntil.inMinutes % 60;
+    return '${hours}sa ${minutes}dk';
+  }
+
   Future<void> _loadUsageStatus() async {
     setState(() {
       isLoading = true;
@@ -52,8 +61,8 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
       setState(() {
         errorMessage = 'Kullanım durumu yüklenemedi: ${e.toString()}';
         isLoading = false;
-        // Fallback to mock data based on scenario for demo purposes
-        usageStatus = MockSubscriptionService.getMockUsageStatus(scenario: widget.scenario);
+        // Show null instead of mock data
+        usageStatus = null;
       });
     }
   }
@@ -226,7 +235,7 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
         break;
       case 'wait_tomorrow':
         button = _buildInfoButton(
-          'Yarın Tekrar Dene (${MockSubscriptionService.getTimeUntilDailyReset()})',
+          'Yarın Tekrar Dene (${_getTimeUntilDailyReset()})',
           Icons.schedule,
         );
         break;
@@ -439,17 +448,27 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
 
     try {
       final loadedTiers = await widget.subscriptionService.getSubscriptionTiers();
+      // Filter out Trial tier as it's not purchasable
+      final purchasableTiers = loadedTiers.where((tier) =>
+        tier.name.toLowerCase() != 'trial'
+      ).toList();
       setState(() {
-        tiers = loadedTiers;
+        tiers = purchasableTiers;
         isLoading = false;
       });
     } catch (e) {
       setState(() {
-        errorMessage = 'Paketler yüklenemedi: ${e.toString()}';
         isLoading = false;
-        // Fallback to mock data
-        tiers = MockSubscriptionService.getMockSubscriptionTiers();
+        // Enhanced error handling with specific messages
+        if (e is SubscriptionTierException) {
+          errorMessage = 'Paketler yüklenemedi: ${e.message}';
+        } else {
+          errorMessage = 'Paketler yüklenemedi: ${e.toString()}';
+        }
+        // No fallback to mock data - show error instead
+        tiers = [];
       });
+      print('Error loading subscription tiers: $e');
     }
   }
 
@@ -869,14 +888,20 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
     );
   }
   
-  void _navigateToPayment(SubscriptionTier tier) {
+  void _navigateToPayment(SubscriptionTier tier) async {
     Navigator.pop(context);
-    Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PaymentScreen(selectedTier: tier),
       ),
     );
+
+    // If payment was successful, navigate to dashboard and refresh data
+    if (result == true) {
+      // Navigate to dashboard (go back to root)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 }
 
@@ -953,9 +978,30 @@ class _SponsorCodeDialogState extends State<_SponsorCodeDialog> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
+        String errorMessage = 'Sponsor kodu kullanılamadı';
+        
+        // Enhanced error handling with specific messages
+        if (e is SponsorshipRedeemException) {
+          switch (e.errorCode) {
+            case 'INVALID_CODE':
+              errorMessage = 'Geçersiz sponsor kodu';
+              break;
+            case 'ALREADY_USED':
+              errorMessage = 'Bu kod daha önce kullanılmış';
+              break;
+            case 'EXPIRED':
+              errorMessage = 'Kodun süresi dolmuş';
+              break;
+            default:
+              errorMessage = e.message;
+          }
+        } else {
+          errorMessage = 'Bağlantı hatası oluştu';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Sponsor kodu kullanılamadı: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
