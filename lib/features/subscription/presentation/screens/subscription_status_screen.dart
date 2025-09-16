@@ -889,7 +889,7 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
   }
   
   void _navigateToPayment(SubscriptionTier tier) async {
-    Navigator.pop(context);
+    Navigator.pop(context); // Close the bottom sheet
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -897,10 +897,10 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
       ),
     );
 
-    // If payment was successful, navigate to dashboard and refresh data
-    if (result == true) {
-      // Navigate to dashboard (go back to root)
-      Navigator.of(context).popUntil((route) => route.isFirst);
+    // If payment was successful, return to dashboard with success flag
+    if (result == true && mounted) {
+      // Pop this screen and return true to trigger refresh
+      Navigator.of(context).pop(true);
     }
   }
 }

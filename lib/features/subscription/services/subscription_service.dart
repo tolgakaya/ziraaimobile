@@ -155,6 +155,7 @@ class SubscriptionService {
   }
 
   /// Subscribe to a tier (Real API call)
+  /// Returns true if successful, throws exception if failed
   Future<bool> subscribeTo(int tierId, {
     int durationMonths = 1,
     bool autoRenew = true,
@@ -198,12 +199,21 @@ class SubscriptionService {
         print('✅ SubscriptionService: Subscription successful!');
         return true;
       } else {
-        print('❌ SubscriptionService: Subscription failed: ${response.data['message']}');
-        return false;
+        final errorMessage = response.data['message'] ?? 'Unknown subscription error';
+        print('❌ SubscriptionService: Subscription failed: $errorMessage');
+        throw SubscriptionPurchaseException(
+          message: errorMessage,
+          errorCode: 'SUBSCRIPTION_FAILED',
+        );
       }
     } catch (e) {
       print('❌ SubscriptionService: Error subscribing: $e');
-      return false;
+      // Re-throw if it's already a SubscriptionException
+      if (e is SubscriptionException) {
+        rethrow;
+      }
+      // Convert DioException to SubscriptionException
+      throw SubscriptionExceptionFactory.fromDioError(e, 'subscribe');
     }
   }
 

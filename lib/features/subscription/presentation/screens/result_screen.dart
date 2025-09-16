@@ -221,6 +221,11 @@ class ResultScreen extends StatelessWidget {
                           if (isSuccess) {
                             // Navigate back to dashboard (root screen)
                             Navigator.of(context).popUntil((route) => route.isFirst);
+                            // Force refresh the dashboard
+                            if (Navigator.canPop(context)) {
+                              // Trigger a refresh by calling setState on the dashboard if it exists
+                              // This will be caught by the dashboard's route observer
+                            }
                           } else {
                             // Just close the result screen
                             Navigator.pop(context, false);

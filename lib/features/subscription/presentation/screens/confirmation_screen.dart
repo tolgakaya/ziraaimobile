@@ -369,44 +369,69 @@ class _ConfirmationScreenState extends State<ConfirmationScreen> {
     PaymentResult result;
 
     try {
-      print('🔵 ConfirmationScreen: Starting payment for tier ${widget.tier.id} - ${widget.tier.name}');
+      print('🔵 Hybrid Payment: Step 1 - Mock payment processing');
 
-      // Get subscription service from service locator
-      final subscriptionService = getIt<SubscriptionService>();
-
-      // Process real payment with API
-      final success = await subscriptionService.subscribeTo(
-        widget.tier.id,
-        durationMonths: 1,
-        autoRenew: true,
-        paymentMethod: 'CreditCard',
-        paymentReference: 'PAY_${DateTime.now().millisecondsSinceEpoch}',
-        paidAmount: widget.totalAmount,
+      // Step 1: Mock payment processing (UI flow testing)
+      final mockPaymentResult = await MockPaymentService.processPayment(
+        cardNumber: widget.cardNumber,
+        cardHolder: widget.cardHolder,
+        expiryDate: '12/25', // Mock expiry date
+        cvv: '123', // Mock CVV
+        amount: widget.totalAmount,
         currency: 'TRY',
+        tierId: widget.tier.id,
       );
 
-      // Create result object similar to mock service
-      result = PaymentResult(
-        success: success,
-        message: success
-            ? 'Ödemeniz başarıyla tamamlandı!'
-            : 'Ödeme işlemi başarısız oldu. Lütfen tekrar deneyiniz.',
-        transactionId: success ? 'TXN_${DateTime.now().millisecondsSinceEpoch}' : null,
-        invoiceUrl: success ? 'https://api.ziraai.com/invoices/invoice_${DateTime.now().millisecondsSinceEpoch}' : null,
-      );
+      if (mockPaymentResult.success) {
+        print('✅ Hybrid Payment: Step 1 completed - Mock payment successful');
+        print('🔵 Hybrid Payment: Step 2 - Real subscription upgrade');
 
-      print('✅ ConfirmationScreen: Payment ${success ? 'successful' : 'failed'}');
+        // Step 2: Real subscription upgrade via API
+        final subscriptionService = getIt<SubscriptionService>();
+        await subscriptionService.subscribeTo(
+          widget.tier.id,
+          durationMonths: 1,
+          autoRenew: true,
+          paymentMethod: 'CreditCard',
+          paymentReference: mockPaymentResult.transactionId ?? 'MOCK_${DateTime.now().millisecondsSinceEpoch}',
+          paidAmount: widget.totalAmount,
+          currency: 'TRY',
+        );
+
+        print('✅ Hybrid Payment: Step 2 completed - Real subscription successful');
+        // Create success result combining both steps
+        result = PaymentResult(
+          success: true,
+          message: 'Abonelik başarıyla yükseltildi!',
+          transactionId: mockPaymentResult.transactionId,
+          invoiceUrl: mockPaymentResult.invoiceUrl,
+        );
+      } else {
+        print('❌ Hybrid Payment: Step 1 failed - Mock payment failed');
+        // Mock payment failed, return mock result
+        result = mockPaymentResult;
+      }
 
     } catch (e) {
-      print('❌ ConfirmationScreen: Payment error: $e');
+      print('❌ Hybrid Payment: Error occurred - $e');
 
-      // Create error result
-      result = PaymentResult(
-        success: false,
-        message: 'Ödeme işlemi sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
-        transactionId: null,
-        invoiceUrl: null,
-      );
+      // Check if it's the "already has subscription" error from backend
+      final errorMessage = e.toString();
+      if (errorMessage.contains('already have an active subscription')) {
+        // This is a backend issue - should allow upgrades
+        result = PaymentResult(
+          success: false,
+          message: 'Zaten aktif aboneliğiniz var. Abonelik yükseltme işlemi backend tarafında henüz desteklenmiyor. Destek ekibi ile iletişime geçin.',
+          errorCode: 'UPGRADE_NOT_SUPPORTED',
+        );
+      } else {
+        // Other errors
+        result = PaymentResult(
+          success: false,
+          message: 'Ödeme işlemi sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
+          errorCode: 'PAYMENT_ERROR',
+        );
+      }
     }
 
     if (!mounted) return;
