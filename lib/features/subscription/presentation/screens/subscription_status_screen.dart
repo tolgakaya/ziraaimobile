@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../models/usage_status.dart';
+import '../../models/subscription_tier.dart';
 import '../../services/mock_subscription_service.dart';
 import '../../services/subscription_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
+import 'sponsor_request_screen.dart';
+import 'payment_screen.dart';
 
 /// Enhanced 403 error screen with smart usage status display
 class SubscriptionStatusScreen extends StatefulWidget {
@@ -182,7 +186,14 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
     final actions = usageStatus!.getAvailableActions();
 
     return Column(
-      children: actions.map((action) => _buildActionButton(action)).toList(),
+      children: [
+        // Existing action buttons
+        ...actions.map((action) => _buildActionButton(action)).toList(),
+        
+        // Always show sponsorship request button
+        const SizedBox(height: 8),
+        _buildSponsorshipRequestButton(),
+      ],
     );
   }
 
@@ -375,6 +386,22 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
     );
   }
 
+  Widget _buildSponsorshipRequestButton() {
+    return _buildSecondaryButton(
+      'Sponsorluk İsteği Gönder',
+      Icons.handshake,
+      () => _navigateToSponsorshipRequest(),
+    );
+  }
+
+  void _navigateToSponsorshipRequest() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SponsorRequestScreen(),
+      ),
+    );
+  }
+
   void _showSponsorCodeDialog() {
     showDialog(
       context: context,
@@ -383,7 +410,7 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
   }
 }
 
-/// Upgrade options bottom sheet
+/// Upgrade options bottom sheet with enhanced sponsor options
 class _UpgradeOptionsSheet extends StatefulWidget {
   final SubscriptionService subscriptionService;
 
@@ -428,145 +455,395 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        padding: const EdgeInsets.all(20),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Abonelik paketleri yükleniyor...'),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (tiers == null || tiers!.isEmpty) {
-      return Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        padding: const EdgeInsets.all(20),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                errorMessage ?? 'Paketler yüklenemedi',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadTiers,
-                child: const Text('Tekrar Dene'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      padding: const EdgeInsets.all(20),
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(Icons.upgrade, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Planını Yükselt',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          Expanded(
+            child: isLoading
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Abonelik paketleri yükleniyor...'),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Current Plan Card
+                        _buildCurrentPlanCard(),
+                        const SizedBox(height: 24),
+                        
+                        // Sponsor Options Section
+                        _buildSponsorOptionsSection(),
+                        const SizedBox(height: 24),
+                        
+                        // Divider with "veya"
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: Colors.grey.shade300)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'veya',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: Colors.grey.shade300)),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Purchase Section
+                        _buildPurchaseSection(),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildCurrentPlanCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.grey.shade100, Colors.grey.shade50],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Abonelik Paketleri',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
+              Icon(Icons.account_circle, color: Colors.grey.shade600),
+              const SizedBox(width: 8),
+              const Text(
+                'Mevcut Planınız',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
-          if (errorMessage != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.orange[700]),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'API\'den veri alınamadı, demo paketleri gösteriliyor',
-                      style: TextStyle(color: Colors.orange[700]),
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 8),
+          const Text(
+            'Temel',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 16),
-          ],
-          const SizedBox(height: 20),
-          Expanded(
-            child: ListView.builder(
-              itemCount: tiers!.length,
-              itemBuilder: (context, index) => _buildTierCard(context, tiers![index]),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '15/50 günlük analiz kullanıldı • 15 gün kaldı',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
             ),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildTierCard(BuildContext context, SubscriptionTier tier) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  
+  Widget _buildSponsorOptionsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  tier.displayName,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '₺${tier.monthlyPrice}/ay',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.green[700],
-                    fontWeight: FontWeight.bold,
+            Icon(Icons.card_giftcard, color: Colors.green.shade600),
+            const SizedBox(width: 8),
+            Text(
+              'Ücretsiz Seçenekler',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.green.shade800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Sponsor Code Card
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.confirmation_number, color: Colors.green.shade600),
+            ),
+            title: const Text(
+              'Sponsor Kodu Var mı?',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              'Sponsor kodunuz varsa hemen kullanın',
+              style: TextStyle(fontSize: 12),
+            ),
+            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
+            onTap: () {
+              Navigator.pop(context);
+              _showSponsorCodeDialog();
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        
+        // Sponsorship Request Card
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.handshake, color: Colors.blue.shade600),
+            ),
+            title: const Text(
+              'Sponsorluk İsteği Gönder',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              'Tarım firmalarından sponsorluk talep edin',
+              style: TextStyle(fontSize: 12),
+            ),
+            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
+            onTap: _navigateToSponsorRequest,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildPurchaseSection() {
+    if (tiers == null || tiers!.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              errorMessage ?? 'Abonelik paketleri yüklenemedi',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadTiers,
+              child: const Text('Tekrar Dene'),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.payment, color: Colors.blue.shade600),
+            const SizedBox(width: 8),
+            Text(
+              'Satın Alma Seçenekleri',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Tier List
+        ...tiers!.map((tier) => _buildTierCard(tier)).toList(),
+      ],
+    );
+  }
+  
+  Widget _buildTierCard(SubscriptionTier tier) {
+    final isRecommended = tier.name == 'Premium';
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: isRecommended ? 4 : 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isRecommended 
+              ? BorderSide(color: Colors.orange.shade300, width: 2)
+              : BorderSide.none,
+        ),
+        child: Stack(
+          children: [
+            if (isRecommended)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade600,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'ÖNERİLEN',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(tier.description),
-            const SizedBox(height: 12),
-            ...tier.features.map((feature) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
+              ),
+            ListTile(
+              contentPadding: const EdgeInsets.all(16),
+              title: Row(
                 children: [
-                  Icon(Icons.check, size: 16, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Text(feature),
+                  Text(
+                    tier.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '₺${tier.price.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                      const Text(
+                        '/ ay',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            )),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _selectTier(context, tier),
-                child: const Text('Bu Paketi Seç'),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  Text(
+                    '${tier.dailyAnalysisLimit} günlük • ${tier.monthlyAnalysisLimit} aylık analiz',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  if (tier.features.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ...tier.features.take(2).map((feature) => Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check, size: 14, color: Colors.green.shade600),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              feature,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )).toList(),
+                  ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _navigateToPayment(tier),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isRecommended 
+                            ? Colors.orange.shade600 
+                            : Colors.blue.shade600,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        'Satın Al',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -574,53 +851,32 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
       ),
     );
   }
-
-  Future<void> _selectTier(BuildContext context, SubscriptionTier tier) async {
+  
+  void _showSponsorCodeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => _SponsorCodeDialog(subscriptionService: widget.subscriptionService),
+    );
+  }
+  
+  void _navigateToSponsorRequest() {
     Navigator.pop(context);
-
-    try {
-      // Show loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-              ),
-              const SizedBox(width: 12),
-              Text('${tier.displayName} paketi satın alınıyor...'),
-            ],
-          ),
-          duration: const Duration(seconds: 10),
-        ),
-      );
-
-      final success = await widget.subscriptionService.subscribeTo(tier.id);
-
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success
-              ? '${tier.displayName} paketi başarıyla satın alındı! 🎉'
-              : '${tier.displayName} paketi satın alınamadı. Lütfen tekrar deneyin.',
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Satın alma işlemi başarısız: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SponsorRequestScreen(),
+      ),
+    );
+  }
+  
+  void _navigateToPayment(SubscriptionTier tier) {
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(selectedTier: tier),
+      ),
+    );
   }
 }
 

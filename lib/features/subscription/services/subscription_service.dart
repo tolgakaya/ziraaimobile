@@ -4,6 +4,7 @@ import '../../../core/storage/secure_storage_service.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/error/plant_analysis_exceptions.dart';
 import '../models/usage_status.dart';
+import '../models/subscription_tier.dart';
 
 /// Real subscription service that calls ZiraAI API
 class SubscriptionService {
@@ -39,7 +40,7 @@ class SubscriptionService {
     }
   }
 
-  /// Get current user's subscription info
+  /// Get current user's subscription info (now points to correct endpoint)
   Future<UserSubscription?> getMySubscription() async {
     try {
       final token = await _storageService.getToken();
@@ -48,7 +49,7 @@ class SubscriptionService {
       }
 
       final response = await _networkClient.get(
-        ApiConfig.mySubscription,
+        ApiConfig.mySubscription, // This should be '/subscriptions/my-subscription'
         options: Options(
           headers: ApiConfig.authHeader(token),
         ),

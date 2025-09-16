@@ -103,47 +103,7 @@ class UsageStatus {
   }
 }
 
-/// Subscription tier information
-class SubscriptionTier {
-  final int id;
-  final String name;
-  final String displayName;
-  final String description;
-  final int dailyRequestLimit;
-  final int monthlyRequestLimit;
-  final double monthlyPrice;
-  final String currency;
-  final bool isActive;
-  final List<String> features;
 
-  SubscriptionTier({
-    required this.id,
-    required this.name,
-    required this.displayName,
-    required this.description,
-    required this.dailyRequestLimit,
-    required this.monthlyRequestLimit,
-    required this.monthlyPrice,
-    required this.currency,
-    required this.isActive,
-    required this.features,
-  });
-
-  factory SubscriptionTier.fromJson(Map<String, dynamic> json) {
-    return SubscriptionTier(
-      id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      displayName: json['displayName'] ?? '',
-      description: json['description'] ?? '',
-      dailyRequestLimit: json['dailyRequestLimit'] ?? 0,
-      monthlyRequestLimit: json['monthlyRequestLimit'] ?? 0,
-      monthlyPrice: (json['monthlyPrice'] ?? 0.0).toDouble(),
-      currency: json['currency'] ?? 'TRY',
-      isActive: json['isActive'] ?? true,
-      features: List<String>.from(json['features'] ?? []),
-    );
-  }
-}
 
 /// User's current subscription info
 class UserSubscription {

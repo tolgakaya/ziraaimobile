@@ -1,5 +1,7 @@
 import '../models/usage_status.dart';
 
+import '../models/subscription_tier.dart';
+
 /// Mock subscription service for testing 403 error handling
 class MockSubscriptionService {
 
@@ -72,52 +74,59 @@ class MockSubscriptionService {
     return [
       SubscriptionTier(
         id: 1,
-        name: 'basic',
-        displayName: 'Temel Plan',
+        name: 'Temel',
         description: 'Bireysel çiftçiler için ideal',
-        dailyRequestLimit: 3,
-        monthlyRequestLimit: 50,
-        monthlyPrice: 99.99,
-        currency: 'TRY',
-        isActive: true,
+        price: 99.99,
+        dailyAnalysisLimit: 3,
+        monthlyAnalysisLimit: 50,
         features: [
-          '3 günlük analiz',
-          '50 aylık analiz',
-          'Temel raporlar',
+          'Günlük 3 analiz',
+          'Aylık 50 analiz',
+          'Temel hastalık tespiti',
           'Email destek'
         ],
       ),
       SubscriptionTier(
         id: 2,
-        name: 'premium',
-        displayName: 'Premium Plan',
+        name: 'Premium',
         description: 'Küçük işletmeler için',
-        dailyRequestLimit: 10,
-        monthlyRequestLimit: 200,
-        monthlyPrice: 299.99,
-        currency: 'TRY',
-        isActive: true,
+        price: 299.99,
+        dailyAnalysisLimit: 10,
+        monthlyAnalysisLimit: 200,
+        isRecommended: true,
         features: [
-          '10 günlük analiz',
-          '200 aylık analiz',
-          'Detaylı raporlar',
+          'Günlük 10 analiz',
+          'Aylık 200 analiz',
+          'Detaylı hastalık raporları',
           'Öncelikli destek',
           'Geçmiş analiz erişimi'
         ],
       ),
       SubscriptionTier(
         id: 3,
-        name: 'enterprise',
-        displayName: 'Kurumsal Plan',
-        description: 'Büyük işletmeler için',
-        dailyRequestLimit: 50,
-        monthlyRequestLimit: 1000,
-        monthlyPrice: 999.99,
-        currency: 'TRY',
-        isActive: true,
+        name: 'Pro',
+        description: 'Profesyonel çiftçiler için',
+        price: 599.99,
+        dailyAnalysisLimit: 25,
+        monthlyAnalysisLimit: 500,
         features: [
-          '50 günlük analiz',
-          '1000 aylık analiz',
+          'Günlük 25 analiz',
+          'Aylık 500 analiz',
+          'Yapay zeka önerileri',
+          'Telefon desteği',
+          'Toprak analizi entegrasyonu'
+        ],
+      ),
+      SubscriptionTier(
+        id: 4,
+        name: 'Enterprise',
+        description: 'Büyük işletmeler için',
+        price: 999.99,
+        dailyAnalysisLimit: 50,
+        monthlyAnalysisLimit: 1000,
+        features: [
+          'Günlük 50 analiz',
+          'Aylık 1000 analiz',
           'Kapsamlı raporlar',
           '7/24 destek',
           'API erişimi',
