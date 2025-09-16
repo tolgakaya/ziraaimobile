@@ -58,6 +58,7 @@ dependencies:
   # Camera & Image
   image_picker: ^1.0.8            # Camera and gallery image selection
   permission_handler: ^11.3.0     # Camera and storage permissions
+  share_plus: ^10.1.2             # Social sharing functionality
 
 dev_dependencies:
   flutter_test:

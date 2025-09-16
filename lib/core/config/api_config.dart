@@ -44,10 +44,19 @@ class ApiConfig {
   static const String plantAnalysesList = '/plantanalyses/list';
   static const String plantAnalysisDetail = '/plantanalyses';
   
+  // Subscription Endpoints
+  static const String subscriptionTiers = '/subscriptions/tiers';
+  static const String mySubscription = '/subscriptions/my-subscription';
+  static const String usageStatus = '/subscriptions/usage-status';
+  static const String subscribe = '/subscriptions/subscribe';
+  static const String cancelSubscription = '/subscriptions/cancel';
+  static const String subscriptionHistory = '/subscriptions/history';
+
   // Sponsorship Endpoints
   static const String sponsorshipCreateLink = '/sponsorships/create-link';
   static const String sponsorshipValidate = '/sponsorships/validate';
   static const String sponsorshipList = '/sponsorships/list';
+  static const String sponsorshipRedeem = '/sponsorship/redeem';
   
   // Timeout configurations
   static const Duration connectTimeout = Duration(seconds: 30);

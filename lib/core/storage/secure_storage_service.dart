@@ -28,4 +28,17 @@ class SecureStorageService {
   Future<bool> containsKey({required String key}) async {
     return await _storage.containsKey(key: key);
   }
+
+  // Authentication specific methods
+  Future<String?> getToken() async {
+    return await read(key: 'auth_token');
+  }
+
+  Future<void> saveToken(String token) async {
+    await write(key: 'auth_token', value: token);
+  }
+
+  Future<void> deleteToken() async {
+    await delete(key: 'auth_token');
+  }
 }

@@ -1,12 +1,89 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../../../../core/utils/minimal_service_locator.dart';
+import '../../../../core/network/network_client.dart';
+import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../core/config/api_config.dart';
+import '../../../subscription/services/subscription_service.dart';
+import '../../../subscription/presentation/screens/subscription_status_screen.dart';
+import 'package:dio/dio.dart';
 
-class SubscriptionPlanCard extends StatelessWidget {
+class SubscriptionPlanCard extends StatefulWidget {
   const SubscriptionPlanCard({super.key});
 
   @override
+  State<SubscriptionPlanCard> createState() => _SubscriptionPlanCardState();
+}
+
+class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
+  late Future<Map<String, dynamic>?> _subscriptionFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscriptionFuture = _loadSubscriptionData();
+  }
+
+  Future<Map<String, dynamic>?> _loadSubscriptionData() async {
+    try {
+      print('🔵 SubscriptionPlanCard: Loading subscription data...');
+      final networkClient = getIt<NetworkClient>();
+      final secureStorage = getIt<SecureStorageService>();
+      final token = await secureStorage.getToken();
+
+      if (token == null) {
+        print('⚠️ SubscriptionPlanCard: No token found');
+        return null;
+      }
+
+      print('🔵 SubscriptionPlanCard: Calling ${ApiConfig.usageStatus}');
+      print('🔵 SubscriptionPlanCard: Full URL will be: ${networkClient.dio.options.baseUrl}${ApiConfig.usageStatus}');
+      final response = await networkClient.get(
+        ApiConfig.usageStatus,
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+        }),
+      );
+
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return response.data['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      print('Error loading subscription data: $e');
+      return null;
+    }
+  }
+
+  int? _calculateDaysLeft(String? renewalDate) {
+    if (renewalDate == null) return null;
+
+    try {
+      final renewal = DateTime.parse(renewalDate);
+      final now = DateTime.now();
+      final difference = renewal.difference(now).inDays;
+      return difference > 0 ? difference : 0;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _subscriptionFuture,
+      builder: (context, snapshot) {
+        // Get data from API or use defaults (fallback to static for now)
+        final subscriptionData = snapshot.data;
+        print('🔍 Subscription data: $subscriptionData');
+
+        final planName = subscriptionData?['tierName'] ?? 'Temel';
+        final usedCount = subscriptionData?['dailyUsed'] ?? 5;
+        final totalCount = subscriptionData?['dailyLimit'] ?? 50;
+        final daysLeft = _calculateDaysLeft(subscriptionData?['subscriptionEndDate']) ?? 15;
+        final progress = totalCount > 0 ? (usedCount / totalCount).clamp(0.0, 1.0) : 0.1;
+
+        return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -54,9 +131,9 @@ class SubscriptionPlanCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Temel',
-                      style: TextStyle(
+                    Text(
+                      planName,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF111827),
@@ -64,39 +141,39 @@ class SubscriptionPlanCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     RichText(
-                      text: const TextSpan(
-                        style: TextStyle(
+                      text: TextSpan(
+                        style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF6B7280),
                         ),
                         children: [
                           TextSpan(
-                            text: '72',
-                            style: TextStyle(
+                            text: '$usedCount',
+                            style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF374151),
                             ),
                           ),
-                          TextSpan(text: '/100 analiz kullanıldı'),
+                          TextSpan(text: '/$totalCount analiz kullanıldı'),
                         ],
                       ),
                     ),
                     const SizedBox(height: 2),
                     RichText(
-                      text: const TextSpan(
-                        style: TextStyle(
+                      text: TextSpan(
+                        style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF6B7280),
                         ),
                         children: [
                           TextSpan(
-                            text: '12',
-                            style: TextStyle(
+                            text: '$daysLeft',
+                            style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF374151),
                             ),
                           ),
-                          TextSpan(text: ' gün kaldı'),
+                          const TextSpan(text: ' gün kaldı'),
                         ],
                       ),
                     ),
@@ -106,8 +183,8 @@ class SubscriptionPlanCard extends StatelessWidget {
 
               // Progress Circle
               const SizedBox(width: 16),
-              const _CircularProgress(
-                progress: 0.72,
+              _CircularProgress(
+                progress: progress.clamp(0.0, 1.0),
                 size: 64,
               ),
             ],
@@ -140,7 +217,12 @@ class SubscriptionPlanCard extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
-                  // Navigate to upgrade plans
+                  // Navigate to subscription status screen
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SubscriptionStatusScreen(),
+                    ),
+                  );
                 },
                 borderRadius: BorderRadius.circular(14),
                 child: Padding(
@@ -178,6 +260,8 @@ class SubscriptionPlanCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+      },
     );
   }
 }

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'analysis_processing_screen.dart';
+import '../../data/repositories/plant_analysis_repository.dart';
+import '../../../../core/services/image_processing_service.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
+import '../../../../core/error/plant_analysis_exceptions.dart';
+import '../../../../core/widgets/error_widgets.dart';
+import '../../../subscription/presentation/screens/subscription_status_screen.dart';
 
 class AnalysisOptionsScreen extends StatefulWidget {
   final File selectedImage;
@@ -15,38 +20,151 @@ class AnalysisOptionsScreen extends StatefulWidget {
 }
 
 class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
-  String _selectedAnalysisType = 'Quick';
-  String? _selectedPlantType;
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  late final PlantAnalysisRepository _repository;
 
+  // Plant type dropdown options
   final List<String> _plantTypes = [
     'Domates',
-    'Mısır',
-    'Buğday',
-    'Pamuk',
     'Biber',
-    'Patlıcan',
     'Salatalık',
-    'Diğer',
+    'Patlıcan',
+    'Fasulye',
+    'Marul',
+    'Lahana',
+    'Karnabahar',
+    'Brokoli',
+    'Havuç',
+    'Soğan',
+    'Sarımsak',
+    'Patates',
+    'Buğday',
+    'Arpa',
+    'Mısır',
   ];
 
-  void _startAnalysis() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AnalysisProcessingScreen(
-          selectedImage: widget.selectedImage,
-          analysisType: _selectedAnalysisType,
-          plantType: _selectedPlantType,
-          additionalNotes: _notesController.text,
-        ),
-      ),
-    );
+  String? _selectedPlantType;
+  bool _isSubmitting = false;
+  PlantAnalysisException? _currentError;
+
+  @override
+  void initState() {
+    super.initState();
+    // Temporary: Use mock repository with correct async flow
+    _repository = getIt<PlantAnalysisRepository>();
+    _validateImage();
+  }
+
+  Future<void> _validateImage() async {
+    try {
+      final validation = await ImageProcessingService.validateImage(widget.selectedImage);
+      if (validation['isValid'] != true) {
+        setState(() {
+          _currentError = ImageValidationException(
+            'Geçersiz dosya formatı veya boyutu',
+            validationType: 'format_or_size',
+          );
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _currentError = ImageProcessingException(
+          'Görsel doğrulanamadı',
+          processingStage: 'validation',
+          originalError: e,
+        );
+      });
+    }
+  }
+
+  Future<void> _startAnalysis() async {
+    if (_isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+      _currentError = null;
+    });
+
+    try {
+      // Submit analysis request to API
+      final result = await _repository.submitPlantAnalysis(
+        imageFile: widget.selectedImage,
+        cropType: _selectedPlantType,
+        location: _locationController.text.trim().isNotEmpty
+            ? _locationController.text.trim()
+            : null,
+        notes: _notesController.text.trim().isNotEmpty
+            ? _notesController.text.trim()
+            : null,
+      );
+
+      if (!mounted) return;
+
+      if (result.isSuccess && result.data != null) {
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Analiz başarıyla gönderildi!\nAnaliz ID: ${result.data!.analysisId.substring(0, 8)}...\nTahmini süre: ${result.data!.estimatedTime ?? "30 saniye"}',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF22C55E),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+
+        // Navigate back to dashboard - async analysis runs in background
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else {
+        // Handle specific error types
+        if (result.exception is QuotaExceededException) {
+          // Navigate to subscription status screen for 403 errors with real scenario
+          final quotaException = result.exception as QuotaExceededException;
+          final scenario = _determineScenarioFromException(quotaException);
+          _navigateToSubscriptionStatus(scenario);
+        } else {
+          // Show other errors normally
+          setState(() {
+            _currentError = result.exception != null
+              ? result.exception as PlantAnalysisException?
+              : UnknownException(
+                  result.error ?? 'Analiz başlatılamadı. Lütfen tekrar deneyin.',
+                );
+          });
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _currentError = UnknownException(
+          'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
+          originalError: e,
+        );
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _notesController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -191,13 +309,13 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             const SizedBox(height: 24),
 
-            // Analysis Type
+            // Analysis Type Section
             const Text(
               'Analysis Type',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF374151),
               ),
             ),
 
@@ -206,93 +324,49 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
             Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedAnalysisType = 'Quick';
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _selectedAnalysisType == 'Quick'
-                            ? const Color(0xFF22C55E).withOpacity(0.1)
-                            : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _selectedAnalysisType == 'Quick'
-                              ? const Color(0xFF22C55E)
-                              : Colors.transparent,
-                          width: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF22C55E)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.flash_on, color: Color(0xFF22C55E), size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Quick Analysis',
+                          style: TextStyle(
+                            color: Color(0xFF22C55E),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.flash_on,
-                            color: _selectedAnalysisType == 'Quick'
-                                ? const Color(0xFF22C55E)
-                                : const Color(0xFF9CA3AF),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Quick',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: _selectedAnalysisType == 'Quick'
-                                  ? const Color(0xFF22C55E)
-                                  : const Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedAnalysisType = 'Detailed';
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _selectedAnalysisType == 'Detailed'
-                            ? const Color(0xFF3B82F6).withOpacity(0.1)
-                            : const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _selectedAnalysisType == 'Detailed'
-                              ? const Color(0xFF3B82F6)
-                              : Colors.transparent,
-                          width: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.science, color: Color(0xFF6B7280), size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Detailed',
+                          style: TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.science,
-                            color: _selectedAnalysisType == 'Detailed'
-                                ? const Color(0xFF3B82F6)
-                                : const Color(0xFF9CA3AF),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Detailed',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: _selectedAnalysisType == 'Detailed'
-                                  ? const Color(0xFF3B82F6)
-                                  : const Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -301,7 +375,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             const SizedBox(height: 24),
 
-            // Plant Type
+            // Plant Type Dropdown
             const Text(
               'Plant Type (Optional)',
               style: TextStyle(
@@ -314,22 +388,19 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
             const SizedBox(height: 8),
 
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFE5E7EB),
-                ),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _selectedPlantType,
                   hint: const Text(
                     'Select Plant Type',
-                    style: TextStyle(
-                      color: Color(0xFF9CA3AF),
-                    ),
+                    style: TextStyle(color: Color(0xFF9CA3AF)),
                   ),
                   isExpanded: true,
                   items: _plantTypes.map((String type) {
@@ -343,6 +414,38 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
                       _selectedPlantType = newValue;
                     });
                   },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Location Input
+            const Text(
+              'Location (Optional)',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF374151),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: TextField(
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  hintText: 'e.g., Ankara, Turkey',
+                  hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                  prefixIcon: Icon(Icons.location_on, color: Color(0xFF6B7280)),
                 ),
               ),
             ),
@@ -385,32 +488,84 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             const SizedBox(height: 32),
 
+            // Error Message
+            if (_currentError != null) ...[
+              ErrorDisplayWidget(
+                exception: _currentError!,
+                onRetry: _currentError!.isRecoverable ? () {
+                  setState(() {
+                    _currentError = null;
+                  });
+                  _validateImage();
+                } : null,
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Analyze Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _startAnalysis,
+                onPressed: _currentError != null || _isSubmitting ? null : _startAnalysis,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF22C55E),
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFFE5E7EB),
+                  disabledForegroundColor: const Color(0xFF9CA3AF),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Analyze',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Analyze',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Navigate to subscription status screen for 403 errors
+  void _navigateToSubscriptionStatus([String? scenario]) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SubscriptionStatusScreen(
+          scenario: scenario ?? 'daily_exceeded', // Fallback to default scenario
+        ),
+      ),
+    );
+  }
+
+  /// Determine the appropriate scenario based on quota exception details
+  String _determineScenarioFromException(QuotaExceededException exception) {
+    // If we have subscription tier information but quotas are exceeded
+    if (exception.subscriptionTier != null) {
+      if (exception.quotaType == 'daily') {
+        return 'daily_exceeded';
+      } else if (exception.quotaType == 'monthly') {
+        return 'monthly_exceeded';
+      }
+      return 'basic_active'; // Has subscription but some other issue
+    }
+
+    // No subscription tier information means likely no active subscription
+    return 'no_subscription';
   }
 }
