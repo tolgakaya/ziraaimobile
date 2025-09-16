@@ -28,6 +28,14 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _passwordError;
 
   @override
+  void initState() {
+    super.initState();
+    // Default test credentials for development
+    _emailController.text = 'farmer61@example.com';
+    _passwordController.text = 'SecurePass123!';
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();

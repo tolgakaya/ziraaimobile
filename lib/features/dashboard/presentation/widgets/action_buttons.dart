@@ -33,22 +33,22 @@ class ActionButtons extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        // Scan QR Code Button
+        // Placeholder Button (İkinci buton için)
         Expanded(
           child: _ActionButton(
-            icon: Icons.qr_code_scanner,
-            label: 'QR Kodu Tara',
+            icon: Icons.history,
+            label: 'Geçmiş',
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF3B82F6), // blue-500
-                Color(0xFF2563EB), // blue-600
+                Color(0xFF6B7280), // gray-500
+                Color(0xFF4B5563), // gray-600
               ],
             ),
             textColor: Colors.white,
             onTap: () {
-              // Navigate to QR scanner
+              // İkinci buton işlevi - sonra eklenecek
             },
           ),
         ),

@@ -3,6 +3,7 @@ import '../../../core/network/network_client.dart';
 import '../../../core/storage/secure_storage_service.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/error/plant_analysis_exceptions.dart';
+import '../../../core/error/subscription_exceptions.dart';
 import '../models/usage_status.dart';
 import '../models/subscription_tier.dart';
 
@@ -40,39 +41,73 @@ class SubscriptionService {
     }
   }
 
-  /// Get current user's subscription info (now points to correct endpoint)
+  /// Get current user's subscription info from real API
   Future<UserSubscription?> getMySubscription() async {
     try {
+      print('🔵 SubscriptionService: Getting user subscription from API...');
+
       final token = await _storageService.getToken();
       if (token == null) {
-        throw Exception('User not authenticated');
+        throw UserSubscriptionException(
+          message: 'User not authenticated',
+          errorCode: 'NO_AUTH_TOKEN',
+        );
       }
 
       final response = await _networkClient.get(
-        ApiConfig.mySubscription, // This should be '/subscriptions/my-subscription'
+        ApiConfig.mySubscription,
         options: Options(
           headers: ApiConfig.authHeader(token),
         ),
       );
 
+      print('🔵 SubscriptionService: My subscription API response: ${response.statusCode}');
+      print('🔵 SubscriptionService: Response data: ${response.data}');
+
       if (response.data['success'] == true) {
         final data = response.data['data'];
-        return UserSubscription.fromJson(data);
+        if (data != null) {
+          final subscription = UserSubscription.fromJson(data);
+          print('✅ SubscriptionService: Successfully loaded user subscription: ${subscription.tierName}');
+          return subscription;
+        } else {
+          // User may not have any subscription (free tier)
+          print('⚠️ SubscriptionService: No subscription data - user may be on free tier');
+          return null;
+        }
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to get subscription');
+        throw UserSubscriptionException(
+          message: response.data['message'] ?? 'Failed to get subscription info',
+          errorCode: response.data['errorCode'] ?? 'API_ERROR',
+          details: response.data,
+        );
       }
+    } on DioException catch (e) {
+      print('❌ SubscriptionService: Dio error getting subscription: $e');
+      throw SubscriptionExceptionFactory.fromDioError(e, 'my_subscription');
     } catch (e) {
-      print('Error getting subscription: $e');
-      return null;
+      print('❌ SubscriptionService: Error getting user subscription: $e');
+      if (e is UserSubscriptionException) {
+        rethrow;
+      }
+      throw UserSubscriptionException(
+        message: 'Failed to load subscription info: ${e.toString()}',
+        errorCode: 'UNKNOWN_ERROR',
+      );
     }
   }
 
-  /// Get available subscription tiers
+  /// Get available subscription tiers from real API
   Future<List<SubscriptionTier>> getSubscriptionTiers() async {
     try {
+      print('🔵 SubscriptionService: Getting subscription tiers from API...');
+
       final token = await _storageService.getToken();
       if (token == null) {
-        throw Exception('User not authenticated');
+        throw SubscriptionTierException(
+          message: 'User not authenticated',
+          errorCode: 'NO_AUTH_TOKEN',
+        );
       }
 
       final response = await _networkClient.get(
@@ -82,19 +117,45 @@ class SubscriptionService {
         ),
       );
 
+      print('🔵 SubscriptionService: Tiers API response: ${response.statusCode}');
+      print('🔵 SubscriptionService: Response data: ${response.data}');
+
       if (response.data['success'] == true) {
-        final data = response.data['data'] as List;
-        return data.map((tier) => SubscriptionTier.fromJson(tier)).toList();
+        final data = response.data['data'] as List?;
+        if (data != null) {
+          final tiers = data.map((tier) => SubscriptionTier.fromJson(tier)).toList();
+          print('✅ SubscriptionService: Successfully loaded ${tiers.length} tiers');
+          return tiers;
+        } else {
+          throw SubscriptionTierException(
+            message: 'No tiers data received from API',
+            errorCode: 'NO_DATA',
+          );
+        }
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to get tiers');
+        throw SubscriptionTierException(
+          message: response.data['message'] ?? 'Failed to get subscription tiers',
+          errorCode: response.data['errorCode'] ?? 'API_ERROR',
+          details: response.data,
+        );
       }
+    } on DioException catch (e) {
+      print('❌ SubscriptionService: Dio error getting tiers: $e');
+      throw SubscriptionExceptionFactory.fromDioError(e, 'tiers');
     } catch (e) {
-      print('Error getting subscription tiers: $e');
-      return [];
+      print('❌ SubscriptionService: Error getting subscription tiers: $e');
+      if (e is SubscriptionTierException) {
+        rethrow;
+      }
+      throw SubscriptionTierException(
+        message: 'Failed to load subscription tiers: ${e.toString()}',
+        errorCode: 'UNKNOWN_ERROR',
+      );
     }
   }
 
-  /// Subscribe to a tier
+  /// Subscribe to a tier (Real API call)
+  /// Returns true if successful, throws exception if failed
   Future<bool> subscribeTo(int tierId, {
     int durationMonths = 1,
     bool autoRenew = true,
@@ -104,6 +165,8 @@ class SubscriptionService {
     String currency = 'TRY',
   }) async {
     try {
+      print('🔵 SubscriptionService: Starting subscription process for tier: $tierId');
+
       final token = await _storageService.getToken();
       if (token == null) {
         throw Exception('User not authenticated');
@@ -119,6 +182,8 @@ class SubscriptionService {
         'currency': currency,
       };
 
+      print('🔵 SubscriptionService: Subscription request data: $requestData');
+
       final response = await _networkClient.post(
         ApiConfig.subscribe,
         data: requestData,
@@ -127,30 +192,51 @@ class SubscriptionService {
         ),
       );
 
-      return response.data['success'] == true;
+      print('🔵 SubscriptionService: Subscription API response: ${response.statusCode}');
+      print('🔵 SubscriptionService: Response data: ${response.data}');
+
+      if (response.data['success'] == true) {
+        print('✅ SubscriptionService: Subscription successful!');
+        return true;
+      } else {
+        final errorMessage = response.data['message'] ?? 'Unknown subscription error';
+        print('❌ SubscriptionService: Subscription failed: $errorMessage');
+        throw SubscriptionPurchaseException(
+          message: errorMessage,
+          errorCode: 'SUBSCRIPTION_FAILED',
+        );
+      }
     } catch (e) {
-      print('Error subscribing: $e');
-      return false;
+      print('❌ SubscriptionService: Error subscribing: $e');
+      // Re-throw if it's already a SubscriptionException
+      if (e is SubscriptionException) {
+        rethrow;
+      }
+      // Convert DioException to SubscriptionException
+      throw SubscriptionExceptionFactory.fromDioError(e, 'subscribe');
     }
   }
 
-  /// Redeem sponsor code
+  /// Redeem sponsor code with real API
   Future<bool> redeemSponsorCode(String code, {
     String? farmerName,
     String? farmerPhone,
     String? notes,
   }) async {
     try {
+      print('🔵 SubscriptionService: Redeeming sponsor code: $code');
+
       final token = await _storageService.getToken();
       if (token == null) {
-        throw Exception('User not authenticated');
+        throw SponsorshipRedeemException(
+          message: 'User not authenticated',
+          errorCode: 'NO_AUTH_TOKEN',
+        );
       }
 
+      // API expects just the code field based on Postman collection
       final requestData = {
-        'sponsorshipCode': code,
-        'farmerName': farmerName,
-        'farmerPhone': farmerPhone,
-        'notes': notes,
+        'code': code,
       };
 
       final response = await _networkClient.post(
@@ -161,10 +247,31 @@ class SubscriptionService {
         ),
       );
 
-      return response.data['success'] == true;
+      print('🔵 SubscriptionService: Sponsor redeem API response: ${response.statusCode}');
+      print('🔵 SubscriptionService: Response data: ${response.data}');
+
+      if (response.data['success'] == true) {
+        print('✅ SubscriptionService: Successfully redeemed sponsor code: $code');
+        return true;
+      } else {
+        throw SponsorshipRedeemException(
+          message: response.data['message'] ?? 'Failed to redeem sponsor code',
+          errorCode: response.data['errorCode'] ?? 'REDEEM_FAILED',
+          details: response.data,
+        );
+      }
+    } on DioException catch (e) {
+      print('❌ SubscriptionService: Dio error redeeming sponsor code: $e');
+      throw SubscriptionExceptionFactory.fromDioError(e, 'sponsorship_redeem');
     } catch (e) {
-      print('Error redeeming sponsor code: $e');
-      return false;
+      print('❌ SubscriptionService: Error redeeming sponsor code: $e');
+      if (e is SponsorshipRedeemException) {
+        rethrow;
+      }
+      throw SponsorshipRedeemException(
+        message: 'Failed to redeem sponsor code: ${e.toString()}',
+        errorCode: 'UNKNOWN_ERROR',
+      );
     }
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/subscription_tier.dart';
 import '../../services/mock_payment_service.dart';
+import '../../services/subscription_service.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
 import 'result_screen.dart';
 
 class ConfirmationScreen extends StatefulWidget {
@@ -363,18 +365,75 @@ class _ConfirmationScreenState extends State<ConfirmationScreen> {
   
   Future<void> _confirmPayment() async {
     setState(() => _isProcessing = true);
-    
-    // Process payment with mock service
-    final result = await MockPaymentService.processPayment(
-      cardNumber: widget.cardNumber,
-      cardHolder: widget.cardHolder,
-      expiryDate: '12/25', // Mock expiry
-      cvv: '123', // Mock CVV
-      amount: widget.totalAmount,
-      currency: 'TRY',
-      tierId: widget.tier.id,
-    );
-    
+
+    PaymentResult result;
+
+    try {
+      print('🔵 Hybrid Payment: Step 1 - Mock payment processing');
+
+      // Step 1: Mock payment processing (UI flow testing)
+      final mockPaymentResult = await MockPaymentService.processPayment(
+        cardNumber: widget.cardNumber,
+        cardHolder: widget.cardHolder,
+        expiryDate: '12/25', // Mock expiry date
+        cvv: '123', // Mock CVV
+        amount: widget.totalAmount,
+        currency: 'TRY',
+        tierId: widget.tier.id,
+      );
+
+      if (mockPaymentResult.success) {
+        print('✅ Hybrid Payment: Step 1 completed - Mock payment successful');
+        print('🔵 Hybrid Payment: Step 2 - Real subscription upgrade');
+
+        // Step 2: Real subscription upgrade via API
+        final subscriptionService = getIt<SubscriptionService>();
+        await subscriptionService.subscribeTo(
+          widget.tier.id,
+          durationMonths: 1,
+          autoRenew: true,
+          paymentMethod: 'CreditCard',
+          paymentReference: mockPaymentResult.transactionId ?? 'MOCK_${DateTime.now().millisecondsSinceEpoch}',
+          paidAmount: widget.totalAmount,
+          currency: 'TRY',
+        );
+
+        print('✅ Hybrid Payment: Step 2 completed - Real subscription successful');
+        // Create success result combining both steps
+        result = PaymentResult(
+          success: true,
+          message: 'Abonelik başarıyla yükseltildi!',
+          transactionId: mockPaymentResult.transactionId,
+          invoiceUrl: mockPaymentResult.invoiceUrl,
+        );
+      } else {
+        print('❌ Hybrid Payment: Step 1 failed - Mock payment failed');
+        // Mock payment failed, return mock result
+        result = mockPaymentResult;
+      }
+
+    } catch (e) {
+      print('❌ Hybrid Payment: Error occurred - $e');
+
+      // Check if it's the "already has subscription" error from backend
+      final errorMessage = e.toString();
+      if (errorMessage.contains('already have an active subscription')) {
+        // This is a backend issue - should allow upgrades
+        result = PaymentResult(
+          success: false,
+          message: 'Zaten aktif aboneliğiniz var. Abonelik yükseltme işlemi backend tarafında henüz desteklenmiyor. Destek ekibi ile iletişime geçin.',
+          errorCode: 'UPGRADE_NOT_SUPPORTED',
+        );
+      } else {
+        // Other errors
+        result = PaymentResult(
+          success: false,
+          message: 'Ödeme işlemi sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
+          errorCode: 'PAYMENT_ERROR',
+        );
+      }
+    }
+
     if (!mounted) return;
     
     // Navigate to result screen

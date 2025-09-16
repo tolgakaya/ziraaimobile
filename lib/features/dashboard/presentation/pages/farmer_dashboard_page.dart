@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../widgets/action_buttons.dart';
 import '../widgets/subscription_plan_card.dart';
 import '../widgets/recent_analyses_grid.dart';
 import '../widgets/bottom_navigation.dart';
 import '../../../plant_analysis/presentation/pages/capture_screen.dart';
+import '../../../subscription/presentation/screens/subscription_status_screen.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   const FarmerDashboardPage({super.key});
@@ -12,8 +14,39 @@ class FarmerDashboardPage extends StatefulWidget {
   State<FarmerDashboardPage> createState() => _FarmerDashboardPageState();
 }
 
-class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
+class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsBindingObserver {
   int _selectedIndex = 0;
+  Key _subscriptionCardKey = UniqueKey();
+  Key _recentAnalysesKey = UniqueKey();
+  
+  void _refreshDashboard() {
+    setState(() {
+      _subscriptionCardKey = UniqueKey();
+      _recentAnalysesKey = UniqueKey();
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Force refresh subscription card when app resumes
+      setState(() {
+        _subscriptionCardKey = UniqueKey();
+      });
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -45,19 +78,29 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Row(
                   children: [
-                    const SizedBox(width: 48), // Spacer for alignment
-                    const Expanded(
-                      child: Text(
-                        'ZiraAI',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF111827),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Image.asset(
+                          'assets/logos/ziraai_logo.png',
+                          height: 56,  // %30 küçültüldü (80 * 0.7)
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback to text if image fails to load
+                            return const Text(
+                              'ZiraAI',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF111827),
+                              ),
+                              textAlign: TextAlign.center,
+                            );
+                          },
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                     SizedBox(
@@ -79,7 +122,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                                   icon: const Icon(
                                     Icons.notifications_outlined,
                                     color: Color(0xFF6B7280),
-                                    size: 24,
+                                    size: 28,
                                   ),
                                   onPressed: () {
                                     // Notifications functionality
@@ -126,7 +169,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                               icon: const Icon(
                                 Icons.settings,
                                 color: Color(0xFF6B7280),
-                                size: 24,
+                                size: 28,
                               ),
                               onPressed: () {
                                 // Settings functionality
@@ -154,7 +197,22 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
                   const SizedBox(height: 24),
 
                   // Subscription Plan Card
-                  const SubscriptionPlanCard(),
+                  SubscriptionPlanCard(
+                    key: _subscriptionCardKey,
+                    onNavigateToSubscription: () async {
+                      // Navigate and wait for result
+                      final result = await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const SubscriptionStatusScreen(),
+                        ),
+                      );
+                      
+                      // Refresh dashboard if subscription was updated
+                      if (result == true && mounted) {
+                        _refreshDashboard();
+                      }
+                    },
+                  ),
 
                   const SizedBox(height: 24),
 
@@ -170,7 +228,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> {
 
                   const SizedBox(height: 12),
 
-                  const RecentAnalysesGrid(),
+                  RecentAnalysesGrid(key: _recentAnalysesKey),
                 ],
               ),
             ),
