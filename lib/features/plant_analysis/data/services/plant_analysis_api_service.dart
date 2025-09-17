@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 import 'package:injectable/injectable.dart';
-import 'package:json_annotation/json_annotation.dart';
 import '../models/plant_analysis_request.dart';
 import '../models/plant_analysis_response.dart';
+import '../models/plant_analysis_response_new.dart';
 import '../../../../core/models/api_response.dart';
 
 part 'plant_analysis_api_service.g.dart';
@@ -28,32 +28,11 @@ abstract class PlantAnalysisApiService {
     @Header('Authorization') String authorization,
   );
 
-  /// Get analysis status for polling
-  @GET('/api/v1/plantanalyses/{id}/status')
-  Future<ApiResponse<AnalysisStatus>> getAnalysisStatus(
-    @Path('id') String analysisId,
-    @Header('Authorization') String authorization,
-  );
-
-  /// Get user's analysis history
+  /// Get analyses list for dashboard
   @GET('/api/v1/plantanalyses/list')
-  Future<ApiResponse<List<PlantAnalysisResult>>> getUserAnalyses(
+  Future<ApiResponse<PlantAnalysisListResponse>> getAnalysesList(
     @Header('Authorization') String authorization,
     @Query('page') int page,
-    @Query('limit') int limit,
+    @Query('pageSize') int pageSize,
   );
-}
-
-/// Analysis status enum for API response
-enum AnalysisStatus {
-  @JsonValue('pending')
-  pending,
-  @JsonValue('processing')
-  processing,
-  @JsonValue('completed')
-  completed,
-  @JsonValue('failed')
-  failed,
-  @JsonValue('timeout')
-  timeout,
 }

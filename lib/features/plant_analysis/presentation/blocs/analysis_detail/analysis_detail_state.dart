@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../../data/models/plant_analysis_result.dart';
+import '../../../data/models/plant_analysis_response_new.dart';
 
 abstract class AnalysisDetailState extends Equatable {
   const AnalysisDetailState();

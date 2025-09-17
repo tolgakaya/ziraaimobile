@@ -98,7 +98,7 @@ class _RecentAnalysesGridState extends State<RecentAnalysesGrid> {
     print('🔍 CLAUDE: Final imageUrl: $imageUrl');
 
     return AnalysisItem(
-      id: apiItem['analysisId'] ?? apiItem['id']?.toString() ?? '',
+      id: apiItem['id']?.toString() ?? apiItem['analysisId'] ?? '',  // Use numeric ID first
       plantName: apiItem['plantSpecies'] ?? 'Bilinmeyen Bitki',
       analysisDate: apiItem['formattedDate'] ?? _formatDate(apiItem['createdDate'] ?? apiItem['analysisDate']),
       status: _mapStatus(apiItem['status']),
@@ -256,7 +256,7 @@ class _AnalysisCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => AnalysisDetailScreen(
-              analysisId: analysis.id,
+              analysisId: analysis.id.toString(),
             ),
           ),
         );

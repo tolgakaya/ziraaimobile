@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/plant_analysis_result.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
+import '../../data/repositories/plant_analysis_repository.dart' as repo;
+import '../../data/models/plant_analysis_response_new.dart';
 import '../blocs/analysis_detail/analysis_detail_bloc.dart';
 import '../blocs/analysis_detail/analysis_detail_event.dart';
 import '../blocs/analysis_detail/analysis_detail_state.dart';
@@ -16,7 +18,8 @@ class AnalysisDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => AnalysisDetailBloc()
+      create: (context) => AnalysisDetailBloc(
+          repository: getIt<repo.PlantAnalysisRepository>())
         ..add(LoadAnalysisDetail(analysisId: analysisId)),
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAFB), // bg-gray-50
@@ -123,9 +126,9 @@ class AnalysisDetailScreen extends StatelessWidget {
         Container(
           height: 250,
           decoration: BoxDecoration(
-            image: result.imageUrl != null
+            image: result.imagePath != null
                 ? DecorationImage(
-                    image: NetworkImage(result.imageUrl!),
+                    image: NetworkImage(result.imagePath!),
                     fit: BoxFit.cover,
                     onError: (exception, stackTrace) {
                       // Fallback to default image

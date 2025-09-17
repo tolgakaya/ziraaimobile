@@ -103,6 +103,83 @@ class PlantAnalysisRepository {
     }
   }
 
+  /// Get analysis result by ID using real API
+  Future<Result<PlantAnalysisDetailResult>> getAnalysisResult(String analysisId) async {
+    try {
+      // Get authentication token
+      final token = await _storageService.getToken();
+      if (token == null) {
+        return Result.error(
+          'Authentication required',
+          exception: AuthenticationException('User not authenticated'),
+        );
+      }
+
+      // Make API call to get analysis result
+      final response = await _networkClient.get(
+        '${ApiConfig.plantAnalysisDetail}/$analysisId',
+        options: Options(
+          headers: ApiConfig.authHeader(token),
+        ),
+      );
+
+      if (response.data['success'] == true && response.data['data'] != null) {
+        final data = response.data['data'];
+        final result = PlantAnalysisDetailResult(
+          id: data['id'] ?? 0,
+          analysisId: data['analysisId'] ?? '',
+          imagePath: data['imagePath'] ?? '',
+          analysisDate: data['analysisDate'] ?? '',
+          status: data['status'] ?? 'Unknown',
+          userId: data['userId'] ?? 0,
+          farmerId: data['farmerId'] ?? '',
+          plantType: data['plantType'] ?? 'Unknown',
+          growthStage: data['growthStage'] ?? '',
+          elementDeficiencies: (data['elementDeficiencies'] as List?)?.map((e) => ElementDeficiency(
+            element: e['element'] ?? '',
+            severity: e['severity'] ?? '',
+            confidence: (e['confidence'] ?? 0).toDouble(),
+            description: e['description'] ?? '',
+          )).toList() ?? [],
+          diseases: (data['diseases'] as List?)?.map((e) => DiseaseDetail(
+            name: e['name'] ?? '',
+            severity: e['severity'] ?? '',
+            confidence: (e['confidence'] ?? 0).toDouble(),
+            description: e['description'] ?? '',
+          )).toList() ?? [],
+          pests: (data['pests'] as List?)?.map((e) => PestDetail(
+            name: e['name'] ?? '',
+            severity: e['severity'] ?? '',
+            confidence: (e['confidence'] ?? 0).toDouble(),
+            description: e['description'] ?? '',
+          )).toList() ?? [],
+        );
+        return Result.success(result);
+      } else {
+        return Result.error(
+          response.data['message'] ?? 'Failed to get analysis result',
+        );
+      }
+    } catch (e) {
+      if (e is DioException) {
+        return Result.error(
+          'Network error: ${e.message}',
+          exception: NetworkException(
+            'Failed to get analysis result: ${e.message}',
+            originalError: e,
+          ),
+        );
+      }
+      return Result.error(
+        'Unexpected error: ${e.toString()}',
+        exception: NetworkException(
+          'Unexpected error getting analysis result',
+          originalError: e,
+        ),
+      );
+    }
+  }
+
   /// Poll analysis result using real API
   Stream<AnalysisStatusUpdate> pollAnalysisResult(
     String analysisId, {
@@ -446,4 +523,77 @@ class Result<T> {
       Result._(null, error, exception, false);
 
   bool get isError => !isSuccess;
+}
+
+/// Plant Analysis Detail Result model for API response
+class PlantAnalysisDetailResult {
+  final int id;
+  final String analysisId;
+  final String imagePath;
+  final String analysisDate;
+  final String status;
+  final int userId;
+  final String farmerId;
+  final String plantType;
+  final String growthStage;
+  final List<ElementDeficiency> elementDeficiencies;
+  final List<DiseaseDetail> diseases;
+  final List<PestDetail> pests;
+
+  PlantAnalysisDetailResult({
+    required this.id,
+    required this.analysisId,
+    required this.imagePath,
+    required this.analysisDate,
+    required this.status,
+    required this.userId,
+    required this.farmerId,
+    required this.plantType,
+    required this.growthStage,
+    required this.elementDeficiencies,
+    required this.diseases,
+    required this.pests,
+  });
+}
+
+class ElementDeficiency {
+  final String element;
+  final String severity;
+  final double confidence;
+  final String description;
+
+  ElementDeficiency({
+    required this.element,
+    required this.severity,
+    required this.confidence,
+    required this.description,
+  });
+}
+
+class DiseaseDetail {
+  final String name;
+  final String severity;
+  final double confidence;
+  final String description;
+
+  DiseaseDetail({
+    required this.name,
+    required this.severity,
+    required this.confidence,
+    required this.description,
+  });
+}
+
+class PestDetail {
+  final String name;
+  final String severity;
+  final double confidence;
+  final String description;
+
+  PestDetail({
+    required this.name,
+    required this.severity,
+    required this.confidence,
+    required this.description,
+  });
 }
