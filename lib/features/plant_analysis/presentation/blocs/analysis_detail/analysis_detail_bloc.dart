@@ -23,7 +23,7 @@ class AnalysisDetailBloc extends Bloc<AnalysisDetailEvent, AnalysisDetailState> 
     try {
       // Call real API
       final result = await repository.getAnalysisResult(event.analysisId);
-
+      
       print('📡 API Result - Success: ${result.isSuccess}');
       if (result.isError) {
         print('❌ API Error: ${result.error}');
