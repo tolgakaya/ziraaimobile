@@ -212,12 +212,36 @@ class AnalysisDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Plant Type and Growth Stage
+          if (result.plantType != null) ...[
+            Text(
+              result.plantType!,
+              style: const TextStyle(
+                color: Color(0xFF111811),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
+
+          if (result.growthStage != null) ...[
+            Text(
+              'Growth Stage: ${result.growthStage}',
+              style: const TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
           // Analysis ID
           Text(
             'Analysis ID: ${result.analysisId}',
             style: const TextStyle(
               color: Color(0xFF6B7280), // text-gray-500
-              fontSize: 14,
+              fontSize: 12,
             ),
           ),
 

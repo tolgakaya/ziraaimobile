@@ -18,12 +18,26 @@ class AnalysisDetailBloc extends Bloc<AnalysisDetailEvent, AnalysisDetailState> 
   ) async {
     emit(AnalysisDetailLoading());
 
+    print('🔍 Loading analysis detail for ID: ${event.analysisId}');
+
     try {
       // Call real API
       final result = await repository.getAnalysisResult(event.analysisId);
 
+      print('📡 API Result - Success: ${result.isSuccess}');
+      if (result.isError) {
+        print('❌ API Error: ${result.error}');
+      }
+
       if (result.isSuccess && result.data != null) {
         final apiData = result.data!;
+        print('✅ API Data received:');
+        print('   - Plant Type: ${apiData.plantType}');
+        print('   - Growth Stage: ${apiData.growthStage}');
+        print('   - Status: ${apiData.status}');
+        print('   - Diseases count: ${apiData.diseases.length}');
+        print('   - Element deficiencies count: ${apiData.elementDeficiencies.length}');
+        print('   - Pests count: ${apiData.pests.length}');
 
         // Convert API response to PlantAnalysisResult model
         final analysisResult = PlantAnalysisResult(
@@ -60,19 +74,22 @@ class AnalysisDetailBloc extends Bloc<AnalysisDetailEvent, AnalysisDetailState> 
           ).toList(),
         );
 
+        print('🎯 Converted result - Plant Type: ${analysisResult.plantType}, Diseases: ${analysisResult.diseases?.length ?? 0}');
         emit(AnalysisDetailLoaded(analysisResult: analysisResult));
       } else {
+        print('⚠️ API failed, falling back to mock data');
         // Fallback to mock data if API fails
         await _loadMockData(event, emit);
       }
     } catch (e) {
-      print('Error loading from API: $e');
+      print('💥 Exception loading from API: $e');
       // Fallback to mock data on error
       await _loadMockData(event, emit);
     }
   }
 
   Future<void> _loadMockData(LoadAnalysisDetail event, Emitter<AnalysisDetailState> emit) async {
+    print('🎭 Loading mock data for analysis ID: ${event.analysisId}');
     await Future.delayed(const Duration(seconds: 1));
 
     final mockResult = PlantAnalysisResult(
@@ -82,11 +99,43 @@ class AnalysisDetailBloc extends Bloc<AnalysisDetailEvent, AnalysisDetailState> 
       status: 'completed',
       userId: 123,
       analysisId: event.analysisId,
-      plantType: 'Domates',
+      plantType: 'Domates (Tomato)',
+      growthStage: 'Flowering Stage',
       notes: 'Mock analysis result for testing',
-      elementDeficiencies: [],
-      diseases: [],
-      pests: [],
+      elementDeficiencies: [
+        ElementDeficiency(
+          element: 'Nitrogen',
+          severity: 'Medium',
+          description: 'Slight yellowing of lower leaves indicates moderate nitrogen deficiency',
+        ),
+        ElementDeficiency(
+          element: 'Potassium',
+          severity: 'Low',
+          description: 'Minor signs of potassium deficiency on leaf edges',
+        ),
+      ],
+      diseases: [
+        PlantDisease(
+          name: 'Early Blight',
+          severity: 'Medium',
+          confidence: 0.85,
+          description: 'Dark spots on leaves typical of early blight disease',
+        ),
+        PlantDisease(
+          name: 'Leaf Spot',
+          severity: 'Low',
+          confidence: 0.72,
+          description: 'Minor leaf spotting consistent with fungal infection',
+        ),
+      ],
+      pests: [
+        PlantPest(
+          name: 'Aphids',
+          severity: 'Low',
+          confidence: 0.68,
+          description: 'Small aphid population detected on young shoots',
+        ),
+      ],
     );
 
     emit(AnalysisDetailLoaded(analysisResult: mockResult));
