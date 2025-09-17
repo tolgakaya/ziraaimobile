@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import '../../../plant_analysis/presentation/pages/analysis_results_screen.dart';
+import '../../../plant_analysis/presentation/screens/analysis_detail_screen.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/network/network_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
@@ -250,10 +251,14 @@ class _AnalysisCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigate to analysis results screen
-        // Navigate to analysis results (simplified for now)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Analysis details for ${analysis.plantName}')),
+        // Navigate to analysis detail screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AnalysisDetailScreen(
+              analysisId: analysis.id,
+            ),
+          ),
         );
       },
       child: Container(
