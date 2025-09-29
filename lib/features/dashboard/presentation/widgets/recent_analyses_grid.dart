@@ -256,7 +256,7 @@ class _AnalysisCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => AnalysisDetailScreen(
-              analysisId: analysis.id.toString(),
+              analysisId: int.tryParse(analysis.id) ?? 1, // Convert string ID to int
             ),
           ),
         );

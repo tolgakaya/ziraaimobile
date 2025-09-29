@@ -11,7 +11,7 @@ class ApiConfig {
     Environment.production: 'https://ziraai-api-prod.up.railway.app',
     Environment.staging: 'https://ziraai-api-sit.up.railway.app', 
     Environment.development: 'https://api.ziraai.com',
-    Environment.local: 'http://localhost:5000',
+    Environment.local: 'https://localhost:5001',
   };
   
   // Get current base URL

@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../../data/models/plant_analysis_response_new.dart';
+import '../../../data/models/plant_analysis_result.dart';
 
 abstract class AnalysisDetailState extends Equatable {
   const AnalysisDetailState();
@@ -13,12 +13,12 @@ class AnalysisDetailInitial extends AnalysisDetailState {}
 class AnalysisDetailLoading extends AnalysisDetailState {}
 
 class AnalysisDetailLoaded extends AnalysisDetailState {
-  final PlantAnalysisResult analysisResult;
+  final PlantAnalysisResult analysisDetail;
 
-  const AnalysisDetailLoaded({required this.analysisResult});
+  const AnalysisDetailLoaded({required this.analysisDetail});
 
   @override
-  List<Object?> get props => [analysisResult];
+  List<Object?> get props => [analysisDetail];
 }
 
 class AnalysisDetailError extends AnalysisDetailState {
