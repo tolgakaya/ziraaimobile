@@ -6,6 +6,7 @@ class HealthAssessment {
   final String? structuralIntegrity;
   final String? severity;
   final List<String>? stressIndicators;
+  final List<String>? diseaseSymptoms;
   final String? overallCondition;
   final List<String>? symptoms;
 
@@ -17,6 +18,7 @@ class HealthAssessment {
     this.structuralIntegrity,
     this.severity,
     this.stressIndicators,
+    this.diseaseSymptoms,
     this.overallCondition,
     this.symptoms,
   });
@@ -30,6 +32,9 @@ class HealthAssessment {
       structuralIntegrity: json['structuralIntegrity']?.toString(),
       severity: json['severity']?.toString(),
       stressIndicators: (json['stressIndicators'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
+      diseaseSymptoms: (json['diseaseSymptoms'] as List<dynamic>?)
           ?.map((e) => e.toString())
           .toList(),
       overallCondition: json['overallCondition']?.toString(),
@@ -48,6 +53,7 @@ class HealthAssessment {
       'structuralIntegrity': structuralIntegrity,
       'severity': severity,
       'stressIndicators': stressIndicators,
+      'diseaseSymptoms': diseaseSymptoms,
       'overallCondition': overallCondition,
       'symptoms': symptoms,
     };

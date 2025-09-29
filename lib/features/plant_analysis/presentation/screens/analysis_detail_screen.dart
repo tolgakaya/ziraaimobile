@@ -532,8 +532,10 @@ class AnalysisDetailScreen extends StatelessWidget {
         _buildDetailRow('Yapısal Bütünlük', health.structuralIntegrity ?? 'Belirtilmemiş'),
         _buildDetailRow('Ciddiyet', health.severity ?? 'Belirtilmemiş'),
         _buildListRow('Stres Göstergeleri', health.stressIndicators ?? []),
+        if (health.diseaseSymptoms?.isNotEmpty == true)
+          _buildListRow('Hastalık Belirtileri', health.diseaseSymptoms!),
         if (health.symptoms?.isNotEmpty == true)
-          _buildListRow('Hastalık Belirtileri', health.symptoms!),
+          _buildListRow('Diğer Semptomlar', health.symptoms!),
       ],
     );
   }
@@ -554,52 +556,31 @@ class AnalysisDetailScreen extends StatelessWidget {
     // Build only deficient nutrients list
     final List<Widget> children = [];
     
-    // Check for specific deficiencies in additionalData or deficiencies list
-    final nutrientLevels = detail.additionalData?['nutrientStatus']?['nutrientLevels'];
-    if (nutrientLevels != null) {
-      // Add deficient nutrients
-      if (nutrientLevels['nitrogen'] == 'eksik') {
-        children.add(_buildDetailRow('Azot (N)', 'Eksik'));
+    // Check for specific deficiencies in additionalData 
+    final nutrientData = detail.additionalData?['nutrientStatus'];
+    if (nutrientData != null) {
+      // Helper function to add deficient nutrients
+      void addDeficientNutrient(String key, String displayName) {
+        if (nutrientData[key] == 'eksik') {
+          children.add(_buildDeficientNutrientRow(displayName, 'Eksik'));
+        }
       }
-      if (nutrientLevels['phosphorus'] == 'eksik') {
-        children.add(_buildDetailRow('Fosfor (P)', 'Eksik'));
-      }
-      if (nutrientLevels['potassium'] == 'eksik') {
-        children.add(_buildDetailRow('Potasyum (K)', 'Eksik'));
-      }
-      if (nutrientLevels['calcium'] == 'eksik') {
-        children.add(_buildDetailRow('Kalsiyum (Ca)', 'Eksik'));
-      }
-      if (nutrientLevels['magnesium'] == 'eksik') {
-        children.add(_buildDetailRow('Magnezyum (Mg)', 'Eksik'));
-      }
-      if (nutrientLevels['sulfur'] == 'eksik') {
-        children.add(_buildDetailRow('Kükürt (S)', 'Eksik'));
-      }
-      if (nutrientLevels['iron'] == 'eksik') {
-        children.add(_buildDetailRow('Demir (Fe)', 'Eksik'));
-      }
-      if (nutrientLevels['zinc'] == 'eksik') {
-        children.add(_buildDetailRow('Çinko (Zn)', 'Eksik'));
-      }
-      if (nutrientLevels['boron'] == 'eksik') {
-        children.add(_buildDetailRow('Bor (B)', 'Eksik'));
-      }
-      if (nutrientLevels['manganese'] == 'eksik') {
-        children.add(_buildDetailRow('Mangan (Mn)', 'Eksik'));
-      }
-      if (nutrientLevels['copper'] == 'eksik') {
-        children.add(_buildDetailRow('Bakır (Cu)', 'Eksik'));
-      }
-      if (nutrientLevels['molybdenum'] == 'eksik') {
-        children.add(_buildDetailRow('Molibden (Mo)', 'Eksik'));
-      }
-      if (nutrientLevels['chlorine'] == 'eksik') {
-        children.add(_buildDetailRow('Klor (Cl)', 'Eksik'));
-      }
-      if (nutrientLevels['nickel'] == 'eksik') {
-        children.add(_buildDetailRow('Nikel (Ni)', 'Eksik'));
-      }
+      
+      // Add all deficient nutrients from API response
+      addDeficientNutrient('nitrogen', 'Azot (N)');
+      addDeficientNutrient('phosphorus', 'Fosfor (P)');
+      addDeficientNutrient('potassium', 'Potasyum (K)');
+      addDeficientNutrient('calcium', 'Kalsiyum (Ca)');
+      addDeficientNutrient('magnesium', 'Magnezyum (Mg)');
+      addDeficientNutrient('sulfur', 'Kükürt (S)');
+      addDeficientNutrient('iron', 'Demir (Fe)');
+      addDeficientNutrient('zinc', 'Çinko (Zn)');
+      addDeficientNutrient('manganese', 'Mangan (Mn)');
+      addDeficientNutrient('boron', 'Bor (B)');
+      addDeficientNutrient('copper', 'Bakır (Cu)');
+      addDeficientNutrient('molybdenum', 'Molibden (Mo)');
+      addDeficientNutrient('chlorine', 'Klor (Cl)');
+      addDeficientNutrient('nickel', 'Nikel (Ni)');
     }
     
     // Add primary and secondary deficiencies from additionalData or from deficiencies list
@@ -1583,6 +1564,46 @@ class AnalysisDetailScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Helper method for displaying deficient nutrients with red styling
+  Widget _buildDeficientNutrientRow(String nutrient, String status) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$nutrient:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red.shade700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
