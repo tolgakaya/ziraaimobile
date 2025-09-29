@@ -53,7 +53,7 @@ class DiseaseDetected {
 
   factory DiseaseDetected.fromJson(Map<String, dynamic> json) {
     return DiseaseDetected(
-      type: json['type']?.toString(),
+      type: json['type']?.toString() ?? json['name']?.toString(),
       severity: json['severity']?.toString(),
       confidence: (json['confidence'] as num?)?.toDouble(),
       category: json['category']?.toString(),
@@ -93,7 +93,7 @@ class PestDetected {
 
   factory PestDetected.fromJson(Map<String, dynamic> json) {
     return PestDetected(
-      type: json['type']?.toString(),
+      type: json['type']?.toString() ?? json['name']?.toString(),
       severity: json['severity']?.toString(),
       confidence: (json['confidence'] as num?)?.toDouble(),
       affectedParts: (json['affectedParts'] as List<dynamic>?)
