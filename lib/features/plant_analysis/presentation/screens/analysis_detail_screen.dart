@@ -664,21 +664,106 @@ class AnalysisDetailScreen extends StatelessWidget {
       
       for (var disease in pestDisease.diseasesDetected!) {
         children.add(
-          Card(
+          Container(
             margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(disease.type ?? 'Hastalık', 
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Kategori: ${disease.category}'),
-                  Text('Şiddet: ${disease.severity}'),
+                  // Disease name with confidence badge
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          disease.type ?? 'Hastalık tespit edildi',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (disease.confidence != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${(disease.confidence! * 100).toInt()}%',
+                            style: const TextStyle(
+                              fontSize: 12, 
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Disease details
+                  if (disease.category != null)
+                    _buildDetailChip('Kategori', disease.category!, Colors.blue),
+                  
+                  if (disease.severity != null)
+                    _buildDetailChip('Şiddet', disease.severity!, Colors.red),
+                  
+                  // Get additional disease information from pestDiseaseData
+                  if (pestDiseaseData?['damagePattern'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Hasar Paterni:',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                          ),
+                          Text(
+                            pestDiseaseData['damagePattern'],
+                            style: const TextStyle(fontSize: 12, color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  if (pestDiseaseData?['affectedAreaPercentage'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Etkilenen Alan: ${pestDiseaseData['affectedAreaPercentage']}%',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  
                   if (disease.affectedParts?.isNotEmpty == true)
-                    Text('Etkilenen Kısımlar: ${disease.affectedParts!.join(', ')}'),
-                  Text('Güven: ${disease.confidence?.toStringAsFixed(1)}%'),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Etkilenen Kısımlar: ${disease.affectedParts!.join(', ')}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  
+                  if (disease.description != null && disease.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        disease.description!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black87,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -696,18 +781,66 @@ class AnalysisDetailScreen extends StatelessWidget {
       
       for (var pest in pestDisease.pestsDetected!) {
         children.add(
-          Card(
+          Container(
             margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(pest.type ?? 'Zararlı', 
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Şiddet: ${pest.severity ?? 'Belirtilmemiş'}'),
-                  Text('Güven: ${pest.confidence?.toStringAsFixed(1) ?? '0'}%'),
+                  // Pest name with confidence badge
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          pest.type ?? 'Zararlı tespit edildi',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (pest.confidence != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${(pest.confidence! * 100).toInt()}%',
+                            style: const TextStyle(
+                              fontSize: 12, 
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Severity and other details
+                  if (pest.severity != null)
+                    _buildDetailChip('Şiddet', pest.severity!, Colors.red),
+                  
+                  if (pest.description != null && pest.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        pest.description!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black87,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1600,6 +1733,38 @@ class AnalysisDetailScreen extends StatelessWidget {
                   color: Colors.red.shade700,
                   fontSize: 12,
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper method for detail chips with color coding
+  Widget _buildDetailChip(String label, String value, MaterialColor color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: color.shade200),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color.shade700,
               ),
             ),
           ),
