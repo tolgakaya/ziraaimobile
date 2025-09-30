@@ -46,14 +46,13 @@ class SignalRService {
           .withAutomaticReconnect(
             retryDelays: [0, 2000, 5000, 10000, 30000], // Reconnect intervals in ms
           )
-          .configureLogging(LogLevel.information)
           .build();
 
       // Register event handlers
       _registerEventHandlers();
 
       // Connection lifecycle handlers
-      _hubConnection.onclose((error) {
+      _hubConnection.onclose(({Exception? error}) {
         _isConnected = false;
         developer.log(
           'SignalR connection closed: $error',
@@ -62,14 +61,14 @@ class SignalRService {
         );
       });
 
-      _hubConnection.onreconnecting((error) {
+      _hubConnection.onreconnecting(({Exception? error}) {
         developer.log(
           'SignalR reconnecting...',
           name: 'SignalRService',
         );
       });
 
-      _hubConnection.onreconnected((connectionId) {
+      _hubConnection.onreconnected(({String? connectionId}) {
         _isConnected = true;
         developer.log(
           'SignalR reconnected: $connectionId',
