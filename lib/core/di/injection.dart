@@ -46,12 +46,65 @@ Future<void> configureDependencies() async {
       connectTimeout: ApiConfig.connectTimeout,
       receiveTimeout: ApiConfig.receiveTimeout,
       headers: ApiConfig.defaultHeaders,
+      // CRITICAL: Remove any response size limits
+      maxRedirects: 5,
+      // Ensure we can receive large responses
+      receiveDataWhenStatusError: true,
     ));
     
-    // Add interceptors
+    // Add custom interceptor for debugging response size
+    dio.interceptors.add(InterceptorsWrapper(
+      onResponse: (response, handler) {
+        final responseString = response.toString();
+        print('🌾 FULL RESPONSE LENGTH: ${responseString.length} characters');
+        print('🌾 RESPONSE DATA TYPE: ${response.data.runtimeType}');
+        
+        if (response.data is Map) {
+          final jsonString = response.data.toString();
+          print('🌾 RESPONSE MAP LENGTH: ${jsonString.length} characters');
+          
+          // Check for specific fields
+          final dataMap = response.data as Map<String, dynamic>;
+          if (dataMap.containsKey('data')) {
+            final dataObject = dataMap['data'];
+            print('🌾 DATA OBJECT TYPE: ${dataObject.runtimeType}');
+            if (dataObject is Map) {
+              print('🌾 DATA OBJECT KEYS: ${(dataObject as Map).keys.toList()}');
+              
+              // Check for farmerFriendlySummary specifically
+              if (dataObject.containsKey('farmerFriendlySummary')) {
+                print('✅ farmerFriendlySummary FOUND in data object!');
+                print('🌾 farmerFriendlySummary: ${dataObject['farmerFriendlySummary']}');
+              } else {
+                print('❌ farmerFriendlySummary NOT FOUND in data object');
+                print('🌾 Available keys in data: ${dataObject.keys.toList()}');
+              }
+            }
+          }
+        }
+        
+        handler.next(response);
+      },
+      onError: (error, handler) {
+        print('🚨 DIO ERROR: ${error.message}');
+        print('🚨 ERROR TYPE: ${error.type}');
+        if (error.response != null) {
+          print('🚨 ERROR RESPONSE LENGTH: ${error.response.toString().length}');
+        }
+        handler.next(error);
+      },
+    ));
+    
+    // Add LogInterceptor with no limits
     dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
+      requestHeader: true,
+      responseHeader: true,
+      error: true,
+      compact: false,
+      // Remove any size limitations
+      maxWidth: 200,
     ));
     
     return dio;

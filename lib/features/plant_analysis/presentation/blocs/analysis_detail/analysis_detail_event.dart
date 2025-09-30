@@ -8,7 +8,7 @@ abstract class AnalysisDetailEvent extends Equatable {
 }
 
 class LoadAnalysisDetail extends AnalysisDetailEvent {
-  final String analysisId;
+  final int analysisId;  // Changed to int for numeric ID
 
   const LoadAnalysisDetail({required this.analysisId});
 
@@ -17,7 +17,7 @@ class LoadAnalysisDetail extends AnalysisDetailEvent {
 }
 
 class RefreshAnalysisDetail extends AnalysisDetailEvent {
-  final String analysisId;
+  final int analysisId;  // Changed to int for numeric ID
 
   const RefreshAnalysisDetail({required this.analysisId});
 

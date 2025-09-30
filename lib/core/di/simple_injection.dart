@@ -8,7 +8,10 @@ import '../storage/secure_storage_service.dart';
 import '../../features/authentication/data/repositories/auth_repository_impl.dart';
 import '../../features/authentication/domain/repositories/auth_repository.dart';
 import '../../features/authentication/presentation/bloc/auth_bloc.dart';
-import '../../features/plant_analysis/data/repositories/plant_analysis_repository.dart';
+import '../../features/plant_analysis/domain/repositories/plant_analysis_repository.dart';
+import '../../features/plant_analysis/data/repositories/plant_analysis_repository_impl.dart';
+import '../../features/plant_analysis/data/services/plant_analysis_api_service.dart';
+import '../services/auth_service.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -43,11 +46,17 @@ Future<void> setupSimpleDI() async {
   // Auth repository
   getIt.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(getIt(), getIt()));
 
-  // Plant Analysis repository - Real API implementation
+  // Auth service
+  getIt.registerLazySingleton<AuthService>(() => AuthServiceImpl(getIt()));
+
+  // Plant Analysis API service
+  getIt.registerLazySingleton<PlantAnalysisApiService>(() => PlantAnalysisApiService(getIt<Dio>()));
+
+  // Plant Analysis repository - Interface to implementation
   getIt.registerLazySingleton<PlantAnalysisRepository>(
-    () => PlantAnalysisRepository(
-      getIt<NetworkClient>(),
-      getIt<SecureStorageService>(),
+    () => PlantAnalysisRepositoryImpl(
+      getIt<PlantAnalysisApiService>(),
+      getIt<AuthService>(),
     ),
   );
 
