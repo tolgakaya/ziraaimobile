@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(flutter build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: enhance analysis detail screen UI/UX and Turkish text formatting\n\n- Modernize card design with gradients, shadows, and icons\n- Implement comprehensive Turkish capitalization system\n- Enhance nutrient status grid with modern interactive cards\n- Improve disease/pest cards with circular progress indicators\n- Add severity badges with color coding for better visual hierarchy\n- Format numbered items to display on separate lines for readability\n- Apply Turkish grammar rules to all text displays across sections\n- Optimize spacing and padding for better visual hierarchy\n- Add proper icon system to all section headers\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

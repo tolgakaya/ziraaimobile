@@ -4,6 +4,7 @@ import '../widgets/action_buttons.dart';
 import '../widgets/subscription_plan_card.dart';
 import '../widgets/recent_analyses_grid.dart';
 import '../widgets/bottom_navigation.dart';
+import '../widgets/notification_bell_icon.dart';
 import '../../../plant_analysis/presentation/pages/capture_screen.dart';
 import '../../../subscription/presentation/screens/subscription_status_screen.dart';
 
@@ -108,54 +109,8 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          // Notifications Icon
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Stack(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.notifications_outlined,
-                                    color: Color(0xFF6B7280),
-                                    size: 28,
-                                  ),
-                                  onPressed: () {
-                                    // Notifications functionality
-                                  },
-                                ),
-                                // Notification badge (example with 3 notifications)
-                                Positioned(
-                                  right: 8,
-                                  top: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEF4444),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 16,
-                                      minHeight: 16,
-                                    ),
-                                    child: const Text(
-                                      '3',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          // Notifications Bell with Badge
+                          const NotificationBellIcon(),
                           const SizedBox(width: 8),
                           // Settings Icon
                           Container(
