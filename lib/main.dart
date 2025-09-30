@@ -9,8 +9,6 @@ import 'core/di/simple_injection.dart';
 // import 'core/security/security_manager.dart';
 import 'features/authentication/presentation/presentation.dart';
 import 'features/authentication/presentation/bloc/auth_event.dart';
-import 'features/dashboard/presentation/bloc/notification_bloc.dart';
-import 'features/dashboard/presentation/bloc/notification_event.dart';
 import 'core/services/signalr_service.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/signalr_notification_integration.dart';
@@ -73,6 +71,7 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
       
       if (token != null && token.isNotEmpty) {
         await _signalRService.initialize(token);
+        _setupSignalRIntegration();
         developer.log('SignalR initialized successfully', name: 'MainApp');
       } else {
         developer.log('No auth token available, skipping SignalR init', name: 'MainApp');
@@ -82,8 +81,10 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
     }
   }
   
-  void _setupSignalRIntegration(NotificationBloc notificationBloc) {
+  void _setupSignalRIntegration() {
     if (_signalRIntegration == null) {
+      // Import AppRouter to access the static notification bloc
+      final notificationBloc = AppRouter.notificationBloc;
       _signalRIntegration = SignalRNotificationIntegration(
         signalRService: _signalRService,
         notificationBloc: notificationBloc,
@@ -126,14 +127,6 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
         BlocProvider<AuthBloc>(
           create: (context) => getIt<AuthBloc>()
             ..add(const AuthCheckStatusRequested()),
-        ),
-        BlocProvider<NotificationBloc>(
-          create: (context) {
-            final bloc = NotificationBloc()..add(const LoadNotifications());
-            // Setup SignalR integration after bloc is created
-            _setupSignalRIntegration(bloc);
-            return bloc;
-          },
         ),
       ],
       child: Builder(
