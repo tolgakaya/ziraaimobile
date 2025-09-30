@@ -64,47 +64,47 @@ class AnalysisDetailScreen extends StatelessWidget {
               delegate: SliverChildListDelegate([
                 // 10. Farmer Friendly Summary (MUST BE AT TOP - as requested)
                 _buildFarmerFriendlySummarySection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 1. Plant Identification (all 6 fields including identifyingFeatures, visibleParts)
                 _buildPlantIdentificationSection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 2. Health Assessment (all 8 fields including diseaseSymptoms)
                 _buildHealthAssessmentSection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 3. Nutrient Status (all 14 nutrients + primaryDeficiency, secondaryDeficiencies - KESINLIKLE!)
                 _buildNutrientStatusSection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 4. Pest & Disease (complete with damagePattern, affectedAreaPercentage, spreadRisk)
                 _buildPestDiseaseSection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 5. Environmental Stress (all 6 factors + primaryStressor)
                 _buildEnvironmentalStressSection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 6. Summary (complete with prognosis, estimatedYieldImpact)
                 _buildAnalysisSummarySection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 7. Cross Factor Insights (confidence, affectedAspects, impactLevel)
                 _buildCrossFactorInsightsSection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 8. Recommendations (immediate, shortTerm, preventive, monitoring, resourceEstimation)
                 _buildRecommendationsSection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // 9. Confidence Notes (aspect, confidence, reason)
                 _buildConfidenceNotesSection(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // Technical Information Card (additional)
                 _buildTechnicalInfoCard(detail),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // Analysis Metadata Card (additional)
                 _buildAnalysisMetadataCard(detail),
@@ -265,6 +265,89 @@ class AnalysisDetailScreen extends StatelessWidget {
     }
   }
 
+  // Helper method to ensure proper Turkish capitalization
+  String _formatTurkishText(String text) {
+    if (text.isEmpty) return text;
+
+    // Ensure first letter is uppercase
+    String formatted = text[0].toUpperCase() + text.substring(1);
+
+    // Split by sentences (. ! ?) and capitalize each
+    final sentences = formatted.split(RegExp(r'(?<=[.!?])\s+'));
+    final capitalizedSentences = sentences.map((sentence) {
+      if (sentence.isEmpty) return sentence;
+
+      // Handle numbered items (1. 2. etc)
+      final numberMatch = RegExp(r'^(\d+[.)]\s*)(.*)').firstMatch(sentence);
+      if (numberMatch != null) {
+        final number = numberMatch.group(1) ?? '';
+        final content = numberMatch.group(2) ?? '';
+        if (content.isNotEmpty) {
+          return number + content[0].toUpperCase() + content.substring(1);
+        }
+        return sentence;
+      }
+
+      // Regular sentence capitalization
+      return sentence[0].toUpperCase() + sentence.substring(1);
+    });
+
+    return capitalizedSentences.join(' ');
+  }
+
+  // Helper method to format summary text with numbered items on separate lines
+  Widget _buildFormattedSummaryText(String text) {
+    // First apply Turkish formatting
+    text = _formatTurkishText(text);
+
+    // Check if text contains numbered items with either "1." or "1)" format
+    // Split on patterns like "1.", "1)", "2.", "2)" etc.
+    final lines = text.split(RegExp(r'(?=\d+[\.)])'));
+
+    if (lines.length > 1) {
+      // Text has numbered items, display each on a new line
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: lines.map((line) {
+          line = line.trim();
+          if (line.isEmpty) return const SizedBox.shrink();
+
+          // Check if this line starts with a number followed by . or )
+          final isNumberedItem = RegExp(r'^\d+[\.)]').hasMatch(line);
+
+          // Apply Turkish formatting to each line
+          line = _formatTurkishText(line);
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: isNumberedItem ? 8.0 : 4.0,
+              left: isNumberedItem ? 0.0 : 0.0,
+            ),
+            child: Text(
+              line,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: isNumberedItem ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
+          );
+        }).toList(),
+      );
+    } else {
+      // No numbered items, display as regular text with better line height
+      return Text(
+        _formatTurkishText(text),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          height: 1.5,
+        ),
+      );
+    }
+  }
+
   // 10. Farmer Friendly Summary (AT TOP - PRIORITY)
   Widget _buildFarmerFriendlySummarySection(PlantAnalysisResult detail) {
     // Check if we have farmerFriendlySummary in additionalData
@@ -296,7 +379,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                   Icon(Icons.agriculture, color: Colors.white, size: 24),
                   SizedBox(width: 8),
                   Text(
-                    'Çiftçi Dostu Özet',
+                    'Analiz Özeti',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -340,7 +423,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                   Icon(Icons.agriculture, color: Colors.white, size: 24),
                   SizedBox(width: 8),
                   Text(
-                    'Çiftçi Dostu Özet',
+                    'Analiz Özeti',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -350,10 +433,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              Text(
-                farmerSummary,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
+              _buildFormattedSummaryText(farmerSummary),
             ],
           ),
         ),
@@ -390,7 +470,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                   Icon(Icons.agriculture, color: Colors.white, size: 24),
                   SizedBox(width: 8),
                   Text(
-                    'Çiftçi Dostu Özet',
+                    'Analiz Özeti',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -434,7 +514,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                 Icon(Icons.agriculture, color: Colors.white, size: 24),
                 SizedBox(width: 8),
                 Text(
-                  'Çiftçi Dostu Özet',
+                  'Analiz Özeti',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -455,28 +535,62 @@ class AnalysisDetailScreen extends StatelessWidget {
   }
 
   Widget _buildSummaryItem(String label, String value) {
+    // Apply Turkish formatting to the value
+    value = _formatTurkishText(value);
+
+    // Check if the value contains numbered items with either "1." or "1)" format
+    final lines = value.split(RegExp(r'(?=\d+[\.)])'));
+    final hasNumberedItems = lines.length > 1;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
             style: const TextStyle(
               color: Colors.white70,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+          const SizedBox(height: 4),
+          if (hasNumberedItems)
+            ...lines.map((line) {
+              line = line.trim();
+              if (line.isEmpty) return const SizedBox.shrink();
+
+              final isNumberedItem = RegExp(r'^\d+[\.)]').hasMatch(line);
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: isNumberedItem ? 4.0 : 2.0,
+                  left: isNumberedItem ? 12.0 : 12.0,
+                ),
+                child: Text(
+                  line,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: isNumberedItem ? FontWeight.w500 : FontWeight.normal,
+                  ),
+                ),
+              );
+            }).toList()
+          else
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -681,7 +795,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          disease.type ?? 'Hastalık tespit edildi',
+                          _formatTurkishText(disease.type ?? 'Hastalık tespit edildi'),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -696,7 +810,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${(disease.confidence! * 100).toInt()}%',
+                            '${disease.confidence!.toInt()}%',
                             style: const TextStyle(
                               fontSize: 12, 
                               fontWeight: FontWeight.w600,
@@ -813,7 +927,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${(pest.confidence! * 100).toInt()}%',
+                            '${pest.confidence!.toInt()}%',
                             style: const TextStyle(
                               fontSize: 12, 
                               fontWeight: FontWeight.w600,
@@ -1011,7 +1125,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Güven: ${((insight['confidence'] ?? 0) * 100).toStringAsFixed(0)}%',
+                        'Güven: ${(insight['confidence'] ?? 0).toStringAsFixed(0)}%',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -1138,10 +1252,10 @@ class AnalysisDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(param['parameter'] ?? 'Parametre',
+                  Text(_formatTurkishText(param['parameter'] ?? 'Parametre'),
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                   if (param['frequency'] != null)
-                    Text('Sıklık: ${param['frequency']}'),
+                    Text('Sıklık: ${_formatTurkishText(param['frequency'])}'),
                   if (param['threshold'] != null)
                     Text('Eşik değer: ${param['threshold']}'),
                 ],
@@ -1249,27 +1363,97 @@ class AnalysisDetailScreen extends StatelessWidget {
     );
   }
 
-  // Helper methods for UI components
+  // Helper methods for UI components - MODERNIZED DESIGN
   Widget _buildSectionCard(String title, List<Widget> children) {
-    return Card(
+    // Extract icon and title from the combined string
+    final iconMatch = RegExp(r'^([^\s]+)\s+(.+)$').firstMatch(title);
+    final icon = iconMatch?.group(1) ?? '📋';
+    final titleText = iconMatch?.group(2) ?? title;
+
+    return Container(
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2E7D32),
+            // Header with gradient background
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF2E7D32).withValues(alpha: 0.08),
+                    const Color(0xFF4CAF50).withValues(alpha: 0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      icon,
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      titleText,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1B5E20),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            ...children,
+            // Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
           ],
         ),
       ),
@@ -1277,6 +1461,9 @@ class AnalysisDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDetailRow(String label, String value) {
+    // Format the value text to ensure proper Turkish capitalization
+    final formattedValue = _formatTurkishText(value);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -1294,7 +1481,7 @@ class AnalysisDetailScreen extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              value,
+              formattedValue,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
@@ -1375,7 +1562,7 @@ class AnalysisDetailScreen extends StatelessWidget {
             Wrap(
               spacing: 6,
               runSpacing: 4,
-              children: items.map((item) => _buildTag(item, Colors.blue)).toList(),
+              children: items.map((item) => _buildTag(_formatTurkishText(item), Colors.blue)).toList(),
             )
           else
             const Text('Yok', style: TextStyle(color: Colors.grey)),
@@ -1428,44 +1615,101 @@ class AnalysisDetailScreen extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 3.5,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+        childAspectRatio: 2.8,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
       ),
       itemCount: nutrientData.length,
       itemBuilder: (context, index) {
         final nutrient = nutrientData[index];
         final isDeficient = nutrient['value'] == 'Eksik';
-        
+
         return Container(
-          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isDeficient ? Colors.red.shade50 : Colors.green.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isDeficient ? Colors.red.shade200 : Colors.green.shade200,
+            gradient: LinearGradient(
+              colors: isDeficient
+                ? [Colors.red.shade50, Colors.red.shade100]
+                : [Colors.green.shade50, Colors.green.shade100],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                nutrient['name']!,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                nutrient['value']!,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: isDeficient ? Colors.red.shade700 : Colors.green.shade700,
-                  fontWeight: FontWeight.w600,
-                ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: (isDeficient ? Colors.red : Colors.green).withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
+            border: Border.all(
+              color: isDeficient ? Colors.red.shade300 : Colors.green.shade300,
+              width: 1.5,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {},
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    // Nutrient icon
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        isDeficient ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                        size: 18,
+                        color: isDeficient ? Colors.orange.shade700 : Colors.green.shade700,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Nutrient info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            nutrient['name']!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isDeficient
+                                ? Colors.red.shade600
+                                : Colors.green.shade600,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              nutrient['value']!,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         );
       },
@@ -1478,46 +1722,209 @@ class AnalysisDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDiseaseDetailCard(dynamic disease) {
+    // Determine severity color
+    Color getSeverityColor(String? severity) {
+      switch (severity?.toLowerCase()) {
+        case 'yüksek':
+        case 'high':
+          return Colors.red;
+        case 'orta':
+        case 'medium':
+          return Colors.orange;
+        case 'düşük':
+        case 'low':
+          return Colors.yellow.shade700;
+        default:
+          return Colors.grey;
+      }
+    }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  disease.name ?? 'Bilinmeyen Hastalık',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${(disease.confidence * 100).toInt()}%',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
+        gradient: LinearGradient(
+          colors: [Colors.white, Colors.red.shade50],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
-          if (disease.severity != null)
-            Text('Şiddet: ${disease.severity}', style: const TextStyle(fontSize: 12)),
-          if (disease.category != null)
-            Text('Kategori: ${disease.category}', style: const TextStyle(fontSize: 12)),
-          Text('Etkilenen Bölgeler: Yapraklar', style: const TextStyle(fontSize: 12)),
-          if (disease.description != null)
-            Text(disease.description!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
+        border: Border.all(
+          color: Colors.red.shade200,
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with disease name and confidence
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.red.shade100, Colors.red.shade50],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Disease icon
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.coronavirus_outlined,
+                      size: 20,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Disease name
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _formatTurkishText(disease.name ?? 'Bilinmeyen hastalık'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (disease.category != null)
+                          Text(
+                            _formatTurkishText(disease.category!),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  // Confidence badge with circular progress
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 50,
+                        height: 50,
+                        child: CircularProgressIndicator(
+                          value: (disease.confidence ?? 0) / 100,
+                          strokeWidth: 3,
+                          backgroundColor: Colors.red.shade100,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.red.shade600),
+                        ),
+                      ),
+                      Text(
+                        '${(disease.confidence * 100).toInt()}%',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Details section
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Severity with color indicator
+                  if (disease.severity != null)
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.warning_rounded,
+                          size: 16,
+                          color: getSeverityColor(disease.severity),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Şiddet:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: getSeverityColor(disease.severity).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: getSeverityColor(disease.severity),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            disease.severity!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: getSeverityColor(disease.severity),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 8),
+                  // Affected areas
+                  Row(
+                    children: [
+                      Icon(Icons.grass, size: 14, color: Colors.grey.shade600),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Etkilenen Bölgeler: Yapraklar',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Description
+                  if (disease.description != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _formatTurkishText(disease.description!),
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1578,17 +1985,17 @@ class AnalysisDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(action, style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(details, style: const TextStyle(fontSize: 12)),
+          Text(_formatTurkishText(action), style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(_formatTurkishText(details), style: const TextStyle(fontSize: 12)),
           const SizedBox(height: 4),
           Row(
             children: [
-              _buildTag('Öncelik: $priority', Colors.red),
+              _buildTag('Öncelik: ${_formatTurkishText(priority)}', Colors.red),
               const SizedBox(width: 8),
-              _buildTag('Zaman: $timeline', Colors.orange),
+              _buildTag('Zaman: ${_formatTurkishText(timeline)}', Colors.orange),
             ],
           ),
-          Text('Beklenen Sonuç: $expectedOutcome', style: const TextStyle(fontSize: 11, color: Colors.green)),
+          Text('Beklenen sonuç: ${_formatTurkishText(expectedOutcome)}', style: const TextStyle(fontSize: 11, color: Colors.green)),
         ],
       ),
     );
@@ -1629,7 +2036,7 @@ class AnalysisDetailScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(aspect, style: const TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(_formatTurkishText(aspect), style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1644,7 +2051,7 @@ class AnalysisDetailScreen extends StatelessWidget {
               ),
             ],
           ),
-          Text(reason, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(_formatTurkishText(reason), style: const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       ),
     );
