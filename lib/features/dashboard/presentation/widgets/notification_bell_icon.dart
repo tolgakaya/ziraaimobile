@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:get_it/get_it.dart';
 import '../bloc/notification_bloc.dart';
 import '../bloc/notification_state.dart';
 
@@ -9,11 +10,13 @@ class NotificationBellIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Try to access NotificationBloc, if not available show icon without badge
-    try {
-      return BlocBuilder<NotificationBloc, NotificationState>(
-        builder: (context, state) {
-          final unreadCount = state is NotificationLoaded ? state.unreadCount : 0;
+    // Use GetIt to access NotificationBloc directly
+    final notificationBloc = GetIt.instance<NotificationBloc>();
+    
+    return BlocBuilder<NotificationBloc, NotificationState>(
+      bloc: notificationBloc,
+      builder: (context, state) {
+        final unreadCount = state is NotificationLoaded ? state.unreadCount : 0;
 
         return IconButton(
           icon: Stack(
@@ -64,20 +67,5 @@ class NotificationBellIcon extends StatelessWidget {
         );
       },
     );
-    } catch (e) {
-      // Fallback: Show icon without badge if provider not available
-      return IconButton(
-        icon: const Icon(
-          Icons.notifications_outlined,
-          color: Colors.grey,
-          size: 28,
-        ),
-        onPressed: () {
-          // Navigate to notification list screen
-          context.push('/notifications');
-        },
-        tooltip: 'Bildirimler',
-      );
-    }
   }
 }

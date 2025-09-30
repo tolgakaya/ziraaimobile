@@ -7,12 +7,9 @@ import '../features/authentication/presentation/presentation.dart';
 import '../features/authentication/presentation/bloc/auth_event.dart';
 import '../features/dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../features/dashboard/presentation/pages/notifications_page.dart';
-import '../features/dashboard/presentation/bloc/notification_bloc.dart';
-import '../features/dashboard/presentation/bloc/notification_event.dart';
 
 class AppRouter {
   static final _getIt = GetIt.instance;
-  static final notificationBloc = NotificationBloc()..add(const LoadNotifications());
 
   static GoRouter get router => GoRouter(
     initialLocation: '/login',
@@ -29,18 +26,12 @@ class AppRouter {
       GoRoute(
         path: '/home',
         name: 'home',
-        builder: (context, state) => BlocProvider.value(
-          value: notificationBloc,
-          child: const FarmerDashboardPage(),
-        ),
+        builder: (context, state) => const FarmerDashboardPage(),
       ),
       GoRoute(
         path: '/notifications',
         name: 'notifications',
-        builder: (context, state) => BlocProvider.value(
-          value: notificationBloc,
-          child: const NotificationsPage(),
-        ),
+        builder: (context, state) => const NotificationsPage(),
       ),
       GoRoute(
         path: '/splash',

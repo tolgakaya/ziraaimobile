@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:get_it/get_it.dart';
 import '../../../../core/models/plant_analysis_notification.dart';
 import '../bloc/notification_bloc.dart';
 import '../bloc/notification_event.dart';
@@ -12,18 +13,19 @@ class NotificationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final notificationBloc = GetIt.instance<NotificationBloc>();
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bildirimler'),
         actions: [
           BlocBuilder<NotificationBloc, NotificationState>(
+            bloc: notificationBloc,
             builder: (context, state) {
               if (state is NotificationLoaded && state.unreadCount > 0) {
                 return TextButton(
                   onPressed: () {
-                    context.read<NotificationBloc>().add(
-                          const MarkAllNotificationsAsRead(),
-                        );
+                    notificationBloc.add(const MarkAllNotificationsAsRead());
                   },
                   child: const Text('Tümünü Okundu İşaretle'),
                 );
@@ -47,6 +49,7 @@ class NotificationsPage extends StatelessWidget {
         ],
       ),
       body: BlocBuilder<NotificationBloc, NotificationState>(
+        bloc: notificationBloc,
         builder: (context, state) {
           if (state is NotificationLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -135,11 +138,11 @@ class NotificationsPage extends StatelessWidget {
     BuildContext context,
     PlantAnalysisNotification notification,
   ) {
+    final notificationBloc = GetIt.instance<NotificationBloc>();
+    
     // Mark as read
     if (!notification.isRead) {
-      context.read<NotificationBloc>().add(
-            MarkNotificationAsRead(notification.analysisId),
-          );
+      notificationBloc.add(MarkNotificationAsRead(notification.analysisId));
     }
 
     // Navigate to analysis detail
@@ -147,6 +150,8 @@ class NotificationsPage extends StatelessWidget {
   }
 
   void _showClearAllDialog(BuildContext context) {
+    final notificationBloc = GetIt.instance<NotificationBloc>();
+    
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -161,9 +166,7 @@ class NotificationsPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              context.read<NotificationBloc>().add(
-                    const ClearAllNotifications(),
-                  );
+              notificationBloc.add(const ClearAllNotifications());
               Navigator.pop(dialogContext);
             },
             child: const Text(
@@ -190,6 +193,8 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final notificationBloc = GetIt.instance<NotificationBloc>();
+    
     return Dismissible(
       key: Key('notification_${notification.analysisId}'),
       direction: DismissDirection.endToStart,

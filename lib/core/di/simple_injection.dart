@@ -12,10 +12,16 @@ import '../../features/plant_analysis/domain/repositories/plant_analysis_reposit
 import '../../features/plant_analysis/data/repositories/plant_analysis_repository_impl.dart';
 import '../../features/plant_analysis/data/services/plant_analysis_api_service.dart';
 import '../services/auth_service.dart';
+import '../../features/dashboard/presentation/bloc/notification_bloc.dart';
+import '../../features/dashboard/presentation/bloc/notification_event.dart';
 
 final GetIt getIt = GetIt.instance;
 
 Future<void> setupSimpleDI() async {
+  // Notification bloc - Singleton
+  getIt.registerLazySingleton<NotificationBloc>(
+    () => NotificationBloc()..add(const LoadNotifications()),
+  );
   // External dependencies
   final sharedPreferences = await SharedPreferences.getInstance();
   getIt.registerSingleton<SharedPreferences>(sharedPreferences);

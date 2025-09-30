@@ -12,6 +12,7 @@ import 'features/authentication/presentation/bloc/auth_event.dart';
 import 'core/services/signalr_service.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/signalr_notification_integration.dart';
+import 'features/dashboard/presentation/bloc/notification_bloc.dart';
 import 'dart:developer' as developer;
 
 void main() async {
@@ -83,8 +84,8 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
   
   void _setupSignalRIntegration() {
     if (_signalRIntegration == null) {
-      // Import AppRouter to access the static notification bloc
-      final notificationBloc = AppRouter.notificationBloc;
+      // Get NotificationBloc from GetIt
+      final notificationBloc = getIt<NotificationBloc>();
       _signalRIntegration = SignalRNotificationIntegration(
         signalRService: _signalRService,
         notificationBloc: notificationBloc,
@@ -129,39 +130,34 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
             ..add(const AuthCheckStatusRequested()),
         ),
       ],
-      child: Builder(
-        builder: (context) {
-          // This Builder ensures that the child has access to the providers
-          return MaterialApp.router(
-            title: 'ZiraAI',
-            debugShowCheckedModeBanner: false,
+      child: MaterialApp.router(
+        title: 'ZiraAI',
+        debugShowCheckedModeBanner: false,
 
-            // Theme configuration
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: ThemeMode.light,
+        // Theme configuration
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.light,
 
-            // Localization with security-aware messages
-            locale: const Locale('tr', 'TR'),
-            supportedLocales: const [
-              Locale('tr', 'TR'), // Turkish (Primary for ZiraAI)
-              Locale('en', 'US'), // English
-              Locale('ar', 'SA'), // Arabic
-            ],
+        // Localization with security-aware messages
+        locale: const Locale('tr', 'TR'),
+        supportedLocales: const [
+          Locale('tr', 'TR'), // Turkish (Primary for ZiraAI)
+          Locale('en', 'US'), // English
+          Locale('ar', 'SA'), // Arabic
+        ],
 
-            // Router configuration
-            routerConfig: AppRouter.router,
+        // Router configuration
+        routerConfig: AppRouter.router,
 
-            // Builder for global configurations
-            builder: (context, child) {
-              return MediaQuery(
-                data: MediaQuery.of(context).copyWith(
-                  // Clamp text scale for consistency
-                  textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.2),
-                ),
-                child: child ?? const SizedBox(),
-              );
-            },
+        // Builder for global configurations
+        builder: (context, child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              // Clamp text scale for consistency
+              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.2),
+            ),
+            child: child ?? const SizedBox(),
           );
         },
       ),
