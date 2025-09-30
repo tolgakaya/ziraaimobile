@@ -104,14 +104,12 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                         ),
                       ),
                     ),
-                    SizedBox(
-                      width: 96,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          // Notifications Bell with Badge
-                          const NotificationBellIcon(),
-                          const SizedBox(width: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // Notifications Bell with Badge
+                        const NotificationBellIcon(),
+                        const SizedBox(width: 8),
                           // Settings Icon
                           Container(
                             width: 40,
@@ -133,7 +131,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                           ),
                         ],
                       ),
-                    ),
                   ],
                 ),
               ),
