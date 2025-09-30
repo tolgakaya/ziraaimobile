@@ -136,34 +136,39 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
           },
         ),
       ],
-      child: MaterialApp.router(
-        title: 'ZiraAI',
-        debugShowCheckedModeBanner: false,
+      child: Builder(
+        builder: (context) {
+          // This Builder ensures that the child has access to the providers
+          return MaterialApp.router(
+            title: 'ZiraAI',
+            debugShowCheckedModeBanner: false,
 
-        // Theme configuration
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.light,
+            // Theme configuration
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.light,
 
-        // Localization with security-aware messages
-        locale: const Locale('tr', 'TR'),
-        supportedLocales: const [
-          Locale('tr', 'TR'), // Turkish (Primary for ZiraAI)
-          Locale('en', 'US'), // English
-          Locale('ar', 'SA'), // Arabic
-        ],
+            // Localization with security-aware messages
+            locale: const Locale('tr', 'TR'),
+            supportedLocales: const [
+              Locale('tr', 'TR'), // Turkish (Primary for ZiraAI)
+              Locale('en', 'US'), // English
+              Locale('ar', 'SA'), // Arabic
+            ],
 
-        // Router configuration
-        routerConfig: AppRouter.router,
+            // Router configuration
+            routerConfig: AppRouter.router,
 
-        // Builder for global configurations
-        builder: (context, child) {
-          return MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              // Clamp text scale for consistency
-              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.2),
-            ),
-            child: child ?? const SizedBox(),
+            // Builder for global configurations
+            builder: (context, child) {
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  // Clamp text scale for consistency
+                  textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.2),
+                ),
+                child: child ?? const SizedBox(),
+              );
+            },
           );
         },
       ),
