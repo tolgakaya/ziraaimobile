@@ -6,6 +6,7 @@ import 'package:get_it/get_it.dart';
 import '../features/authentication/presentation/presentation.dart';
 import '../features/authentication/presentation/bloc/auth_event.dart';
 import '../features/dashboard/presentation/pages/farmer_dashboard_page.dart';
+import '../features/dashboard/presentation/pages/notifications_page.dart';
 
 class AppRouter {
   static final _getIt = GetIt.instance;
@@ -26,6 +27,11 @@ class AppRouter {
         path: '/home',
         name: 'home',
         builder: (context, state) => const FarmerDashboardPage(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsPage(),
       ),
       GoRoute(
         path: '/splash',

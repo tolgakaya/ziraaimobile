@@ -13,6 +13,7 @@ import '../../features/plant_analysis/data/repositories/plant_analysis_repositor
 import '../../features/plant_analysis/data/services/plant_analysis_api_service.dart';
 import '../services/auth_service.dart';
 import '../../features/subscription/services/subscription_service.dart';
+import '../../features/dashboard/presentation/bloc/notification_bloc.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -85,5 +86,10 @@ Future<void> setupMinimalServiceLocator() async {
   // BLoCs
   getIt.registerFactory<AuthBloc>(
     () => AuthBloc(getIt<AuthRepository>()),
+  );
+
+  // Notification bloc - Singleton
+  getIt.registerLazySingleton<NotificationBloc>(
+    () => NotificationBloc(),
   );
 }

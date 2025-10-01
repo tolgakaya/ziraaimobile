@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app/app_router.dart';
 import 'app/app_theme.dart';
@@ -9,6 +9,12 @@ import 'core/di/simple_injection.dart';
 // import 'core/security/security_manager.dart';
 import 'features/authentication/presentation/presentation.dart';
 import 'features/authentication/presentation/bloc/auth_event.dart';
+import 'core/services/signalr_service.dart';
+import 'core/services/auth_service.dart';
+import 'core/services/signalr_notification_integration.dart';
+import 'features/dashboard/presentation/bloc/notification_bloc.dart';
+import 'features/dashboard/presentation/bloc/notification_event.dart';
+import 'dart:developer' as developer;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,21 +56,73 @@ class ZiraAIApp extends StatefulWidget {
 }
 
 class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
+  final SignalRService _signalRService = SignalRService();
+  SignalRNotificationIntegration? _signalRIntegration;
+  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initializeSignalR();
+  }
+  
+  Future<void> _initializeSignalR() async {
+    try {
+      final authService = getIt<AuthService>();
+      final token = await authService.getToken();
+      
+      if (token != null && token.isNotEmpty) {
+        await _signalRService.initialize(token);
+        _setupSignalRIntegration();
+        developer.log('SignalR initialized successfully', name: 'MainApp');
+      } else {
+        developer.log('No auth token available, skipping SignalR init', name: 'MainApp');
+      }
+    } catch (e) {
+      developer.log('Failed to initialize SignalR: $e', name: 'MainApp', error: e);
+    }
+  }
+  
+  void _setupSignalRIntegration() {
+    if (_signalRIntegration == null) {
+      // Get NotificationBloc from GetIt
+      final notificationBloc = getIt<NotificationBloc>();
+      
+      // Initialize bloc by loading notifications
+      notificationBloc.add(const LoadNotifications());
+      
+      _signalRIntegration = SignalRNotificationIntegration(
+        signalRService: _signalRService,
+        notificationBloc: notificationBloc,
+      );
+      _signalRIntegration!.setupEventHandlers();
+      developer.log('SignalR integration setup complete', name: 'MainApp');
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    // Simplified lifecycle management - no security manager for now
+    
+    // Handle SignalR connection lifecycle
+    if (state == AppLifecycleState.paused) {
+      developer.log('App paused - SignalR will auto-reconnect', name: 'MainApp');
+    } else if (state == AppLifecycleState.resumed) {
+      developer.log('App resumed', name: 'MainApp');
+      
+      // Check SignalR connection and reconnect if needed
+      if (!_signalRService.isConnected) {
+        developer.log('SignalR disconnected, attempting to reconnect', name: 'MainApp');
+        _initializeSignalR();
+      }
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _signalRIntegration?.clearEventHandlers();
+    _signalRService.disconnect();
     super.dispose();
   }
 
@@ -88,6 +146,11 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
 
         // Localization with security-aware messages
         locale: const Locale('tr', 'TR'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         supportedLocales: const [
           Locale('tr', 'TR'), // Turkish (Primary for ZiraAI)
           Locale('en', 'US'), // English
