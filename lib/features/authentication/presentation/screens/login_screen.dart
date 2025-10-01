@@ -9,6 +9,10 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import 'register_screen.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
+import '../../../../core/services/signalr_service.dart';
+import '../../../../core/services/signalr_notification_integration.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../dashboard/presentation/bloc/notification_bloc.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -99,11 +103,41 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _initializeSignalRAfterLogin() async {
+    try {
+      final authService = GetIt.instance<AuthService>();
+      final token = await authService.getToken();
+
+      if (token != null && token.isNotEmpty) {
+        print('🔌 Login: Initializing SignalR after successful login...');
+
+        final signalRService = SignalRService();
+        await signalRService.initialize(token);
+
+        // Setup SignalR notification integration
+        final notificationBloc = GetIt.instance<NotificationBloc>();
+        final integration = SignalRNotificationIntegration(
+          signalRService: signalRService,
+          notificationBloc: notificationBloc,
+        );
+        integration.setupEventHandlers();
+
+        print('✅ Login: SignalR initialized and connected!');
+      }
+    } catch (e) {
+      print('❌ Login: Failed to initialize SignalR: $e');
+      // Don't block login flow if SignalR fails
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is AuthAuthenticated) {
+          // Initialize SignalR after successful login
+          await _initializeSignalRAfterLogin();
+
           // Navigate to dashboard on successful login
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
