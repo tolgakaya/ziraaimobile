@@ -42,36 +42,55 @@ class PlantAnalysisRepositoryImpl implements PlantAnalysisRepository {
         cropType: null, // Auto-detect
       );
 
-      // Submit analysis
+      // Submit analysis - using Dio directly because backend returns flat JSON (no data wrapper)
       final token = await _authService.getToken();
-      final response = await _apiService.submitAnalysisAsync(request, 'Bearer $token');
+      final dio = Dio();
+      final apiResponse = await dio.post(
+        'https://ziraai-api-sit.up.railway.app/api/v1/plantanalyses/analyze-async',
+        data: request.toJson(),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
 
       print('🚀 PlantAnalysisRepository: API Response received');
-      print('   success: ${response.success}');
-      print('   message: ${response.message}');
-      print('   data: ${response.data}');
-      print('   errorCode: ${response.errorCode}');
+      print('   statusCode: ${apiResponse.statusCode}');
+      print('   data: ${apiResponse.data}');
 
-      // Check if analysis was queued successfully (backend may return success:false but with valid data)
-      if (response.data != null && response.data!.analysisId.isNotEmpty) {
+      final Map<String, dynamic> responseData = apiResponse.data as Map<String, dynamic>;
+
+      // Backend returns flat JSON with snake_case fields
+      final success = responseData['success'] as bool? ?? false;
+      final message = responseData['message'] as String? ?? '';
+      final analysisId = responseData['analysis_id'] as String? ?? '';
+
+      print('   success: $success');
+      print('   message: $message');
+      print('   analysis_id: $analysisId');
+
+      // Check if analysis was queued successfully
+      if (success && analysisId.isNotEmpty) {
         print('✅ PlantAnalysisRepository: Analysis queued successfully!');
-        // Convert PlantAnalysisAsyncResponse to PlantAnalysisData
         final plantAnalysisData = PlantAnalysisData(
-          analysisId: response.data!.analysisId,
-          status: response.data!.status,
-          message: response.message ?? 'Analysis submitted successfully',
+          analysisId: analysisId,
+          status: 'queued',
+          message: message,
         );
         return Right(plantAnalysisData);
       } else {
         print('❌ PlantAnalysisRepository: Analysis submission failed');
         return Left(ServerFailure(
-          message: response.message ?? 'Analysis submission failed',
-          code: response.errorCode,
+          message: message.isNotEmpty ? message : 'Analysis submission failed',
+          code: null,
         ));
       }
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
+      print('❌ PlantAnalysisRepository: Exception: $e');
       return Left(ServerFailure(message: e.toString()));
     }
   }
