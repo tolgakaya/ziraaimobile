@@ -97,8 +97,16 @@ class SignalRService {
 
         try {
           final notification = PlantAnalysisNotification.fromJson(notificationData);
-          print('✅ SignalR: Notification parsed successfully, calling callback...');
-          onAnalysisCompleted?.call(notification);
+          print('✅ SignalR: Notification parsed successfully');
+          print('📋 SignalR: Notification details - ID: ${notification.analysisId}, User: ${notification.userId}, Status: ${notification.status}');
+
+          if (onAnalysisCompleted != null) {
+            print('🔔 SignalR: Calling onAnalysisCompleted callback...');
+            onAnalysisCompleted?.call(notification);
+            print('✅ SignalR: Callback executed');
+          } else {
+            print('⚠️ SignalR: WARNING - onAnalysisCompleted callback is NULL! No handler registered!');
+          }
         } catch (e, stackTrace) {
           print('❌ SignalR: Error parsing notification: $e');
           print('❌ SignalR: Stack trace: $stackTrace');

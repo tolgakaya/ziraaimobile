@@ -51,6 +51,15 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     AddNotification event,
     Emitter<NotificationState> emit,
   ) async {
+    print('📬📬📬 NotificationBloc: _onAddNotification EVENT RECEIVED!');
+    print('📬 NotificationBloc: Event details:');
+    print('   - Analysis ID: ${event.notification.analysisId}');
+    print('   - User ID: ${event.notification.userId}');
+    print('   - Status: ${event.notification.status}');
+    print('   - Message: ${event.notification.message}');
+    print('   - Crop Type: ${event.notification.cropType}');
+    print('📬 NotificationBloc: Current notifications count: ${_notifications.length}');
+
     // Check if notification already exists
     final existingIndex = _notifications.indexWhere(
       (n) => n.analysisId == event.notification.analysisId,
@@ -59,17 +68,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     if (existingIndex >= 0) {
       // Update existing notification
       _notifications[existingIndex] = event.notification;
-      developer.log(
-        'Updated existing notification for analysis ${event.notification.analysisId}',
-        name: 'NotificationBloc',
-      );
+      print('🔄 NotificationBloc: Updated existing notification for analysis ${event.notification.analysisId}');
     } else {
       // Add new notification
       _notifications.insert(0, event.notification);
-      developer.log(
-        'Added new notification for analysis ${event.notification.analysisId}',
-        name: 'NotificationBloc',
-      );
+      print('➕ NotificationBloc: Added NEW notification for analysis ${event.notification.analysisId}');
     }
 
     // Sort by completion date, newest first
@@ -77,10 +80,15 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
     final unreadCount = _notifications.where((n) => !n.isRead).length;
 
+    print('📊 NotificationBloc: Total notifications: ${_notifications.length}, Unread: $unreadCount');
+    print('📤 NotificationBloc: Emitting NotificationLoaded state...');
+
     emit(NotificationLoaded(
       notifications: List.from(_notifications),
       unreadCount: unreadCount,
     ));
+
+    print('✅ NotificationBloc: State emitted successfully!');
   }
 
   Future<void> _onMarkNotificationAsRead(

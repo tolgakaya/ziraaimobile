@@ -12,11 +12,20 @@ class NotificationBellIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     // Use GetIt to access NotificationBloc directly
     final notificationBloc = GetIt.instance<NotificationBloc>();
-    
+
     return BlocBuilder<NotificationBloc, NotificationState>(
       bloc: notificationBloc,
       builder: (context, state) {
+        print('🔔 NotificationBellIcon: Builder triggered!');
+        print('🔔 NotificationBellIcon: Current state type: ${state.runtimeType}');
+
         final unreadCount = state is NotificationLoaded ? state.unreadCount : 0;
+
+        if (state is NotificationLoaded) {
+          print('🔔 NotificationBellIcon: Loaded state - Unread count: $unreadCount, Total: ${state.notifications.length}');
+        } else {
+          print('🔔 NotificationBellIcon: State is NOT NotificationLoaded: $state');
+        }
 
         return IconButton(
           icon: Stack(
