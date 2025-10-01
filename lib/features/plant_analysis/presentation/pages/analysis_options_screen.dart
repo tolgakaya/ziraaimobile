@@ -106,49 +106,43 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
       if (!mounted) return;
 
-      if (result.isSuccess && result.data != null) {
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Analiz başarıyla gönderildi!\nAnaliz ID: ${result.data!.analysisId.substring(0, 8)}...\nTahmini süre: ${result.data!.estimatedTime ?? "30 saniye"}',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFF22C55E),
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-
-        // Navigate back to dashboard - async analysis runs in background
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      } else {
-        // Handle specific error types
-        if (result.exception is QuotaExceededException) {
-          // Navigate to subscription status screen for 403 errors with real scenario
-          final quotaException = result.exception as QuotaExceededException;
-          final scenario = _determineScenarioFromException(quotaException);
-          _navigateToSubscriptionStatus(scenario);
-        } else {
-          // Show other errors normally
+      result.fold(
+        // Left - Failure/Error
+        (failure) {
           setState(() {
-            _currentError = result.exception != null
-              ? result.exception as PlantAnalysisException?
-              : UnknownException(
-                  result.error ?? 'Analiz başlatılamadı. Lütfen tekrar deneyin.',
-                );
+            _currentError = UnknownException(
+              failure.toString(),
+            );
           });
-        }
-      }
+        },
+        // Right - Success
+        (data) {
+          // Show success message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Analiz başarıyla gönderildi!\nAnaliz ID: ${data.analysisId.substring(0, 8)}...',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF22C55E),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+
+          // Navigate back to dashboard - async analysis runs in background
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        },
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
