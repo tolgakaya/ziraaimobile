@@ -57,7 +57,10 @@ class ApiConfig {
   static const String sponsorshipValidate = '/sponsorships/validate';
   static const String sponsorshipList = '/sponsorships/list';
   static const String sponsorshipRedeem = '/sponsorship/redeem';
-  
+
+  // SignalR Hub Endpoint
+  static String get signalRHubUrl => '$baseUrl/hubs/plantanalysis';
+
   // Timeout configurations
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

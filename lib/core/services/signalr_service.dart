@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:signalr_netcore/signalr_client.dart';
+import '../config/api_config.dart';
 import '../models/plant_analysis_notification.dart';
 
 class SignalRService {
@@ -34,9 +35,12 @@ class SignalRService {
 
     try {
       // Hub connection builder
+      final hubUrl = ApiConfig.signalRHubUrl;
+      print('🔌 SignalR: Connecting to hub: $hubUrl');
+
       _hubConnection = HubConnectionBuilder()
           .withUrl(
-            'https://ziraai-api-sit.up.railway.app/hubs/plantanalysis',
+            hubUrl,
             options: HttpConnectionOptions(
               accessTokenFactory: () async => jwtToken,
               logMessageContent: true,
