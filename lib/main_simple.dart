@@ -4,7 +4,7 @@ import 'package:get_it/get_it.dart';
 
 import 'core/utils/minimal_service_locator.dart';
 import 'features/authentication/presentation/bloc/auth_bloc.dart';
-import 'features/authentication/presentation/screens/login_screen.dart';
+import 'features/authentication/presentation/screens/splash_screen.dart';
 import 'core/services/signalr_service.dart';
 
 void main() async {
@@ -27,7 +27,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Don't initialize SignalR here - wait for user to login first
+    // Don't initialize SignalR here - SplashScreen handles auto-login and SignalR
   }
 
   @override
@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       if (!_signalRService.isConnected) {
         print('🔄 App resumed: Attempting to reconnect SignalR...');
-        // SignalR will be reconnected via login screen if authenticated
+        // SignalR will be reconnected automatically if token is valid
       }
     }
   }
@@ -60,7 +60,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ),
       home: BlocProvider(
         create: (context) => GetIt.instance<AuthBloc>(),
-        child: const LoginScreen(),
+        child: const SplashScreen(), // Start with SplashScreen for auto-login
       ),
       debugShowCheckedModeBanner: false,
     );
