@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../models/plant_analysis_notification.dart';
 
@@ -73,6 +74,36 @@ class SignalRService {
 
       print('✅ SignalR: Connected successfully!');
 
+      // CRITICAL: Join user-specific group after connection
+      // Backend needs to know which user this connection belongs to
+      try {
+        print('🔑 SignalR: Joining user group...');
+        // Extract userId from JWT token
+        final parts = jwtToken.split('.');
+        if (parts.length >= 2) {
+          final payload = parts[1];
+          // Decode base64 (handle padding)
+          String normalized = base64.normalize(payload);
+          final decoded = utf8.decode(base64.decode(normalized));
+          final Map<String, dynamic> claims = jsonDecode(decoded);
+
+          // Get userId from nameidentifier claim
+          final userId = claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']?.toString();
+
+          if (userId != null) {
+            print('🔑 SignalR: Extracted userId from JWT: $userId');
+            // Invoke server method to associate this connection with userId
+            await _hubConnection.invoke('JoinUserGroup', args: [userId]);
+            print('✅ SignalR: Successfully joined user group for userId: $userId');
+          } else {
+            print('⚠️ SignalR: Could not extract userId from JWT claims');
+          }
+        }
+      } catch (e) {
+        print('⚠️ SignalR: Failed to join user group (non-critical): $e');
+        // Don't throw - this is optional optimization
+      }
+
       // Test ping
       print('🏓 SignalR: Sending test ping...');
       await ping();
@@ -86,8 +117,26 @@ class SignalRService {
   /// Register server → client event handlers
   void _registerEventHandlers() {
     print('📡 SignalR: Registering event handlers...');
-    
-    // Analysis completed event
+
+    // Try both possible event names backend might use
+    print('📝 SignalR: Registering AnalysisCompleted (without Receive prefix)...');
+    _hubConnection.on('AnalysisCompleted', (arguments) {
+      print('📨 SignalR: AnalysisCompleted (no prefix) event triggered!');
+      if (arguments != null && arguments.isNotEmpty) {
+        final notificationData = arguments[0] as Map<String, dynamic>;
+        print('📨 SignalR: Notification data: $notificationData');
+
+        try {
+          final notification = PlantAnalysisNotification.fromJson(notificationData);
+          print('✅ SignalR: Notification parsed from AnalysisCompleted');
+          onAnalysisCompleted?.call(notification);
+        } catch (e) {
+          print('❌ SignalR: Error parsing AnalysisCompleted: $e');
+        }
+      }
+    });
+
+    print('📝 SignalR: Registering ReceiveAnalysisCompleted...');
     _hubConnection.on('ReceiveAnalysisCompleted', (arguments) {
       print('📨 SignalR: ReceiveAnalysisCompleted event triggered!');
       if (arguments != null && arguments.isNotEmpty) {
