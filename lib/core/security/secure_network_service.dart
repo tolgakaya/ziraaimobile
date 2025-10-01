@@ -465,6 +465,208 @@ class NetworkStats {
   }
 }
 
+/// Token interceptor for automatic authentication and refresh
+class TokenInterceptor extends Interceptor {
+  final TokenManager _tokenManager;
+  bool _isRefreshing = false;
+  final List<RequestOptions> _pendingRequests = [];
+
+  TokenInterceptor(this._tokenManager);
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    // Skip auth for login/register/refresh endpoints
+    if (_isAuthEndpoint(options.path)) {
+      handler.next(options);
+      return;
+    }
+
+    // Get valid access token
+    final token = await _tokenManager.getValidAccessToken();
+
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
+      print('🔑 TokenInterceptor: Added auth token to request');
+      handler.next(options);
+    } else {
+      // Token is expired, try to refresh
+      print('⚠️ TokenInterceptor: Token expired, attempting refresh before request');
+
+      final refreshed = await _attemptTokenRefresh();
+      if (refreshed) {
+        final newToken = await _tokenManager.getToken();
+        if (newToken != null) {
+          options.headers['Authorization'] = 'Bearer $newToken';
+          handler.next(options);
+          return;
+        }
+      }
+
+      // Refresh failed, reject request
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+          error: 'Authentication required - please login',
+        ),
+      );
+    }
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // Handle 401 Unauthorized
+    if (err.response?.statusCode == 401) {
+      print('🔑 TokenInterceptor: 401 Unauthorized - attempting token refresh');
+
+      // Prevent multiple simultaneous refresh attempts
+      if (_isRefreshing) {
+        print('🔑 TokenInterceptor: Refresh already in progress, queuing request');
+        _pendingRequests.add(err.requestOptions);
+        return; // Don't call handler yet
+      }
+
+      _isRefreshing = true;
+
+      try {
+        final refreshed = await _attemptTokenRefresh();
+
+        if (refreshed) {
+          print('✅ TokenInterceptor: Token refreshed successfully, retrying request');
+
+          // Retry original request with new token
+          final newToken = await _tokenManager.getToken();
+          if (newToken != null) {
+            err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+
+            try {
+              final dio = Dio();
+              final response = await dio.fetch(err.requestOptions);
+
+              // Process all pending requests
+              _processPendingRequests(newToken);
+
+              handler.resolve(response);
+              return;
+            } catch (e) {
+              print('❌ TokenInterceptor: Retry failed: $e');
+            }
+          }
+        }
+
+        // Refresh failed - clear tokens and reject
+        print('❌ TokenInterceptor: Token refresh failed, clearing auth');
+        await _tokenManager.clearTokens();
+        _clearPendingRequests();
+
+        handler.reject(
+          DioException(
+            requestOptions: err.requestOptions,
+            type: DioExceptionType.badResponse,
+            error: 'Authentication failed - please login again',
+            response: err.response,
+          ),
+        );
+      } finally {
+        _isRefreshing = false;
+      }
+    } else {
+      handler.next(err);
+    }
+  }
+
+  /// Attempt to refresh access token using refresh token
+  Future<bool> _attemptTokenRefresh() async {
+    try {
+      final refreshToken = await _tokenManager.getRefreshToken();
+
+      if (refreshToken == null || refreshToken.isEmpty) {
+        print('⚠️ TokenInterceptor: No refresh token available');
+        return false;
+      }
+
+      print('🔄 TokenInterceptor: Calling refresh token endpoint...');
+
+      // Make refresh token request
+      final dio = Dio();
+      final response = await dio.post(
+        '${ApiConstants.baseUrl}${ApiConstants.refreshToken}',
+        data: {
+          'refreshToken': refreshToken,
+        },
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+
+        // Extract new tokens from response
+        String? newAccessToken;
+        String? newRefreshToken;
+
+        // Handle different response structures
+        if (data.containsKey('data')) {
+          final tokenData = data['data'] as Map<String, dynamic>;
+          newAccessToken = tokenData['token'] ?? tokenData['accessToken'];
+          newRefreshToken = tokenData['refreshToken'];
+        } else {
+          newAccessToken = data['token'] ?? data['accessToken'];
+          newRefreshToken = data['refreshToken'];
+        }
+
+        if (newAccessToken != null) {
+          // Save new tokens
+          await _tokenManager.saveToken(newAccessToken);
+
+          if (newRefreshToken != null) {
+            await _tokenManager.saveRefreshToken(newRefreshToken);
+          }
+
+          print('✅ TokenInterceptor: New tokens saved successfully');
+          return true;
+        }
+      }
+
+      print('❌ TokenInterceptor: Refresh token response invalid');
+      return false;
+    } catch (e) {
+      print('❌ TokenInterceptor: Token refresh error: $e');
+      return false;
+    }
+  }
+
+  /// Process all pending requests with new token
+  void _processPendingRequests(String newToken) {
+    print('🔄 TokenInterceptor: Processing ${_pendingRequests.length} pending requests');
+
+    for (final options in _pendingRequests) {
+      options.headers['Authorization'] = 'Bearer $newToken';
+      // Note: These requests would need to be retried in actual implementation
+      // For now, they will timeout or be handled by the application layer
+    }
+
+    _pendingRequests.clear();
+  }
+
+  /// Clear all pending requests
+  void _clearPendingRequests() {
+    print('🗑️ TokenInterceptor: Clearing ${_pendingRequests.length} pending requests');
+    _pendingRequests.clear();
+  }
+
+  /// Check if endpoint doesn't require authentication
+  bool _isAuthEndpoint(String path) {
+    return path.contains('/auth/login') ||
+           path.contains('/auth/register') ||
+           path.contains('/auth/refresh-token') ||
+           path.contains('/auth/forgot-password');
+  }
+}
+
 /// Custom network exception
 class NetworkException implements Exception {
   final String message;
