@@ -46,15 +46,24 @@ class PlantAnalysisRepositoryImpl implements PlantAnalysisRepository {
       final token = await _authService.getToken();
       final response = await _apiService.submitAnalysisAsync(request, 'Bearer $token');
 
-      if (response.success && response.data != null) {
+      print('🚀 PlantAnalysisRepository: API Response received');
+      print('   success: ${response.success}');
+      print('   message: ${response.message}');
+      print('   data: ${response.data}');
+      print('   errorCode: ${response.errorCode}');
+
+      // Check if analysis was queued successfully (backend may return success:false but with valid data)
+      if (response.data != null && response.data!.analysisId.isNotEmpty) {
+        print('✅ PlantAnalysisRepository: Analysis queued successfully!');
         // Convert PlantAnalysisAsyncResponse to PlantAnalysisData
         final plantAnalysisData = PlantAnalysisData(
           analysisId: response.data!.analysisId,
           status: response.data!.status,
-          message: 'Analysis submitted successfully',
+          message: response.message ?? 'Analysis submitted successfully',
         );
         return Right(plantAnalysisData);
       } else {
+        print('❌ PlantAnalysisRepository: Analysis submission failed');
         return Left(ServerFailure(
           message: response.message ?? 'Analysis submission failed',
           code: response.errorCode,
