@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../../../core/security/token_manager.dart';
@@ -8,6 +9,7 @@ import '../../../../core/services/signalr_service.dart';
 import '../../../../core/services/signalr_notification_integration.dart';
 import '../../../dashboard/presentation/bloc/notification_bloc.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
+import '../bloc/auth_bloc.dart';
 import 'login_screen.dart';
 
 /// Splash screen with automatic login check
@@ -197,7 +199,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => const LoginScreen(),
+        builder: (context) => BlocProvider(
+          create: (context) => GetIt.instance<AuthBloc>(),
+          child: const LoginScreen(),
+        ),
       ),
     );
   }

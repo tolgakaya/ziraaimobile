@@ -5,6 +5,7 @@ import '../config/api_config.dart';
 import '../network/network_client.dart';
 import '../storage/secure_storage_service.dart';
 import '../storage/storage_service.dart';
+import '../security/token_manager.dart';
 import '../../features/authentication/data/repositories/auth_repository_impl.dart';
 import '../../features/authentication/domain/repositories/auth_repository.dart';
 import '../../features/authentication/presentation/bloc/auth_bloc.dart';
@@ -29,6 +30,11 @@ Future<void> setupMinimalServiceLocator() async {
   
   getIt.registerLazySingleton<SecureStorageService>(
     () => SecureStorageService(),
+  );
+
+  // Token management
+  getIt.registerLazySingleton<TokenManager>(
+    () => TokenManager(getIt<SecureStorageService>()),
   );
 
   // Network
