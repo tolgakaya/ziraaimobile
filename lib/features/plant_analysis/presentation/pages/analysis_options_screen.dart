@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import '../../data/repositories/plant_analysis_repository.dart';
+import '../../domain/repositories/plant_analysis_repository.dart';
 import '../../../../core/services/image_processing_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/error/plant_analysis_exceptions.dart';
