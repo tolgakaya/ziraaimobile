@@ -87,16 +87,21 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
     });
 
     try {
+      // Prepare notes with crop type if selected
+      String? combinedNotes = _notesController.text.trim();
+      if (_selectedPlantType != null) {
+        combinedNotes = combinedNotes.isNotEmpty
+            ? 'Bitki Türü: $_selectedPlantType\n$combinedNotes'
+            : 'Bitki Türü: $_selectedPlantType';
+      }
+
       // Submit analysis request to API
-      final result = await _repository.submitPlantAnalysis(
+      final result = await _repository.submitAnalysis(
         imageFile: widget.selectedImage,
-        cropType: _selectedPlantType,
         location: _locationController.text.trim().isNotEmpty
             ? _locationController.text.trim()
             : null,
-        notes: _notesController.text.trim().isNotEmpty
-            ? _notesController.text.trim()
-            : null,
+        notes: combinedNotes.isNotEmpty ? combinedNotes : null,
       );
 
       if (!mounted) return;
