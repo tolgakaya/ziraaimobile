@@ -1,5 +1,6 @@
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../storage/secure_storage_service.dart';
+import '../config/api_config.dart';
 
 class TokenManager {
   final SecureStorageService _secureStorage;
@@ -103,6 +104,51 @@ class TokenManager {
     } catch (e) {
       print('⚠️ TokenManager: Error getting token time remaining: $e');
       return null;
+    }
+  }
+
+  /// Check if token belongs to current environment
+  /// Returns false if token is for different environment (e.g., production token in staging)
+  bool isTokenForCurrentEnvironment(String token) {
+    try {
+      final decodedToken = JwtDecoder.decode(token);
+      final issuer = decodedToken['iss'] as String?;
+
+      if (issuer == null) {
+        print('⚠️ TokenManager: Token has no issuer claim');
+        return false;
+      }
+
+      // Map environment to expected issuer
+      String expectedIssuer;
+      switch (ApiConfig.environment) {
+        case Environment.production:
+          expectedIssuer = 'ZiraAI_Prod';
+          break;
+        case Environment.staging:
+          expectedIssuer = 'ZiraAI_Staging';
+          break;
+        case Environment.development:
+          expectedIssuer = 'ZiraAI_Dev';
+          break;
+        case Environment.local:
+          expectedIssuer = 'ZiraAI_Local';
+          break;
+      }
+
+      final isValid = issuer == expectedIssuer;
+
+      if (!isValid) {
+        print('⚠️ TokenManager: Token environment mismatch!');
+        print('   Token issuer: $issuer');
+        print('   Expected issuer: $expectedIssuer');
+        print('   Current environment: ${ApiConfig.environment}');
+      }
+
+      return isValid;
+    } catch (e) {
+      print('⚠️ TokenManager: Error checking token environment: $e');
+      return false;
     }
   }
 

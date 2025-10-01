@@ -55,6 +55,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
       print('✅ SplashScreen: Token found, checking validity...');
 
+      // Check if token belongs to current environment
+      if (!tokenManager.isTokenForCurrentEnvironment(token)) {
+        print('❌ SplashScreen: Token is for different environment, clearing tokens');
+        await tokenManager.clearTokens();
+        _navigateToLogin();
+        return;
+      }
+
       // Check if token is valid (not expired)
       if (!tokenManager.isTokenExpired(token)) {
         print('✅ SplashScreen: Token is valid, auto-login successful');

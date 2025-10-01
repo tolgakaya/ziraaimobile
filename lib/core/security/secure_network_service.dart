@@ -517,7 +517,27 @@ class TokenInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     // Handle 401 Unauthorized
     if (err.response?.statusCode == 401) {
-      print('🔑 TokenInterceptor: 401 Unauthorized - attempting token refresh');
+      print('🔑 TokenInterceptor: 401 Unauthorized - checking token validity');
+
+      // Check if token belongs to current environment
+      final token = await _tokenManager.getToken();
+      if (token != null && !_tokenManager.isTokenForCurrentEnvironment(token)) {
+        print('❌ TokenInterceptor: Token is for different environment, clearing tokens');
+        await _tokenManager.clearTokens();
+        _clearPendingRequests();
+
+        handler.reject(
+          DioException(
+            requestOptions: err.requestOptions,
+            type: DioExceptionType.badResponse,
+            error: 'Environment changed - please login again',
+            response: err.response,
+          ),
+        );
+        return;
+      }
+
+      print('🔑 TokenInterceptor: Attempting token refresh');
 
       // Prevent multiple simultaneous refresh attempts
       if (_isRefreshing) {

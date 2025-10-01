@@ -4,7 +4,7 @@
 
 class ApiConfig {
   // Environment configuration
-  static const Environment environment = Environment.staging;
+  static const Environment environment = Environment.production;
   
   // Base URLs for different environments
   static const Map<Environment, String> _baseUrls = {
@@ -57,7 +57,10 @@ class ApiConfig {
   static const String sponsorshipValidate = '/sponsorships/validate';
   static const String sponsorshipList = '/sponsorships/list';
   static const String sponsorshipRedeem = '/sponsorship/redeem';
-  
+
+  // SignalR Hub Endpoint
+  static String get signalRHubUrl => '$baseUrl/hubs/plantanalysis';
+
   // Timeout configurations
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
