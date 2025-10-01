@@ -1,5 +1,4 @@
 import 'package:signalr_netcore/signalr_client.dart';
-import 'dart:developer' as developer;
 import '../models/plant_analysis_notification.dart';
 
 class SignalRService {
@@ -18,14 +17,15 @@ class SignalRService {
 
   /// Initialize SignalR connection with JWT token
   Future<void> initialize(String jwtToken) async {
+    print('🔌 SignalR: Starting initialization...');
     if (_isConnected && _currentToken == jwtToken) {
-      developer.log('SignalR already connected with same token', name: 'SignalRService');
+      print('✅ SignalR: Already connected with same token');
       return;
     }
 
     // Disconnect existing connection if token changed
     if (_isConnected && _currentToken != jwtToken) {
-      developer.log('Token changed, reconnecting SignalR', name: 'SignalRService');
+      print('🔄 SignalR: Token changed, reconnecting...');
       await disconnect();
     }
 
@@ -54,83 +54,66 @@ class SignalRService {
       // Connection lifecycle handlers
       _hubConnection.onclose(({Exception? error}) {
         _isConnected = false;
-        developer.log(
-          'SignalR connection closed: $error',
-          name: 'SignalRService',
-          error: error,
-        );
+        print('❌ SignalR: Connection closed: $error');
       });
 
       _hubConnection.onreconnecting(({Exception? error}) {
-        developer.log(
-          'SignalR reconnecting...',
-          name: 'SignalRService',
-        );
+        print('🔄 SignalR: Reconnecting...');
       });
 
       _hubConnection.onreconnected(({String? connectionId}) {
         _isConnected = true;
-        developer.log(
-          'SignalR reconnected: $connectionId',
-          name: 'SignalRService',
-        );
+        print('✅ SignalR: Reconnected: $connectionId');
       });
 
+      print('🔌 SignalR: Starting connection...');
       // Start connection
       await _hubConnection.start();
       _isConnected = true;
 
-      developer.log(
-        '✅ SignalR connected successfully',
-        name: 'SignalRService',
-      );
+      print('✅ SignalR: Connected successfully!');
 
       // Test ping
+      print('🏓 SignalR: Sending test ping...');
       await ping();
-    } catch (e) {
-      developer.log(
-        '❌ SignalR connection failed: $e',
-        name: 'SignalRService',
-        error: e,
-      );
+    } catch (e, stackTrace) {
+      print('❌ SignalR: Connection failed: $e');
+      print('❌ SignalR: Stack trace: $stackTrace');
       rethrow;
     }
   }
 
   /// Register server → client event handlers
   void _registerEventHandlers() {
+    print('📡 SignalR: Registering event handlers...');
+    
     // Analysis completed event
     _hubConnection.on('ReceiveAnalysisCompleted', (arguments) {
+      print('📨 SignalR: ReceiveAnalysisCompleted event triggered!');
       if (arguments != null && arguments.isNotEmpty) {
         final notificationData = arguments[0] as Map<String, dynamic>;
-        developer.log(
-          '📨 Analysis completed notification received: ${notificationData['analysisId']}',
-          name: 'SignalRService',
-        );
+        print('📨 SignalR: Analysis completed notification received: ${notificationData['analysisId']}');
+        print('📨 SignalR: Full notification data: $notificationData');
 
         try {
           final notification = PlantAnalysisNotification.fromJson(notificationData);
+          print('✅ SignalR: Notification parsed successfully, calling callback...');
           onAnalysisCompleted?.call(notification);
-        } catch (e) {
-          developer.log(
-            'Error parsing notification: $e',
-            name: 'SignalRService',
-            error: e,
-          );
+        } catch (e, stackTrace) {
+          print('❌ SignalR: Error parsing notification: $e');
+          print('❌ SignalR: Stack trace: $stackTrace');
         }
       }
     });
 
     // Analysis failed event
     _hubConnection.on('ReceiveAnalysisFailed', (arguments) {
+      print('❌ SignalR: ReceiveAnalysisFailed event triggered!');
       if (arguments != null && arguments.length >= 2) {
         final analysisId = arguments[0] as int;
         final errorMessage = arguments[1] as String;
 
-        developer.log(
-          '❌ Analysis failed notification: $analysisId - $errorMessage',
-          name: 'SignalRService',
-        );
+        print('❌ SignalR: Analysis failed notification: $analysisId - $errorMessage');
 
         onAnalysisFailed?.call(analysisId, errorMessage);
       }
@@ -140,9 +123,13 @@ class SignalRService {
     _hubConnection.on('Pong', (arguments) {
       if (arguments != null && arguments.isNotEmpty) {
         final timestamp = arguments[0];
-        developer.log('🏓 Pong received: $timestamp', name: 'SignalRService');
+        print('🏓 SignalR: Pong received: $timestamp');
+      } else {
+        print('🏓 SignalR: Pong received (no timestamp)');
       }
     });
+    
+    print('✅ SignalR: Event handlers registered successfully!');
   }
 
   /// Test connection with ping
@@ -153,9 +140,9 @@ class SignalRService {
 
     try {
       await _hubConnection.invoke('Ping');
-      developer.log('Ping sent successfully', name: 'SignalRService');
+      print('✅ SignalR: Ping sent successfully');
     } catch (e) {
-      developer.log('Ping failed: $e', name: 'SignalRService', error: e);
+      print('❌ SignalR: Ping failed: $e');
       rethrow;
     }
   }
@@ -168,16 +155,9 @@ class SignalRService {
 
     try {
       await _hubConnection.invoke('SubscribeToAnalysis', args: [analysisId]);
-      developer.log(
-        'Subscribed to analysis: $analysisId',
-        name: 'SignalRService',
-      );
+      print('✅ SignalR: Subscribed to analysis: $analysisId');
     } catch (e) {
-      developer.log(
-        'Failed to subscribe to analysis $analysisId: $e',
-        name: 'SignalRService',
-        error: e,
-      );
+      print('❌ SignalR: Failed to subscribe to analysis $analysisId: $e');
       rethrow;
     }
   }
@@ -190,16 +170,9 @@ class SignalRService {
 
     try {
       await _hubConnection.invoke('UnsubscribeFromAnalysis', args: [analysisId]);
-      developer.log(
-        'Unsubscribed from analysis: $analysisId',
-        name: 'SignalRService',
-      );
+      print('✅ SignalR: Unsubscribed from analysis: $analysisId');
     } catch (e) {
-      developer.log(
-        'Failed to unsubscribe from analysis $analysisId: $e',
-        name: 'SignalRService',
-        error: e,
-      );
+      print('❌ SignalR: Failed to unsubscribe from analysis $analysisId: $e');
       rethrow;
     }
   }
@@ -212,13 +185,9 @@ class SignalRService {
       await _hubConnection.stop();
       _isConnected = false;
       _currentToken = null;
-      developer.log('SignalR disconnected', name: 'SignalRService');
+      print('🔌 SignalR: Disconnected');
     } catch (e) {
-      developer.log(
-        'Error disconnecting SignalR: $e',
-        name: 'SignalRService',
-        error: e,
-      );
+      print('❌ SignalR: Error disconnecting: $e');
     }
   }
 

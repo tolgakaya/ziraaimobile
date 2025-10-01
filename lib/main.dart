@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:get_it/get_it.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app/app_router.dart';
 import 'app/app_theme.dart';
@@ -13,6 +13,7 @@ import 'core/services/signalr_service.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/signalr_notification_integration.dart';
 import 'features/dashboard/presentation/bloc/notification_bloc.dart';
+import 'features/dashboard/presentation/bloc/notification_event.dart';
 import 'dart:developer' as developer;
 
 void main() async {
@@ -86,6 +87,10 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
     if (_signalRIntegration == null) {
       // Get NotificationBloc from GetIt
       final notificationBloc = getIt<NotificationBloc>();
+      
+      // Initialize bloc by loading notifications
+      notificationBloc.add(const LoadNotifications());
+      
       _signalRIntegration = SignalRNotificationIntegration(
         signalRService: _signalRService,
         notificationBloc: notificationBloc,
@@ -141,6 +146,11 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
 
         // Localization with security-aware messages
         locale: const Locale('tr', 'TR'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         supportedLocales: const [
           Locale('tr', 'TR'), // Turkish (Primary for ZiraAI)
           Locale('en', 'US'), // English

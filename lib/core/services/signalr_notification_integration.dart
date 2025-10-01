@@ -1,4 +1,3 @@
-import 'dart:developer' as developer;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../features/dashboard/presentation/bloc/notification_bloc.dart';
 import '../../features/dashboard/presentation/bloc/notification_event.dart';
@@ -19,28 +18,26 @@ class SignalRNotificationIntegration {
 
   /// Setup SignalR event handlers to update NotificationBloc
   void setupEventHandlers() {
+    print('🔗 SignalRIntegration: Setting up event handlers...');
     if (_isInitialized) {
-      developer.log('SignalR event handlers already initialized', name: 'SignalRIntegration');
+      print('⚠️ SignalRIntegration: Event handlers already initialized');
       return;
     }
 
     // Handle analysis completed notifications
     _signalRService.onAnalysisCompleted = (notification) {
-      developer.log(
-        '📨 Received analysis completed: ${notification.analysisId}',
-        name: 'SignalRIntegration',
-      );
+      print('🎉🎉🎉 SignalRIntegration: CALLBACK TRIGGERED! Analysis completed: ${notification.analysisId}');
+      print('🎉 SignalRIntegration: Notification data: $notification');
 
       // Add notification to bloc
+      print('🎉 SignalRIntegration: Adding notification to bloc...');
       _notificationBloc.add(AddNotification(notification));
+      print('🎉 SignalRIntegration: Notification added to bloc successfully!');
     };
 
     // Handle analysis failed notifications
     _signalRService.onAnalysisFailed = (analysisId, errorMessage) {
-      developer.log(
-        '❌ Received analysis failed: $analysisId - $errorMessage',
-        name: 'SignalRIntegration',
-      );
+      print('❌ SignalRIntegration: CALLBACK TRIGGERED! Analysis failed: $analysisId - $errorMessage');
 
       // Create a failed notification
       final notification = PlantAnalysisNotification(
@@ -52,18 +49,19 @@ class SignalRNotificationIntegration {
         primaryConcern: 'Analiz başarısız oldu',
       );
 
+      print('❌ SignalRIntegration: Adding failed notification to bloc...');
       _notificationBloc.add(AddNotification(notification));
     };
 
     _isInitialized = true;
-    developer.log('SignalR event handlers setup complete', name: 'SignalRIntegration');
+    print('✅ SignalRIntegration: Event handlers setup complete!');
   }
 
   /// Clear event handlers
   void clearEventHandlers() {
     _signalRService.clearHandlers();
     _isInitialized = false;
-    developer.log('SignalR event handlers cleared', name: 'SignalRIntegration');
+    print('🔌 SignalRIntegration: Event handlers cleared');
   }
 
   /// Check if handlers are initialized

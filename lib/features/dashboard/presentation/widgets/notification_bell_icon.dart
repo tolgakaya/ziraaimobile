@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
 import '../bloc/notification_bloc.dart';
 import '../bloc/notification_state.dart';
+import '../pages/notifications_page.dart';
 
 class NotificationBellIcon extends StatelessWidget {
   const NotificationBellIcon({Key? key}) : super(key: key);
@@ -61,7 +61,11 @@ class NotificationBellIcon extends StatelessWidget {
           ),
           onPressed: () {
             // Navigate to notification list screen
-            context.push('/notifications');
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const NotificationsPage(),
+              ),
+            );
           },
           tooltip: 'Bildirimler',
         );

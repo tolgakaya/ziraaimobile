@@ -18,10 +18,6 @@ import '../../features/dashboard/presentation/bloc/notification_event.dart';
 final GetIt getIt = GetIt.instance;
 
 Future<void> setupSimpleDI() async {
-  // Notification bloc - Singleton
-  getIt.registerLazySingleton<NotificationBloc>(
-    () => NotificationBloc()..add(const LoadNotifications()),
-  );
   // External dependencies
   final sharedPreferences = await SharedPreferences.getInstance();
   getIt.registerSingleton<SharedPreferences>(sharedPreferences);
@@ -64,6 +60,11 @@ Future<void> setupSimpleDI() async {
       getIt<PlantAnalysisApiService>(),
       getIt<AuthService>(),
     ),
+  );
+
+  // Notification bloc - Singleton (registered after all dependencies)
+  getIt.registerLazySingleton<NotificationBloc>(
+    () => NotificationBloc(),
   );
 
   // Auth bloc

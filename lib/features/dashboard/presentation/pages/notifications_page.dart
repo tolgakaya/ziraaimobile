@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/models/plant_analysis_notification.dart';
 import '../bloc/notification_bloc.dart';
 import '../bloc/notification_event.dart';
 import '../bloc/notification_state.dart';
+import '../../../plant_analysis/presentation/screens/analysis_detail_screen.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({Key? key}) : super(key: key);
@@ -146,7 +147,11 @@ class NotificationsPage extends StatelessWidget {
     }
 
     // Navigate to analysis detail
-    context.push('/plant-analysis/detail/${notification.analysisId}');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AnalysisDetailScreen(analysisId: notification.analysisId),
+      ),
+    );
   }
 
   void _showClearAllDialog(BuildContext context) {
