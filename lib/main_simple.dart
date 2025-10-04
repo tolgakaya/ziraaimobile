@@ -6,6 +6,8 @@ import 'core/utils/minimal_service_locator.dart';
 import 'features/authentication/presentation/bloc/auth_bloc.dart';
 import 'features/authentication/presentation/screens/splash_screen.dart';
 import 'core/services/signalr_service.dart';
+import 'core/services/deep_link_service.dart';
+import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,12 +24,24 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final SignalRService _signalRService = SignalRService();
+  final DeepLinkService _deepLinkService = DeepLinkService();
+  StreamSubscription<String>? _deepLinkSubscription;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     // Don't initialize SignalR here - SplashScreen handles auto-login and SignalR
+
+    // Initialize deep link service
+    _deepLinkService.initialize();
+    _deepLinkSubscription = _deepLinkService.deepLinkStream?.listen((link) {
+      print('📱 Main: Deep link received: $link');
+      // Handle deep link in current context
+      if (mounted) {
+        DeepLinkService.handleDeepLink(context, link);
+      }
+    });
   }
 
   @override
