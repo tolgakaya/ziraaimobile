@@ -12,9 +12,13 @@ class CreditBreakdownResponse {
   @JsonKey(name: 'success')
   final bool success;
 
+  @JsonKey(name: 'message')
+  final String? message;
+
   CreditBreakdownResponse({
     required this.data,
     required this.success,
+    this.message,
   });
 
   factory CreditBreakdownResponse.fromJson(Map<String, dynamic> json) =>

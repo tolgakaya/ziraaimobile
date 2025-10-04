@@ -150,9 +150,9 @@ class ReferralBloc extends Bloc<ReferralEvent, ReferralState> {
     }
 
     // All requests succeeded, extract data
-    final stats = statsResult.getOrElse(() => throw Exception());
-    final credits = creditsResult.getOrElse(() => throw Exception());
-    final rewards = rewardsResult.getOrElse(() => throw Exception());
+    final stats = statsResult.getOrElse(() => throw Exception()) as ReferralStats;
+    final credits = creditsResult.getOrElse(() => throw Exception()) as CreditBreakdown;
+    final rewards = rewardsResult.getOrElse(() => throw Exception()) as List<ReferralReward>;
 
     emit(ReferralDataLoaded(
       stats: stats,

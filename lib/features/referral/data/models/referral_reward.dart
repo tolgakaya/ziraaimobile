@@ -12,9 +12,13 @@ class ReferralRewardsResponse {
   @JsonKey(name: 'success')
   final bool success;
 
+  @JsonKey(name: 'message')
+  final String? message;
+
   ReferralRewardsResponse({
     required this.data,
     required this.success,
+    this.message,
   });
 
   factory ReferralRewardsResponse.fromJson(Map<String, dynamic> json) =>
