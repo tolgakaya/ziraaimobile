@@ -15,6 +15,11 @@ import '../../features/plant_analysis/data/services/plant_analysis_api_service.d
 import '../services/auth_service.dart';
 import '../../features/subscription/services/subscription_service.dart';
 import '../../features/dashboard/presentation/bloc/notification_bloc.dart';
+import '../../features/authentication/data/services/phone_auth_api_service.dart';
+import '../../features/referral/data/services/referral_api_service.dart';
+import '../../features/referral/domain/repositories/referral_repository.dart';
+import '../../features/referral/data/repositories/referral_repository_impl.dart';
+import '../../features/referral/presentation/bloc/referral_bloc.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -59,7 +64,30 @@ Future<void> setupMinimalServiceLocator() async {
     () => NetworkClient(getIt<Dio>()),
   );
 
-  // Repositories - removed, will use injectable auto-registration
+  // API Services
+  getIt.registerLazySingleton<PhoneAuthApiService>(
+    () => PhoneAuthApiService(getIt<Dio>()),
+  );
+
+  getIt.registerLazySingleton<ReferralApiService>(
+    () => ReferralApiService(getIt<Dio>()),
+  );
+
+  // Repositories
+  getIt.registerLazySingleton<AuthRepository>(
+    () => AuthRepositoryImpl(
+      getIt<NetworkClient>(),
+      getIt<SecureStorageService>(),
+      getIt<PhoneAuthApiService>(),
+    ),
+  );
+
+  getIt.registerLazySingleton<ReferralRepository>(
+    () => ReferralRepositoryImpl(
+      getIt<ReferralApiService>(),
+      getIt<SecureStorageService>(),
+    ),
+  );
 
   // Auth service
   getIt.registerLazySingleton<AuthService>(() => AuthServiceImpl(getIt()));
@@ -86,6 +114,10 @@ Future<void> setupMinimalServiceLocator() async {
   // BLoCs
   getIt.registerFactory<AuthBloc>(
     () => AuthBloc(getIt<AuthRepository>()),
+  );
+
+  getIt.registerFactory<ReferralBloc>(
+    () => ReferralBloc(getIt<ReferralRepository>()),
   );
 
   // Notification bloc - Singleton
