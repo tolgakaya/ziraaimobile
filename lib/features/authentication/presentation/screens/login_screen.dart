@@ -8,6 +8,7 @@ import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import 'register_screen.dart';
+import 'phone_auth/phone_number_screen.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../../../../core/services/signalr_service.dart';
 import '../../../../core/services/signalr_notification_integration.dart';
@@ -491,6 +492,44 @@ class _LoginScreenState extends State<LoginScreen> {
         // Social Login Buttons
         Row(
           children: [
+            // Phone Button - Primary alternative login
+            Expanded(
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF17CF17).withOpacity(0.1),
+                  border: Border.all(color: const Color(0xFF17CF17)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BlocProvider(
+                            create: (context) => GetIt.instance<AuthBloc>(),
+                            child: const PhoneNumberScreen(isRegistration: false),
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Center(
+                      child: Icon(
+                        Icons.phone_android,
+                        size: 24,
+                        color: Color(0xFF17CF17),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
             // GitHub Button (from design)
             Expanded(
               child: Container(
@@ -517,9 +556,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(width: 12),
-            
+
             // Google Button (from design)
             Expanded(
               child: Container(
