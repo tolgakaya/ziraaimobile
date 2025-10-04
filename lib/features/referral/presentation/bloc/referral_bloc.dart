@@ -1,6 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import '../../domain/repositories/referral_repository.dart';
+import '../../data/models/referral_stats.dart';
+import '../../data/models/credit_breakdown.dart';
+import '../../data/models/referral_reward.dart';
 import 'referral_event.dart';
 import 'referral_state.dart';
 
