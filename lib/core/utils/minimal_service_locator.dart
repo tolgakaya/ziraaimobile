@@ -59,13 +59,7 @@ Future<void> setupMinimalServiceLocator() async {
     () => NetworkClient(getIt<Dio>()),
   );
 
-  // Repositories
-  getIt.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(
-      getIt<NetworkClient>(),
-      getIt<SecureStorageService>(),
-    ),
-  );
+  // Repositories - removed, will use injectable auto-registration
 
   // Auth service
   getIt.registerLazySingleton<AuthService>(() => AuthServiceImpl(getIt()));

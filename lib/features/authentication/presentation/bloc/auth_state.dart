@@ -46,3 +46,20 @@ class AuthFailure extends AuthState {
   @override
   List<Object?> get props => [message];
 }
+
+// Phone OTP Authentication States
+
+class PhoneOtpSent extends AuthState {
+  final String mobilePhone;
+  final String? otpCode; // In dev environment, OTP is returned in response
+  final bool isRegistration; // true for registration, false for login
+
+  const PhoneOtpSent({
+    required this.mobilePhone,
+    this.otpCode,
+    required this.isRegistration,
+  });
+
+  @override
+  List<Object?> get props => [mobilePhone, otpCode, isRegistration];
+}

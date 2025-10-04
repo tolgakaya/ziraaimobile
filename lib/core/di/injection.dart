@@ -114,13 +114,8 @@ Future<void> configureDependencies() async {
     () => NetworkClient(getIt<Dio>()),
   );
 
-  // Repositories
-  getIt.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(
-      getIt<NetworkClient>(),
-      getIt<SecureStorageService>(),
-    ),
-  );
+  // Repositories - will be auto-registered by injectable
+  // Manual registration removed to use @injectable annotation
 
   // BLoCs
   getIt.registerFactory<AuthBloc>(

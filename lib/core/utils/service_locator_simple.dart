@@ -74,13 +74,7 @@ Future<void> setupServiceLocator() async {
     () => NetworkClient(getIt<Dio>()),
   );
 
-  // Repositories
-  getIt.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(
-      getIt<NetworkClient>(),
-      getIt<SecureStorageService>(),
-    ),
-  );
+  // Repositories - removed, will use injectable auto-registration
 
   // BLoCs
   getIt.registerFactory<AuthBloc>(

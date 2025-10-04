@@ -106,8 +106,7 @@ void _initSecurity() {
 }
 
 void _initAuth() {
-  // Repository
-  sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(sl(), sl()));
+  // Repository - removed, will use injectable auto-registration
 
   // Use cases
   sl.registerLazySingleton(() => LoginUser(sl()));
