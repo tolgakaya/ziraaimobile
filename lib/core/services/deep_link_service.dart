@@ -35,6 +35,9 @@ class DeepLinkService {
       }
     } on PlatformException catch (e) {
       print('❌ DeepLink: Error getting initial link: ${e.message}');
+    } on MissingPluginException catch (e) {
+      print('⚠️ DeepLink: Native implementation not available yet: ${e.message}');
+      // This is expected - native implementation will be added later
     } catch (e) {
       print('❌ DeepLink: Unexpected error: $e');
     }
