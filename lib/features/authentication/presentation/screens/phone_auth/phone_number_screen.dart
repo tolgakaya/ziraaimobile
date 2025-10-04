@@ -9,11 +9,13 @@ import 'otp_verification_screen.dart';
 class PhoneNumberScreen extends StatefulWidget {
   final bool isRegistration;
   final String? referralCode;
+  final String? initialPhone;
 
   const PhoneNumberScreen({
     super.key,
     this.isRegistration = false,
     this.referralCode,
+    this.initialPhone,
   });
 
   @override
@@ -28,8 +30,8 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
   @override
   void initState() {
     super.initState();
-    // Default test phone for development
-    _phoneController.text = '+905551234567';
+    // Use initialPhone if provided, otherwise use default test phone
+    _phoneController.text = widget.initialPhone ?? '+905551234567';
   }
 
   @override
