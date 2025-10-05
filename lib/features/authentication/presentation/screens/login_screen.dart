@@ -8,6 +8,8 @@ import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import 'register_screen.dart';
+import 'phone_auth/phone_number_screen.dart';
+import 'phone_auth/otp_verification_screen.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../../../../core/services/signalr_service.dart';
 import '../../../../core/services/signalr_notification_integration.dart';
@@ -25,40 +27,65 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+  final _phoneController = TextEditingController();
+
   bool _rememberMe = false;
   bool _obscurePassword = true;
   String? _emailError;
   String? _passwordError;
+  String? _phoneError;
+
+  // Login mode: 'phone' or 'email' - DEFAULT is PHONE
+  String _loginMode = 'phone';
 
   @override
   void initState() {
     super.initState();
-    // Default test credentials for development
+    // Default test credentials for development (only for email mode)
     _emailController.text = 'farmer61@example.com';
     _passwordController.text = 'SecurePass123!';
+    // Default test phone for development
+    _phoneController.text = '+905551234567';
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
   void _validateAndLogin() {
-    setState(() {
-      _emailError = _validateEmail(_emailController.text);
-      _passwordError = _validatePassword(_passwordController.text);
-    });
+    if (_loginMode == 'phone') {
+      // Validate phone and request OTP directly
+      setState(() {
+        _phoneError = _validatePhone(_phoneController.text);
+      });
 
-    if (_emailError == null && _passwordError == null) {
-      context.read<AuthBloc>().add(
-        AuthLoginRequested(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        ),
-      );
+      if (_phoneError == null) {
+        final phone = _phoneController.text.trim();
+
+        // Dispatch OTP request event
+        context.read<AuthBloc>().add(
+          PhoneLoginOtpRequested(mobilePhone: phone),
+        );
+      }
+    } else {
+      // Email/password login
+      setState(() {
+        _emailError = _validateEmail(_emailController.text);
+        _passwordError = _validatePassword(_passwordController.text);
+      });
+
+      if (_emailError == null && _passwordError == null) {
+        context.read<AuthBloc>().add(
+          AuthLoginRequested(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          ),
+        );
+      }
     }
   }
 
@@ -83,6 +110,25 @@ class _LoginScreenState extends State<LoginScreen> {
     if (value.length < 6) {
       return 'Password must be at least 6 characters';
     }
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Telefon numarası gerekli';
+    }
+
+    // Remove spaces, dashes, parentheses
+    final cleanPhone = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+
+    // Turkish phone validation: +90 5XX XXX XX XX or 05XX XXX XX XX
+    final withCountryCode = RegExp(r'^\+90[5][0-9]{9}$');
+    final withoutCountryCode = RegExp(r'^0[5][0-9]{9}$');
+
+    if (!withCountryCode.hasMatch(cleanPhone) && !withoutCountryCode.hasMatch(cleanPhone)) {
+      return 'Geçerli bir Türk telefon numarası girin';
+    }
+
     return null;
   }
 
@@ -144,6 +190,22 @@ class _LoginScreenState extends State<LoginScreen> {
               builder: (context) => const FarmerDashboardPage(),
             ),
           );
+        } else if (state is PhoneOtpSent) {
+          // Navigate to OTP verification screen
+          final authBloc = GetIt.instance<AuthBloc>();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: authBloc,
+                child: OtpVerificationScreen(
+                  mobilePhone: state.mobilePhone,
+                  isRegistration: state.isRegistration,
+                  developmentOtpCode: state.otpCode,
+                ),
+              ),
+            ),
+          );
         } else if (state is AuthError) {
           _showErrorSnackBar(state.message);
         }
@@ -166,12 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   // Form Section
                   _buildForm(),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Social Login Section
-                  _buildSocialLogin(),
-                  
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -232,155 +289,86 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Email/Phone Input - Matching design
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Color(0xFF111827),
-              ),
-              decoration: InputDecoration(
-                hintText: 'Email or Phone',
-                hintStyle: const TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontSize: 16,
-                ),
-                prefixIcon: const Icon(
-                  Icons.alternate_email,
-                  color: Color(0xFF9CA3AF),
-                  size: 20,
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                errorText: _emailError,
-              ),
-              onChanged: (value) {
-                if (_emailError != null) {
-                  setState(() {
-                    _emailError = _validateEmail(value);
-                  });
-                }
-              },
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Password Input - Matching design
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: TextFormField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Color(0xFF111827),
-              ),
-              decoration: InputDecoration(
-                hintText: 'Password',
-                hintStyle: const TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontSize: 16,
-                ),
-                prefixIcon: const Icon(
-                  Icons.lock_outline,
-                  color: Color(0xFF9CA3AF),
-                  size: 20,
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                errorText: _passwordError,
-              ),
-              onChanged: (value) {
-                if (_passwordError != null) {
-                  setState(() {
-                    _passwordError = _validatePassword(value);
-                  });
-                }
-              },
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Remember Me and Forgot Password Row
+          // Login Mode Switcher
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Remember Me Checkbox
-              SizedBox(
-                height: 24,
-                width: 24,
-                child: Checkbox(
-                  value: _rememberMe,
-                  onChanged: (value) {
-                    setState(() {
-                      _rememberMe = value ?? false;
-                    });
-                  },
-                  activeColor: const Color(0xFF17CF17),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _rememberMe = !_rememberMe;
-                  });
-                },
-                child: const Text(
-                  'Remember me',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF374151),
-                  ),
-                ),
-              ),
-              
-              const Spacer(),
-              
-              // Forgot Password Link
-              GestureDetector(
-                onTap: () {
-                  // TODO: Navigate to forgot password
-                  _showErrorSnackBar('Forgot password functionality pending...');
-                },
-                child: const Text(
-                  'Forgot Password?',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF17CF17),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+              _buildModeButton('Telefon ile', 'phone'),
+              const SizedBox(width: 12),
+              _buildModeButton('Email ile', 'email'),
             ],
           ),
-          
+
+          const SizedBox(height: 24),
+
+          // Conditional inputs based on login mode
+          if (_loginMode == 'phone') ..._buildPhoneInput()
+          else ..._buildEmailPasswordInputs(),
+
+          const SizedBox(height: 16),
+
+          // Remember Me and Forgot Password Row (only for email mode)
+          if (_loginMode == 'email')
+            Row(
+              children: [
+                // Remember Me Checkbox
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) {
+                      setState(() {
+                        _rememberMe = value ?? false;
+                      });
+                    },
+                    activeColor: const Color(0xFF17CF17),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _rememberMe = !_rememberMe;
+                    });
+                  },
+                  child: const Text(
+                    'Remember me',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
+                ),
+
+                const Spacer(),
+
+                // Forgot Password Link
+                GestureDetector(
+                  onTap: () {
+                    // TODO: Navigate to forgot password
+                    _showErrorSnackBar('Forgot password functionality pending...');
+                  },
+                  child: const Text(
+                    'Forgot Password?',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF17CF17),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
           const SizedBox(height: 32),
-          
+
           // Login Button
           BlocBuilder<AuthBloc, AuthState>(
             builder: (context, state) {
               final isLoading = state is AuthLoading;
-              
+
               return Container(
                 width: double.infinity,
                 height: 52,
@@ -410,9 +398,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text(
-                              'Login',
-                              style: TextStyle(
+                          : Text(
+                              _loginMode == 'phone' ? 'Kod Gönder' : 'Login',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -424,9 +412,9 @@ class _LoginScreenState extends State<LoginScreen> {
               );
             },
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Register Link
           Center(
             child: RichText(
@@ -465,90 +453,168 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSocialLogin() {
-    return Column(
-      children: [
-        // Divider with "Or continue with"
-        Row(
-          children: [
-            const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Or continue with',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ),
-            const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
-          ],
+  Widget _buildModeButton(String label, String mode) {
+    final isActive = _loginMode == mode;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _loginMode = mode;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF17CF17) : Colors.white,
+          border: Border.all(
+            color: isActive ? const Color(0xFF17CF17) : const Color(0xFFE5E7EB),
+          ),
+          borderRadius: BorderRadius.circular(8),
         ),
-        
-        const SizedBox(height: 20),
-        
-        // Social Login Buttons
-        Row(
-          children: [
-            // GitHub Button (from design)
-            Expanded(
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      _showErrorSnackBar('GitHub login not implemented');
-                    },
-                    child: const Center(
-                      child: Icon(
-                        Icons.g_mobiledata, // GitHub-like icon
-                        size: 24,
-                        color: Color(0xFF374151),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            
-            const SizedBox(width: 12),
-            
-            // Google Button (from design)
-            Expanded(
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      _showErrorSnackBar('Google login not implemented');
-                    },
-                    child: const Center(
-                      child: Icon(
-                        Icons.g_translate, // Google-like icon
-                        size: 24,
-                        color: Color(0xFF374151),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: isActive ? Colors.white : const Color(0xFF6B7280),
+          ),
         ),
-      ],
+      ),
     );
   }
+
+  List<Widget> _buildPhoneInput() {
+    return [
+      Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: TextFormField(
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF111827),
+          ),
+          decoration: InputDecoration(
+            hintText: '+90 5XX XXX XX XX',
+            hintStyle: const TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 16,
+            ),
+            prefixIcon: const Icon(
+              Icons.phone_android,
+              color: Color(0xFF9CA3AF),
+              size: 20,
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            errorText: _phoneError,
+          ),
+          onChanged: (value) {
+            if (_phoneError != null) {
+              setState(() {
+                _phoneError = _validatePhone(value);
+              });
+            }
+          },
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildEmailPasswordInputs() {
+    return [
+      // Email Input
+      Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: TextFormField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF111827),
+          ),
+          decoration: InputDecoration(
+            hintText: 'Email',
+            hintStyle: const TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 16,
+            ),
+            prefixIcon: const Icon(
+              Icons.alternate_email,
+              color: Color(0xFF9CA3AF),
+              size: 20,
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            errorText: _emailError,
+          ),
+          onChanged: (value) {
+            if (_emailError != null) {
+              setState(() {
+                _emailError = _validateEmail(value);
+              });
+            }
+          },
+        ),
+      ),
+
+      const SizedBox(height: 16),
+
+      // Password Input
+      Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: TextFormField(
+          controller: _passwordController,
+          obscureText: _obscurePassword,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF111827),
+          ),
+          decoration: InputDecoration(
+            hintText: 'Password',
+            hintStyle: const TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 16,
+            ),
+            prefixIcon: const Icon(
+              Icons.lock_outline,
+              color: Color(0xFF9CA3AF),
+              size: 20,
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            errorText: _passwordError,
+          ),
+          onChanged: (value) {
+            if (_passwordError != null) {
+              setState(() {
+                _passwordError = _validatePassword(value);
+              });
+            }
+          },
+        ),
+      ),
+    ];
+  }
+
 }

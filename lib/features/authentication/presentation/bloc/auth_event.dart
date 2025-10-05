@@ -64,3 +64,55 @@ class AuthResetPasswordRequested extends AuthEvent {
   @override
   List<Object?> get props => [email];
 }
+
+// Phone-based OTP Authentication Events
+
+class PhoneLoginOtpRequested extends AuthEvent {
+  final String mobilePhone;
+
+  const PhoneLoginOtpRequested({required this.mobilePhone});
+
+  @override
+  List<Object?> get props => [mobilePhone];
+}
+
+class PhoneLoginOtpVerifyRequested extends AuthEvent {
+  final String mobilePhone;
+  final int code;
+
+  const PhoneLoginOtpVerifyRequested({
+    required this.mobilePhone,
+    required this.code,
+  });
+
+  @override
+  List<Object?> get props => [mobilePhone, code];
+}
+
+class PhoneRegisterOtpRequested extends AuthEvent {
+  final String mobilePhone;
+  final String? referralCode;
+
+  const PhoneRegisterOtpRequested({
+    required this.mobilePhone,
+    this.referralCode,
+  });
+
+  @override
+  List<Object?> get props => [mobilePhone, referralCode];
+}
+
+class PhoneRegisterOtpVerifyRequested extends AuthEvent {
+  final String mobilePhone;
+  final int code;
+  final String? referralCode;
+
+  const PhoneRegisterOtpVerifyRequested({
+    required this.mobilePhone,
+    required this.code,
+    this.referralCode,
+  });
+
+  @override
+  List<Object?> get props => [mobilePhone, code, referralCode];
+}

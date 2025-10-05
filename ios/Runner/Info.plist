@@ -45,5 +45,25 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Deep linking configuration -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.ziraai.mobile</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ziraai</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Contacts permission for Referral System -->
+	<key>NSContactsUsageDescription</key>
+	<string>ZiraAI arkadaşlarınızı davet etmek için rehberinize erişmek istiyor</string>
+	<!-- Universal Links for referral system -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
 </dict>
 </plist>

@@ -45,8 +45,7 @@ Future<void> setupSimpleDI() async {
   // Secure storage
   getIt.registerLazySingleton<SecureStorageService>(() => SecureStorageService());
 
-  // Auth repository
-  getIt.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(getIt(), getIt()));
+  // Auth repository - removed, will use injectable auto-registration
 
   // Auth service
   getIt.registerLazySingleton<AuthService>(() => AuthServiceImpl(getIt()));

@@ -13,6 +13,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthCheckStatusRequested>(_onCheckStatusRequested);
+    // Phone OTP authentication
+    on<PhoneLoginOtpRequested>(_onPhoneLoginOtpRequested);
+    on<PhoneLoginOtpVerifyRequested>(_onPhoneLoginOtpVerifyRequested);
+    on<PhoneRegisterOtpRequested>(_onPhoneRegisterOtpRequested);
+    on<PhoneRegisterOtpVerifyRequested>(_onPhoneRegisterOtpVerifyRequested);
   }
 
   Future<void> _onLoginRequested(
@@ -103,6 +108,104 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         } else {
           emit(const AuthInitial());
         }
+      },
+    );
+  }
+
+  // Phone OTP Authentication Handlers
+
+  Future<void> _onPhoneLoginOtpRequested(
+    PhoneLoginOtpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _authRepository.requestPhoneLoginOtp(
+      mobilePhone: event.mobilePhone,
+    );
+
+    result.fold(
+      (failure) {
+        emit(AuthError(message: failure.message ?? 'Failed to send OTP'));
+      },
+      (otpCode) {
+        // OTP sent successfully
+        // In dev environment, otpCode will contain the actual code
+        // In production, it will be 'OTP_SENT'
+        emit(PhoneOtpSent(
+          mobilePhone: event.mobilePhone,
+          otpCode: otpCode == 'OTP_SENT' ? null : otpCode,
+          isRegistration: false,
+        ));
+      },
+    );
+  }
+
+  Future<void> _onPhoneLoginOtpVerifyRequested(
+    PhoneLoginOtpVerifyRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _authRepository.verifyPhoneLoginOtp(
+      mobilePhone: event.mobilePhone,
+      code: event.code,
+    );
+
+    result.fold(
+      (failure) {
+        emit(AuthError(message: failure.message ?? 'OTP verification failed'));
+      },
+      (user) {
+        emit(AuthAuthenticated(user: user));
+      },
+    );
+  }
+
+  Future<void> _onPhoneRegisterOtpRequested(
+    PhoneRegisterOtpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _authRepository.requestPhoneRegisterOtp(
+      mobilePhone: event.mobilePhone,
+      referralCode: event.referralCode,
+    );
+
+    result.fold(
+      (failure) {
+        emit(AuthError(message: failure.message ?? 'Failed to send OTP'));
+      },
+      (otpCode) {
+        // OTP sent successfully
+        emit(PhoneOtpSent(
+          mobilePhone: event.mobilePhone,
+          otpCode: otpCode == 'OTP_SENT' ? null : otpCode,
+          isRegistration: true,
+        ));
+      },
+    );
+  }
+
+  Future<void> _onPhoneRegisterOtpVerifyRequested(
+    PhoneRegisterOtpVerifyRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthLoading());
+
+    final result = await _authRepository.verifyPhoneRegisterOtp(
+      mobilePhone: event.mobilePhone,
+      code: event.code,
+      referralCode: event.referralCode,
+    );
+
+    result.fold(
+      (failure) {
+        emit(AuthError(message: failure.message ?? 'Registration OTP verification failed'));
+      },
+      (user) {
+        emit(AuthAuthenticated(user: user));
       },
     );
   }

@@ -12,15 +12,22 @@ import '../models/login_request.dart';
 import '../models/login_response.dart';
 import '../models/register_request.dart';
 import '../models/register_response.dart';
+import '../models/phone_login_request.dart';
+import '../models/verify_phone_otp_request.dart';
+import '../models/phone_register_request.dart';
+import '../models/verify_phone_register_request.dart';
+import '../services/phone_auth_api_service.dart';
 
 @LazySingleton(as: AuthRepository)
 class AuthRepositoryImpl implements AuthRepository {
   final NetworkClient _networkClient;
   final SecureStorageService _secureStorage;
+  final PhoneAuthApiService _phoneAuthApiService;
 
   AuthRepositoryImpl(
     this._networkClient,
     this._secureStorage,
+    this._phoneAuthApiService,
   );
 
   @override
@@ -346,7 +353,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, UserEntity>> getCurrentUser() async {
     try {
       final token = await _secureStorage.read(key: 'auth_token');
-      
+
       if (token == null) {
         return const Left(UnauthorizedFailure());
       }
@@ -360,7 +367,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       if (response.data['success'] == true && response.data['data'] != null) {
         final userData = response.data['data'];
-        
+
         final user = UserEntity(
           id: userData['id'],
           email: userData['email'],
@@ -379,6 +386,202 @@ class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         return const Left(UnauthorizedFailure());
+      }
+      return const Left(NetworkFailure());
+    } catch (e) {
+      return Left(UnexpectedFailure(message: e.toString()));
+    }
+  }
+
+  // Phone-based OTP Authentication Implementation
+
+  @override
+  Future<Either<Failure, String>> requestPhoneLoginOtp({
+    required String mobilePhone,
+  }) async {
+    try {
+      final request = PhoneLoginRequest(mobilePhone: mobilePhone);
+      final response = await _phoneAuthApiService.requestLoginOtp(request);
+
+      if (response.success) {
+        // Extract OTP code from message
+        // In dev: "SendMobileCode123456"
+        final otpCode = response.otpCode;
+        if (otpCode != null) {
+          return Right(otpCode);
+        } else {
+          // In production, OTP is sent via SMS
+          return const Right('OTP_SENT');
+        }
+      } else {
+        return Left(ServerFailure(
+          message: response.message ?? 'Failed to request OTP',
+        ));
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final errorMessage = e.response!.data is String
+            ? e.response!.data as String
+            : e.response!.data['message'] ?? 'Failed to request OTP';
+        return Left(ServerFailure(message: errorMessage));
+      }
+      return const Left(NetworkFailure());
+    } catch (e) {
+      return Left(UnexpectedFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserEntity>> verifyPhoneLoginOtp({
+    required String mobilePhone,
+    required int code,
+  }) async {
+    try {
+      final request = VerifyPhoneOtpRequest(
+        mobilePhone: mobilePhone,
+        code: code,
+      );
+      final response = await _phoneAuthApiService.verifyLoginOtp(request);
+
+      if (response.success && response.data != null) {
+        // Store authentication tokens
+        await _secureStorage.write(
+          key: 'auth_token',
+          value: response.data!.token,
+        );
+
+        if (response.data!.refreshToken != null) {
+          await _secureStorage.write(
+            key: 'refresh_token',
+            value: response.data!.refreshToken!,
+          );
+        }
+
+        // Create UserEntity from token response
+        // Phone login doesn't return full user data, so create minimal entity
+        final user = UserEntity(
+          id: 'phone_user', // Will be updated when fetching full profile
+          email: '', // Phone users might not have email
+          firstName: 'User',
+          lastName: '',
+          role: 'Farmer',
+          phoneNumber: mobilePhone,
+          isEmailVerified: false,
+          tier: null,
+        );
+
+        return Right(user);
+      } else {
+        return Left(ServerFailure(
+          message: response.message ?? 'OTP verification failed',
+        ));
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final errorMessage = e.response!.data is String
+            ? e.response!.data as String
+            : e.response!.data['message'] ?? 'OTP verification failed';
+        return Left(ServerFailure(message: errorMessage));
+      }
+      return const Left(NetworkFailure());
+    } catch (e) {
+      return Left(UnexpectedFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> requestPhoneRegisterOtp({
+    required String mobilePhone,
+    String? referralCode,
+  }) async {
+    try {
+      final request = PhoneRegisterRequest(
+        mobilePhone: mobilePhone,
+        referralCode: referralCode,
+      );
+      final response = await _phoneAuthApiService.requestRegisterOtp(request);
+
+      if (response.success) {
+        // Extract OTP code from message
+        // In dev: "Register SendMobileCode for Phone:+90XXXXXXXXXX, Code:123456"
+        final otpCode = response.otpCode;
+        if (otpCode != null) {
+          return Right(otpCode);
+        } else {
+          // In production, OTP is sent via SMS
+          return const Right('OTP_SENT');
+        }
+      } else {
+        return Left(ServerFailure(
+          message: response.message ?? 'Failed to request registration OTP',
+        ));
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final errorMessage = e.response!.data is String
+            ? e.response!.data as String
+            : e.response!.data['message'] ?? 'Failed to request registration OTP';
+        return Left(ServerFailure(message: errorMessage));
+      }
+      return const Left(NetworkFailure());
+    } catch (e) {
+      return Left(UnexpectedFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserEntity>> verifyPhoneRegisterOtp({
+    required String mobilePhone,
+    required int code,
+    String? referralCode,
+  }) async {
+    try {
+      final request = VerifyPhoneRegisterRequest(
+        mobilePhone: mobilePhone,
+        code: code,
+        referralCode: referralCode,
+      );
+      final response = await _phoneAuthApiService.verifyRegisterOtp(request);
+
+      if (response.success && response.data != null) {
+        // Store authentication tokens
+        await _secureStorage.write(
+          key: 'auth_token',
+          value: response.data!.token,
+        );
+
+        if (response.data!.refreshToken != null) {
+          await _secureStorage.write(
+            key: 'refresh_token',
+            value: response.data!.refreshToken!,
+          );
+        }
+
+        // Create UserEntity from registration response
+        // Registration includes claims with permissions
+        final user = UserEntity(
+          id: 'phone_user', // Will be updated when fetching full profile
+          email: '', // Phone users might not have email initially
+          firstName: 'User',
+          lastName: '',
+          role: 'Farmer',
+          phoneNumber: mobilePhone,
+          isEmailVerified: false,
+          tier: null,
+        );
+
+        return Right(user);
+      } else {
+        return Left(ServerFailure(
+          message: response.message ?? 'Registration OTP verification failed',
+        ));
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        final errorMessage = e.response!.data is String
+            ? e.response!.data as String
+            : e.response!.data['message'] ?? 'Registration OTP verification failed';
+        return Left(ServerFailure(message: errorMessage));
       }
       return const Left(NetworkFailure());
     } catch (e) {

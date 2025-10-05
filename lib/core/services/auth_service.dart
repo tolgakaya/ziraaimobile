@@ -1,3 +1,4 @@
+import 'package:injectable/injectable.dart';
 import '../storage/secure_storage_service.dart';
 
 abstract class AuthService {
@@ -5,6 +6,7 @@ abstract class AuthService {
   Future<bool> isAuthenticated();
 }
 
+@LazySingleton(as: AuthService)
 class AuthServiceImpl implements AuthService {
   final SecureStorageService _secureStorage;
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import '../widgets/action_buttons.dart';
 import '../widgets/subscription_plan_card.dart';
 import '../widgets/recent_analyses_grid.dart';
@@ -7,6 +6,14 @@ import '../widgets/bottom_navigation.dart';
 import '../widgets/notification_bell_icon.dart';
 import '../../../plant_analysis/presentation/pages/capture_screen.dart';
 import '../../../subscription/presentation/screens/subscription_status_screen.dart';
+import '../../../referral/presentation/screens/referral_dashboard_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+import '../../../referral/presentation/bloc/referral_bloc.dart';
+import '../../../authentication/presentation/bloc/auth_bloc.dart';
+import '../../../authentication/presentation/bloc/auth_event.dart';
+import '../../../authentication/presentation/bloc/auth_state.dart';
+import '../../../authentication/presentation/screens/login_screen.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   const FarmerDashboardPage({super.key});
@@ -54,15 +61,80 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
       _selectedIndex = index;
     });
 
-    // Navigate to capture screen when analysis tab is tapped
+    // Navigate to screens based on tab
     if (index == 3) {
+      // Analysis tab
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => const CaptureScreen(),
         ),
       );
+    } else if (index == 4) {
+      // Referral tab - provide ReferralBloc
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BlocProvider(
+            create: (_) => GetIt.instance<ReferralBloc>(),
+            child: const ReferralDashboardScreen(),
+          ),
+        ),
+      );
     }
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.logout, color: Colors.red[600]),
+            const SizedBox(width: 12),
+            const Text('Çıkış Yap'),
+          ],
+        ),
+        content: const Text(
+          'Çıkış yapmak istediğinizden emin misiniz?',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _handleLogout(context);
+            },
+            child: const Text('Çıkış Yap'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleLogout(BuildContext context) {
+    // Trigger logout event using GetIt directly
+    GetIt.instance<AuthBloc>().add(const AuthLogoutRequested());
+
+    // Navigate to login screen and remove all previous routes
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => GetIt.instance<AuthBloc>(),
+          child: const LoginScreen(),
+        ),
+      ),
+      (route) => false,
+    );
   }
 
   @override
@@ -110,7 +182,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                         // Notifications Bell with Badge
                         const NotificationBellIcon(),
                         const SizedBox(width: 8),
-                          // Settings Icon
+                          // Logout Icon
                           Container(
                             width: 40,
                             height: 40,
@@ -120,13 +192,12 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                             ),
                             child: IconButton(
                               icon: const Icon(
-                                Icons.settings,
-                                color: Color(0xFF6B7280),
-                                size: 28,
+                                Icons.logout,
+                                color: Color(0xFFEF4444), // Red color for logout
+                                size: 24,
                               ),
-                              onPressed: () {
-                                // Settings functionality
-                              },
+                              onPressed: () => _showLogoutDialog(context),
+                              tooltip: 'Çıkış Yap',
                             ),
                           ),
                         ],

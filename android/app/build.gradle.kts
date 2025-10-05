@@ -20,14 +20,37 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.ziraai.ziraai_mobile"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Default application ID - overridden by flavors
+        applicationId = "com.ziraai.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "environment"
+
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationId = "com.ziraai.app.dev"
+            resValue("string", "app_name", "ZiraAI Dev")
+            manifestPlaceholders["deepLinkHost"] = "localhost:5001"
+        }
+
+        create("staging") {
+            dimension = "environment"
+            applicationId = "com.ziraai.app.staging"
+            resValue("string", "app_name", "ZiraAI Staging")
+            manifestPlaceholders["deepLinkHost"] = "ziraai-api-sit.up.railway.app"
+        }
+
+        create("prod") {
+            dimension = "environment"
+            applicationId = "com.ziraai.app"
+            resValue("string", "app_name", "ZiraAI")
+            manifestPlaceholders["deepLinkHost"] = "ziraai.com"
+        }
     }
 
     buildTypes {
