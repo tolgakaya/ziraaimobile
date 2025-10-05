@@ -6,6 +6,9 @@ import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../subscription/services/subscription_service.dart';
 import '../../../subscription/presentation/screens/subscription_status_screen.dart';
+import '../../../referral/presentation/screens/referral_link_generation_screen.dart';
+import '../../../referral/presentation/bloc/referral_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 
 class SubscriptionPlanCard extends StatefulWidget {
@@ -113,6 +116,7 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
         final usedCount = subscriptionData?['dailyUsed'] ?? 5;
         final totalCount = subscriptionData?['dailyLimit'] ?? 50;
         final daysLeft = _calculateDaysLeft(subscriptionData?['subscriptionEndDate']) ?? 15;
+        final referralCredits = subscriptionData?['referralCredits'] ?? 0;
         final progress = totalCount > 0 ? (usedCount / totalCount).clamp(0.0, 1.0) : 0.1;
 
         return Container(
@@ -185,7 +189,7 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
                 padding: EdgeInsets.all(widget.isCompact ? 16 : 20),
                 child: widget.isCompact 
                   ? _buildCompactView(planName, usedCount, totalCount, progress) 
-                  : _buildFullView(planName, usedCount, totalCount, daysLeft, progress),
+                  : _buildFullView(planName, usedCount, totalCount, daysLeft, referralCredits, progress),
               ),
             ),
           ),
@@ -235,7 +239,7 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
     );
   }
 
-  Widget _buildFullView(String planName, int usedCount, int totalCount, int daysLeft, double progress) {
+  Widget _buildFullView(String planName, int usedCount, int totalCount, int daysLeft, int referralCredits, double progress) {
     return Column(
       children: [
         Row(
@@ -299,6 +303,71 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
                         ),
                         const TextSpan(text: ' gün kaldı'),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => BlocProvider(
+                            create: (_) => getIt<ReferralBloc>(),
+                            child: const ReferralLinkGenerationScreen(),
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFDCFCE7), // green-100
+                            Color(0xFFBBF7D0), // green-200
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF86EFAC), // green-300
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.card_giftcard,
+                            size: 18,
+                            color: Color(0xFF16A34A), // green-600
+                          ),
+                          const SizedBox(width: 6),
+                          if (referralCredits > 0) ...[
+                            Text(
+                              '$referralCredits Kredi • ',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF16A34A), // green-600
+                              ),
+                            ),
+                          ],
+                          const Text(
+                            'Davet Et Kazan',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF15803D), // green-700
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 12,
+                            color: Color(0xFF16A34A), // green-600
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

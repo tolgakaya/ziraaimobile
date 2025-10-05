@@ -56,6 +56,13 @@ class DashboardBottomNavigation extends StatelessWidget {
                 isSelected: currentIndex == 3,
                 onTap: () => onTap(3),
               ),
+              _NavigationItem(
+                icon: Icons.card_giftcard_outlined,
+                iconSelected: Icons.card_giftcard,
+                label: 'Davet',
+                isSelected: currentIndex == 4,
+                onTap: () => onTap(4),
+              ),
             ],
           ),
         ),

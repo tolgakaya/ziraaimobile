@@ -59,6 +59,9 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Contacts permission for Referral System -->
+	<key>NSContactsUsageDescription</key>
+	<string>ZiraAI arkadaşlarınızı davet etmek için rehberinize erişmek istiyor</string>
 	<!-- Universal Links for referral system -->
 	<key>FlutterDeepLinkingEnabled</key>
 	<true/>

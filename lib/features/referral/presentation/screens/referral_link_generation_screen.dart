@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../bloc/referral_bloc.dart';
 import '../bloc/referral_event.dart';
 import '../bloc/referral_state.dart';
@@ -32,9 +33,21 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
 
   void _addPhoneField() {
     if (_phoneControllers.length < 10) {
-      setState(() {
-        _phoneControllers.add(TextEditingController());
-      });
+      // Son textbox boş değilse yeni ekle
+      if (_phoneControllers.isEmpty || _phoneControllers.last.text.trim().isNotEmpty) {
+        setState(() {
+          _phoneControllers.add(TextEditingController());
+        });
+      } else {
+        // Son textbox boşsa uyar
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lütfen önce mevcut telefon numarasını doldurun'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -94,24 +107,72 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
     );
   }
 
-  void _shareLink(String link, String code) {
-    final message = 'ZiraAI\'a katıl ve ücretsiz bitki analizi kazan! 🌱\n\n'
-        'Davet Kodum: $code\n'
-        'Link: $link\n\n'
-        'Kayıt olduğunda ikimiz de kredi kazanıyoruz! 🎁';
+  Future<void> _pickContactsFromPhone() async {
+    final permissionStatus = await Permission.contacts.status;
 
-    Share.share(message);
-  }
+    if (permissionStatus.isDenied) {
+      final result = await Permission.contacts.request();
+      if (!result.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Rehber erişimi için izin gerekli'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+    }
 
-  void _copyToClipboard(String text, String label) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label kopyalandı'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    try {
+      final contacts = await FlutterContacts.getContacts(
+        withProperties: true,
+        withPhoto: false,
+      );
+
+      final contactsWithPhones = contacts.where((contact) => contact.phones.isNotEmpty).toList();
+
+      if (!mounted) return;
+
+      final selectedContacts = await showDialog<List<Contact>>(
+        context: context,
+        builder: (context) => _ContactSelectionDialog(contacts: contactsWithPhones),
+      );
+
+      if (selectedContacts != null && selectedContacts.isNotEmpty) {
+        for (var contact in selectedContacts) {
+          if (contact.phones.isNotEmpty) {
+            String phone = contact.phones.first.number.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+
+            setState(() {
+              _addPhoneField();
+              _phoneControllers.last.text = phone;
+            });
+          }
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${selectedContacts.length} kişi eklendi'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rehber erişim hatası: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -124,8 +185,16 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
       body: BlocConsumer<ReferralBloc, ReferralState>(
         listener: (context, state) {
           if (state is ReferralLinkGenerated) {
-            // Show success dialog with link
-            _showLinkGeneratedDialog(context, state.linkData);
+            // Show success message and navigate back
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Davet linki oluşturuldu ve ${state.linkData.deliveryStatuses.length} kişiye gönderildi'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            Navigator.of(context).pop();
           } else if (state is ReferralError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -218,10 +287,19 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      TextButton.icon(
-                        onPressed: _phoneControllers.length >= 10 ? null : _addPhoneField,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Ekle'),
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: isLoading ? null : _pickContactsFromPhone,
+                            icon: const Icon(Icons.contacts),
+                            label: const Text('Rehber'),
+                          ),
+                          TextButton.icon(
+                            onPressed: _phoneControllers.length >= 10 ? null : _addPhoneField,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Ekle'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -267,7 +345,7 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
 
                   const SizedBox(height: 16),
 
@@ -319,172 +397,148 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
     );
   }
 
-  void _showLinkGeneratedDialog(BuildContext context, dynamic linkData) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
+}
+
+// Contact Selection Dialog Widget
+class _ContactSelectionDialog extends StatefulWidget {
+  final List<Contact> contacts;
+
+  const _ContactSelectionDialog({required this.contacts});
+
+  @override
+  State<_ContactSelectionDialog> createState() => _ContactSelectionDialogState();
+}
+
+class _ContactSelectionDialogState extends State<_ContactSelectionDialog> {
+  final Set<Contact> _selectedContacts = {};
+  String _searchQuery = '';
+
+  List<Contact> get _filteredContacts {
+    if (_searchQuery.isEmpty) return widget.contacts;
+    
+    return widget.contacts.where((contact) {
+      final name = contact.displayName.toLowerCase();
+      final phones = contact.phones.map((p) => p.number).join(' ');
+      final query = _searchQuery.toLowerCase();
+      return name.contains(query) || phones.contains(query);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredContacts = _filteredContacts;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            Icon(Icons.check_circle, color: Colors.green[600], size: 32),
-            const SizedBox(width: 12),
-            const Text('Link Oluşturuldu!'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Referral code
-              Text(
-                'Davet Kodunuz',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        linkData.referralCode,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.copy),
-                      onPressed: () => _copyToClipboard(
-                        linkData.referralCode,
-                        'Davet kodu',
-                      ),
-                      tooltip: 'Kopyala',
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Deep link
-              Text(
-                'Davet Linki',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        linkData.deepLink,
-                        style: const TextStyle(fontSize: 12),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.copy),
-                      onPressed: () => _copyToClipboard(
-                        linkData.deepLink,
-                        'Link',
-                      ),
-                      tooltip: 'Kopyala',
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Expiration
-              Row(
-                children: [
-                  Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Son Kullanma: ${linkData.expiresAt}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Delivery statuses
-              if (linkData.deliveryStatuses != null &&
-                  linkData.deliveryStatuses.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Text(
-                  'Gönderim Durumu',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  'Kişi Seç',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
-                ...linkData.deliveryStatuses.map<Widget>((status) {
-                  final isSuccess = status.isSuccess;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          isSuccess ? Icons.check_circle : Icons.error,
-                          color: isSuccess ? Colors.green : Colors.red,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${status.phoneNumber} - ${status.method}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ],
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Ara...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            if (_selectedContacts.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${_selectedContacts.length} kişi seçildi',
+                  style: TextStyle(
+                    color: Colors.green[700],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: filteredContacts.isEmpty
+                  ? const Center(child: Text('Kişi bulunamadı'))
+                  : ListView.builder(
+                      itemCount: filteredContacts.length,
+                      itemBuilder: (context, index) {
+                        final contact = filteredContacts[index];
+                        final isSelected = _selectedContacts.contains(contact);
+
+                        return CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (checked) {
+                            setState(() {
+                              if (checked == true) {
+                                _selectedContacts.add(contact);
+                              } else {
+                                _selectedContacts.remove(contact);
+                              }
+                            });
+                          },
+                          title: Text(contact.displayName),
+                          subtitle: contact.phones.isNotEmpty
+                              ? Text(contact.phones.first.number)
+                              : null,
+                          secondary: CircleAvatar(
+                            child: Text(
+                              contact.displayName.isNotEmpty
+                                  ? contact.displayName[0].toUpperCase()
+                                  : '?',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('İptal'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _selectedContacts.isEmpty
+                      ? null
+                      : () {
+                          Navigator.of(context).pop(_selectedContacts.toList());
+                        },
+                  child: Text('Ekle (${_selectedContacts.length})'),
+                ),
+              ],
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Kapat'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              _shareLink(linkData.deepLink, linkData.referralCode);
-              Navigator.of(dialogContext).pop();
-            },
-            icon: const Icon(Icons.share),
-            label: const Text('Paylaş'),
-          ),
-        ],
       ),
     );
   }

@@ -1,82 +1,118 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:app_links/app_links.dart';
 
-/// Service to handle deep links for referral system
-/// Handles links in format: https://ziraai.com/ref/ZIRA-XXXXXX
+/// Service to handle deep links for referral system using app_links package
+/// Handles links in format:
+/// - https://ziraai.com/ref/ZIRA-XXXXXX (Production)
+/// - https://ziraai-api-sit.up.railway.app/ref/ZIRA-XXXXXX (Staging)
+/// - ziraai://ref/ZIRA-XXXXXX (Custom scheme fallback)
 class DeepLinkService {
-  static const MethodChannel _channel = MethodChannel('app.channel.shared.data');
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+  final StreamController<String> _referralCodeController =
+      StreamController<String>.broadcast();
 
-  StreamController<String>? _deepLinkController;
-  Stream<String>? _deepLinkStream;
+  /// Stream of referral codes extracted from deep links
+  Stream<String> get referralCodeStream => _referralCodeController.stream;
 
   /// Initialize deep link handling
-  void initialize() {
-    _deepLinkController = StreamController<String>.broadcast();
-    _deepLinkStream = _deepLinkController!.stream;
+  /// This should be called once in main.dart after app startup
+  Future<void> initialize() async {
+    print('📱 DeepLink: Initializing app_links service...');
 
-    // Handle initial deep link (when app is opened via link)
-    _handleInitialLink();
+    try {
+      _appLinks = AppLinks();
 
-    // Handle deep links while app is running
-    _handleIncomingLinks();
+      // Handle initial deep link (when app was closed and opened via link)
+      await _handleInitialLink();
+
+      // Listen for deep links while app is running
+      _listenForLinks();
+
+      print('✅ DeepLink: Service initialized successfully');
+    } catch (e) {
+      print('❌ DeepLink: Initialization error: $e');
+    }
   }
-
-  /// Get stream of deep links
-  Stream<String>? get deepLinkStream => _deepLinkStream;
 
   /// Handle the initial deep link that opened the app
   Future<void> _handleInitialLink() async {
     try {
-      final String? initialLink = await _channel.invokeMethod('getInitialLink');
-      if (initialLink != null && initialLink.isNotEmpty) {
-        print('📱 DeepLink: Initial link received: $initialLink');
-        _deepLinkController?.add(initialLink);
+      final uri = await _appLinks.getInitialLink();
+      if (uri != null) {
+        final link = uri.toString();
+        print('📱 DeepLink: Initial link received: $link');
+        _processDeepLink(link);
+      } else {
+        print('📱 DeepLink: No initial link found');
       }
-    } on PlatformException catch (e) {
-      print('❌ DeepLink: Error getting initial link: ${e.message}');
-    } on MissingPluginException catch (e) {
-      print('⚠️ DeepLink: Native implementation not available yet: ${e.message}');
-      // This is expected - native implementation will be added later
     } catch (e) {
-      print('❌ DeepLink: Unexpected error: $e');
+      print('❌ DeepLink: Error getting initial link: $e');
     }
   }
 
-  /// Handle incoming deep links while app is running
-  void _handleIncomingLinks() {
-    _channel.setMethodCallHandler((call) async {
-      if (call.method == 'handleDeepLink') {
-        final String link = call.arguments as String;
+  /// Listen for incoming deep links while app is running
+  void _listenForLinks() {
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (Uri uri) {
+        final link = uri.toString();
         print('📱 DeepLink: Incoming link received: $link');
-        _deepLinkController?.add(link);
-      }
-    });
+        _processDeepLink(link);
+      },
+      onError: (err) {
+        print('❌ DeepLink: Error in link stream: $err');
+      },
+    );
+  }
+
+  /// Process deep link and extract referral code
+  void _processDeepLink(String link) {
+    final referralCode = extractReferralCode(link);
+
+    if (referralCode != null) {
+      print('✅ DeepLink: Extracted referral code: $referralCode');
+      _referralCodeController.add(referralCode);
+    } else {
+      print('⚠️ DeepLink: No referral code found in link: $link');
+    }
   }
 
   /// Extract referral code from deep link
-  /// Format: https://ziraai.com/ref/ZIRA-XXXXXX or ziraai://ref/ZIRA-XXXXXX
+  /// Formats supported (all environments):
+  /// - https://ziraai.com/ref/ZIRA-XXXXXX (Production)
+  /// - https://ziraai-api-sit.up.railway.app/ref/ZIRA-XXXXXX (Staging)
+  /// - https://localhost:5001/ref/ZIRA-XXXXXX (Development)
+  /// - ziraai://ref/ZIRA-XXXXXX (Custom scheme fallback)
   static String? extractReferralCode(String link) {
     try {
       final uri = Uri.parse(link);
 
-      // Handle https://ziraai.com/ref/ZIRA-XXXXXX
-      if (uri.scheme == 'https' && uri.host == 'ziraai.com') {
-        final segments = uri.pathSegments;
-        if (segments.length >= 2 && segments[0] == 'ref') {
-          final code = segments[1];
-          print('✅ DeepLink: Extracted referral code: $code');
-          return code;
+      // Handle HTTPS links (All environments)
+      if (uri.scheme == 'https' || uri.scheme == 'http') {
+        // Accept any host that contains 'ziraai' or localhost for development
+        final isValidHost = uri.host.contains('ziraai') ||
+                           uri.host.contains('localhost') ||
+                           uri.host.contains('127.0.0.1');
+
+        if (isValidHost && uri.pathSegments.isNotEmpty) {
+          // Check if path starts with 'ref'
+          if (uri.pathSegments.first == 'ref' && uri.pathSegments.length >= 2) {
+            final code = uri.pathSegments[1];
+            print('✅ DeepLink: Extracted code from ${uri.scheme}://${uri.host}: $code');
+            return code;
+          }
         }
       }
 
-      // Handle ziraai://ref/ZIRA-XXXXXX
+      // Handle custom scheme (ziraai://ref/ZIRA-XXXXXX)
       if (uri.scheme == 'ziraai') {
-        final segments = uri.pathSegments;
-        if (segments.length >= 2 && segments[0] == 'ref') {
-          final code = segments[1];
-          print('✅ DeepLink: Extracted referral code: $code');
-          return code;
+        if (uri.pathSegments.isNotEmpty) {
+          if (uri.pathSegments.first == 'ref' && uri.pathSegments.length >= 2) {
+            final code = uri.pathSegments[1];
+            print('✅ DeepLink: Extracted code from custom scheme: $code');
+            return code;
+          }
         }
       }
 
@@ -93,12 +129,19 @@ class DeepLinkService {
     try {
       final uri = Uri.parse(link);
 
-      if (uri.scheme == 'https' && uri.host == 'ziraai.com') {
-        return uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'ref';
+      // Check HTTPS/HTTP links (all environments)
+      if (uri.scheme == 'https' || uri.scheme == 'http') {
+        final isValidHost = uri.host.contains('ziraai') ||
+                           uri.host.contains('localhost') ||
+                           uri.host.contains('127.0.0.1');
+        return isValidHost &&
+            uri.pathSegments.isNotEmpty &&
+            uri.pathSegments.first == 'ref';
       }
 
+      // Check custom scheme
       if (uri.scheme == 'ziraai') {
-        return uri.pathSegments.isNotEmpty && uri.pathSegments[0] == 'ref';
+        return uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'ref';
       }
 
       return false;
@@ -109,95 +152,8 @@ class DeepLinkService {
 
   /// Dispose the service
   void dispose() {
-    _deepLinkController?.close();
-  }
-
-  /// Handle deep link and navigate to appropriate screen
-  static void handleDeepLink(BuildContext context, String link) {
-    if (!isReferralLink(link)) {
-      print('⚠️ DeepLink: Not a referral link, ignoring: $link');
-      return;
-    }
-
-    final referralCode = extractReferralCode(link);
-    if (referralCode == null) {
-      print('❌ DeepLink: Failed to extract referral code from: $link');
-      return;
-    }
-
-    // Show dialog or navigate to registration
-    _showReferralDialog(context, referralCode);
-  }
-
-  static void _showReferralDialog(BuildContext context, String referralCode) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.card_giftcard, color: Colors.green[600]),
-            const SizedBox(width: 12),
-            const Text('Davet Kodu'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Davet edildiniz! Kayıt olduğunuzda ücretsiz kredi kazanacaksınız.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Text(
-                referralCode,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[900],
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Navigate to phone registration with referral code
-              // This will be implemented when integrating with app router
-              _navigateToRegistration(context, referralCode);
-            },
-            child: const Text('Kayıt Ol'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static void _navigateToRegistration(BuildContext context, String referralCode) {
-    // Import the phone number screen
-    // This is a placeholder - actual implementation will use app router
-    print('📱 DeepLink: Navigating to registration with code: $referralCode');
-
-    // For now, show a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Davet kodu: $referralCode ile kayıt ekranına yönlendiriliyorsunuz'),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    _linkSubscription?.cancel();
+    _referralCodeController.close();
+    print('📱 DeepLink: Service disposed');
   }
 }

@@ -25,6 +25,7 @@ class PhoneNumberScreen extends StatefulWidget {
 class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
+  final _referralCodeController = TextEditingController();
   String? _phoneError;
 
   @override
@@ -32,11 +33,16 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
     super.initState();
     // Use initialPhone if provided, otherwise use default test phone
     _phoneController.text = widget.initialPhone ?? '+905551234567';
+    // Pre-fill referral code if provided (from deep link)
+    if (widget.referralCode != null) {
+      _referralCodeController.text = widget.referralCode!;
+    }
   }
 
   @override
   void dispose() {
     _phoneController.dispose();
+    _referralCodeController.dispose();
     super.dispose();
   }
 
@@ -47,12 +53,16 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
 
     if (_phoneError == null) {
       final phone = _phoneController.text.trim();
+      // Get referral code from text field (could be from deep link or manual entry)
+      final referralCode = _referralCodeController.text.trim().isEmpty
+          ? null
+          : _referralCodeController.text.trim();
 
       if (widget.isRegistration) {
         context.read<AuthBloc>().add(
           PhoneRegisterOtpRequested(
             mobilePhone: phone,
-            referralCode: widget.referralCode,
+            referralCode: referralCode,
           ),
         );
       } else {
@@ -109,7 +119,8 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
         listener: (context, state) {
           if (state is PhoneOtpSent) {
             // Navigate to OTP verification screen
-            Navigator.of(context).pushReplacement(
+            // No BlocProvider needed - it will use the ancestor BlocProvider from main_simple.dart
+            Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => OtpVerificationScreen(
                   mobilePhone: state.mobilePhone,
@@ -191,39 +202,43 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                       },
                     ),
 
-                    if (widget.referralCode != null) ...[
+                    // Referral code field (only for registration)
+                    if (widget.isRegistration) ...[
                       const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green[200]!),
+                      TextFormField(
+                        controller: _referralCodeController,
+                        keyboardType: TextInputType.text,
+                        enabled: !isLoading,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          labelText: 'Davet Kodu (Opsiyonel)',
+                          hintText: 'ZIRA-XXXXXX',
+                          prefixIcon: Icon(
+                            Icons.card_giftcard,
+                            color: _referralCodeController.text.isNotEmpty
+                                ? Colors.green[700]
+                                : null,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: _referralCodeController.text.isNotEmpty,
+                          fillColor: _referralCodeController.text.isNotEmpty
+                              ? Colors.green[50]
+                              : null,
+                          helperText: _referralCodeController.text.isNotEmpty
+                              ? 'Kayıt olduğunuzda davet eden kişi kredi kazanacak'
+                              : null,
+                          helperStyle: TextStyle(color: Colors.green[700]),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.card_giftcard, color: Colors.green[700]),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Davet Kodu',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[700],
-                                    ),
-                                  ),
-                                  Text(
-                                    widget.referralCode!,
-                                    style: TextStyle(color: Colors.green[900]),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'[A-Z0-9\-]')),
+                          LengthLimitingTextInputFormatter(20),
+                        ],
+                        onChanged: (_) {
+                          setState(() {}); // Refresh UI for color change
+                        },
                       ),
                     ],
 

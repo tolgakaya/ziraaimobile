@@ -23,7 +23,10 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
   void _navigateToLinkGeneration() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const ReferralLinkGenerationScreen(),
+        builder: (_) => BlocProvider.value(
+          value: context.read<ReferralBloc>(),
+          child: const ReferralLinkGenerationScreen(),
+        ),
       ),
     );
   }

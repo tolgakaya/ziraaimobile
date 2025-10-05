@@ -9,6 +9,7 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import 'register_screen.dart';
 import 'phone_auth/phone_number_screen.dart';
+import 'phone_auth/otp_verification_screen.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../../../../core/services/signalr_service.dart';
 import '../../../../core/services/signalr_notification_integration.dart';
@@ -57,24 +58,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _validateAndLogin() {
     if (_loginMode == 'phone') {
-      // Validate phone and navigate to OTP screen
+      // Validate phone and request OTP directly
       setState(() {
         _phoneError = _validatePhone(_phoneController.text);
       });
 
       if (_phoneError == null) {
-        // Navigate to PhoneNumberScreen with pre-filled phone
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BlocProvider(
-              create: (context) => GetIt.instance<AuthBloc>(),
-              child: PhoneNumberScreen(
-                isRegistration: false,
-                initialPhone: _phoneController.text.trim(),
-              ),
-            ),
-          ),
+        final phone = _phoneController.text.trim();
+
+        // Dispatch OTP request event
+        context.read<AuthBloc>().add(
+          PhoneLoginOtpRequested(mobilePhone: phone),
         );
       }
     } else {
@@ -194,6 +188,22 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => const FarmerDashboardPage(),
+            ),
+          );
+        } else if (state is PhoneOtpSent) {
+          // Navigate to OTP verification screen
+          final authBloc = GetIt.instance<AuthBloc>();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: authBloc,
+                child: OtpVerificationScreen(
+                  mobilePhone: state.mobilePhone,
+                  isRegistration: state.isRegistration,
+                  developmentOtpCode: state.otpCode,
+                ),
+              ),
             ),
           );
         } else if (state is AuthError) {
