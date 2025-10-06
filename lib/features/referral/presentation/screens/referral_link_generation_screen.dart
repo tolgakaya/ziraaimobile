@@ -66,8 +66,14 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
     }
 
     final cleanPhone = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    bool isValid = RegExp(r'^\+90[1-9]\d{9}$').hasMatch(cleanPhone) ||
-                   RegExp(r'^05\d{9}$').hasMatch(cleanPhone);
+
+    // Accept three formats:
+    // 1. +905XXXXXXXXX (with country code)
+    // 2. 05XXXXXXXXX (with leading 0)
+    // 3. 5XXXXXXXXX (without leading 0)
+    bool isValid = RegExp(r'^\+90[5]\d{9}$').hasMatch(cleanPhone) ||
+                   RegExp(r'^0[5]\d{9}$').hasMatch(cleanPhone) ||
+                   RegExp(r'^[5]\d{9}$').hasMatch(cleanPhone);
 
     if (!isValid) {
       return 'Geçersiz format';
@@ -75,15 +81,35 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
     return null;
   }
 
+  /// Normalize phone number to 05XXXXXXXXX format for API
+  String _normalizePhone(String phone) {
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+
+    // If starts with +90, remove it and ensure it starts with 0
+    if (cleanPhone.startsWith('+90')) {
+      final withoutCountryCode = cleanPhone.substring(3);
+      return withoutCountryCode.startsWith('0') ? withoutCountryCode : '0$withoutCountryCode';
+    }
+
+    // If starts with 0, keep as is
+    if (cleanPhone.startsWith('0')) {
+      return cleanPhone;
+    }
+
+    // If starts with 5, add 0 prefix
+    return '0$cleanPhone';
+  }
+
   void _generateLink() {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Get non-empty phone numbers
+    // Get non-empty phone numbers and normalize them to 05XXXXXXXXX format
     final phoneNumbers = _phoneControllers
         .map((c) => c.text.trim())
         .where((phone) => phone.isNotEmpty)
+        .map((phone) => _normalizePhone(phone))
         .toList();
 
     if (phoneNumbers.isEmpty) {
@@ -143,11 +169,13 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
       if (selectedContacts != null && selectedContacts.isNotEmpty) {
         for (var contact in selectedContacts) {
           if (contact.phones.isNotEmpty) {
+            // Clean phone number and normalize to 05XXXXXXXXX format
             String phone = contact.phones.first.number.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+            String normalizedPhone = _normalizePhone(phone);
 
             setState(() {
               _addPhoneField();
-              _phoneControllers.last.text = phone;
+              _phoneControllers.last.text = normalizedPhone;
             });
           }
         }
@@ -178,17 +206,36 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Davet Linki Oluştur'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Davet Et Kredi Kazan',
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: BlocConsumer<ReferralBloc, ReferralState>(
         listener: (context, state) {
           if (state is ReferralLinkGenerated) {
+            // Calculate unique phone numbers (since both SMS + WhatsApp creates 2 statuses per phone)
+            final uniquePhones = state.linkData.deliveryStatuses
+                .map((d) => d.phoneNumber)
+                .toSet()
+                .length;
+
             // Show success message and navigate back
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Davet linki oluşturuldu ve ${state.linkData.deliveryStatuses.length} kişiye gönderildi'),
+                content: Text('Davet gönderildi! $uniquePhones kişiye ulaştı'),
                 backgroundColor: Colors.green,
                 behavior: SnackBarBehavior.floating,
                 duration: const Duration(seconds: 2),
@@ -217,7 +264,7 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                 children: [
                   // Info card
                   Card(
-                    color: Colors.blue[50],
+                    color: const Color(0xFFF0FDF4),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -225,12 +272,12 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.blue[700]),
+                          const Icon(Icons.info_outline, color: Color(0xFF17CF17)),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Arkadaşlarınıza davet linki gönderin. Kayıt olduklarında ikimiz de kredi kazanın!',
-                              style: TextStyle(color: Colors.blue[900]),
+                              style: const TextStyle(color: Color(0xFF111827)),
                             ),
                           ),
                         ],
@@ -241,10 +288,12 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                   const SizedBox(height: 24),
 
                   // Delivery method selection
-                  Text(
+                  const Text(
                     'Gönderim Yöntemi',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: TextStyle(
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -281,10 +330,12 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      const Text(
                         'Telefon Numaraları',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
                         ),
                       ),
                       Row(
@@ -314,24 +365,46 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                       child: Row(
                         children: [
                           Expanded(
-                            child: TextFormField(
-                              controller: controller,
-                              keyboardType: TextInputType.phone,
-                              enabled: !isLoading,
-                              decoration: InputDecoration(
-                                labelText: 'Telefon ${index + 1}',
-                                hintText: '+90 5XX XXX XX XX',
-                                prefixIcon: const Icon(Icons.phone),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE5E7EB)),
                               ),
-                              validator: _validatePhone,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                  RegExp(r'[0-9+\s\-\(\)]'),
+                              child: TextFormField(
+                                controller: controller,
+                                keyboardType: TextInputType.phone,
+                                enabled: !isLoading,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF111827),
                                 ),
-                              ],
+                                decoration: InputDecoration(
+                                  labelText: 'Telefon ${index + 1}',
+                                  labelStyle: const TextStyle(
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                  hintText: '05XX XXX XX XX',
+                                  hintStyle: const TextStyle(
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.phone,
+                                    color: Color(0xFF9CA3AF),
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                validator: _validatePhone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[0-9+\s\-\(\)]'),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           if (_phoneControllers.length > 1) ...[
@@ -350,41 +423,93 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                   const SizedBox(height: 16),
 
                   // Custom message (optional)
-                  TextFormField(
-                    controller: _messageController,
-                    maxLines: 3,
-                    enabled: !isLoading,
-                    decoration: InputDecoration(
-                      labelText: 'Özel Mesaj (İsteğe Bağlı)',
-                      hintText: 'Arkadaşlarınıza özel bir mesaj ekleyin...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      helperText: 'Bu mesaj gönderilen davetlere eklenecek',
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
                     ),
-                    maxLength: 200,
+                    child: TextFormField(
+                      controller: _messageController,
+                      maxLines: 3,
+                      enabled: !isLoading,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF111827),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Özel Mesaj (İsteğe Bağlı)',
+                        labelStyle: const TextStyle(
+                          color: Color(0xFF6B7280),
+                        ),
+                        hintText: 'Arkadaşlarınıza özel bir mesaj ekleyin...',
+                        hintStyle: const TextStyle(
+                          color: Color(0xFF6B7280),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        helperText: 'Bu mesaj gönderilen davetlere eklenecek',
+                        helperStyle: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 12,
+                        ),
+                      ),
+                      maxLength: 200,
+                    ),
                   ),
 
                   const SizedBox(height: 32),
 
                   // Generate button
-                  ElevatedButton.icon(
-                    onPressed: isLoading ? null : _generateLink,
-                    icon: isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Icon(Icons.send),
-                    label: Text(isLoading ? 'Gönderiliyor...' : 'Oluştur ve Gönder'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
+                  Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF17CF17),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF17CF17).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(12),
+                        onTap: isLoading ? null : _generateLink,
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (isLoading)
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              else
+                                const Icon(Icons.send, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Text(
+                                isLoading ? 'Gönderiliyor...' : 'Davet Gönder',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -439,10 +564,12 @@ class _ContactSelectionDialogState extends State<_ContactSelectionDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   'Kişi Seç',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: Color(0xFF111827),
                   ),
                 ),
                 IconButton(
@@ -471,13 +598,13 @@ class _ContactSelectionDialogState extends State<_ContactSelectionDialog> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.green[50],
+                  color: const Color(0xFFF0FDF4),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '${_selectedContacts.length} kişi seçildi',
-                  style: TextStyle(
-                    color: Colors.green[700],
+                  style: const TextStyle(
+                    color: Color(0xFF17CF17),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -527,13 +654,40 @@ class _ContactSelectionDialogState extends State<_ContactSelectionDialog> {
                   child: const Text('İptal'),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _selectedContacts.isEmpty
-                      ? null
-                      : () {
-                          Navigator.of(context).pop(_selectedContacts.toList());
-                        },
-                  child: Text('Ekle (${_selectedContacts.length})'),
+                Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _selectedContacts.isEmpty
+                        ? const Color(0xFFE5E7EB)
+                        : const Color(0xFF17CF17),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: _selectedContacts.isEmpty
+                          ? null
+                          : () {
+                              Navigator.of(context).pop(_selectedContacts.toList());
+                            },
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Text(
+                            'Ekle (${_selectedContacts.length})',
+                            style: TextStyle(
+                              color: _selectedContacts.isEmpty
+                                  ? const Color(0xFF9CA3AF)
+                                  : Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

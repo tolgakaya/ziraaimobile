@@ -202,10 +202,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Doğrulama Kodu'),
-        centerTitle: true,
-      ),
+      backgroundColor: Colors.white,
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) async {
           if (state is AuthAuthenticated) {
@@ -234,41 +231,69 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           final isLoading = state is AuthLoading;
 
           return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 32),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 60),
 
-                  // Icon
-                  Icon(
-                    Icons.message,
-                    size: 80,
-                    color: Theme.of(context).primaryColor,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Title
-                  Text(
-                    'Kodu Girin',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    // ZiraAI Logo
+                    Image.asset(
+                      'assets/logos/ziraai_logo.png',
+                      height: 80,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Text(
+                          'ZiraAI',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF111827),
+                          ),
+                          textAlign: TextAlign.center,
+                        );
+                      },
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+                    const SizedBox(height: 8),
 
-                  const SizedBox(height: 8),
-
-                  // Subtitle with phone number
-                  Text(
-                    '${widget.mobilePhone} numarasına gönderilen 6 haneli kodu girin',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+                    // Slogan
+                    const Text(
+                      'Akıllı ziraatçi',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0.5,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+
+                    const SizedBox(height: 48),
+
+                    // Title
+                    const Text(
+                      'Doğrulama Kodu',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF111827),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Subtitle with phone number
+                    Text(
+                      '${widget.mobilePhone} numarasına gönderilen 6 haneli kodu girin',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
 
                   if (widget.developmentOtpCode != null) ...[
                     const SizedBox(height: 8),
@@ -297,53 +322,58 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     children: List.generate(6, (index) {
                       return SizedBox(
                         width: 45,
-                        child: TextField(
-                          controller: _otpControllers[index],
-                          focusNode: _otpFocusNodes[index],
-                          enabled: !isLoading,
-                          textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
-                          maxLength: 1,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
                             ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Theme.of(context).colorScheme.error,
+                          ),
+                          child: TextField(
+                            controller: _otpControllers[index],
+                            focusNode: _otpFocusNodes[index],
+                            enabled: !isLoading,
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            maxLength: 1,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF111827),
+                            ),
+                            decoration: const InputDecoration(
+                              counterText: '',
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 12,
                               ),
                             ),
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          onChanged: (value) {
-                            if (_otpError != null) {
-                              setState(() => _otpError = null);
-                            }
-
-                            if (value.isNotEmpty && index < 5) {
-                              _otpFocusNodes[index + 1].requestFocus();
-                            } else if (value.isEmpty && index > 0) {
-                              _otpFocusNodes[index - 1].requestFocus();
-                            }
-
-                            // Auto-submit when all fields filled
-                            if (index == 5 && value.isNotEmpty) {
-                              final allFilled = _otpControllers.every(
-                                (c) => c.text.isNotEmpty,
-                              );
-                              if (allFilled) {
-                                _validateAndSubmit();
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            onChanged: (value) {
+                              if (_otpError != null) {
+                                setState(() => _otpError = null);
                               }
-                            }
-                          },
+
+                              if (value.isNotEmpty && index < 5) {
+                                _otpFocusNodes[index + 1].requestFocus();
+                              } else if (value.isEmpty && index > 0) {
+                                _otpFocusNodes[index - 1].requestFocus();
+                              }
+
+                              // Auto-submit when all fields filled
+                              if (index == 5 && value.isNotEmpty) {
+                                final allFilled = _otpControllers.every(
+                                  (c) => c.text.isNotEmpty,
+                                );
+                                if (allFilled) {
+                                  _validateAndSubmit();
+                                }
+                              }
+                            },
+                          ),
                         ),
                       );
                     }),
@@ -363,27 +393,46 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   const SizedBox(height: 32),
 
                   // Verify button
-                  ElevatedButton(
-                    onPressed: isLoading ? null : _validateAndSubmit,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF17CF17),
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF17CF17).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: isLoading ? null : _validateAndSubmit,
+                        child: Center(
+                          child: isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Doğrula',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
                       ),
                     ),
-                    child: isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Text(
-                            'Doğrula',
-                            style: TextStyle(fontSize: 16),
-                          ),
                   ),
 
                   const SizedBox(height: 24),
@@ -392,39 +441,58 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      const Text(
                         'Kod almadınız mı? ',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 14,
+                        ),
                       ),
                       if (_canResend)
                         TextButton(
                           onPressed: isLoading ? null : _resendOtp,
-                          child: const Text('Tekrar Gönder'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF17CF17),
+                          ),
+                          child: const Text(
+                            'Tekrar Gönder',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         )
                       else
                         Text(
                           '($_resendCountdown sn)',
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
+                          style: const TextStyle(
+                            color: Color(0xFF17CF17),
                             fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
                     ],
                   ),
 
-                  const Spacer(),
+                  const SizedBox(height: 40),
 
                   // Change phone number
                   TextButton(
                     onPressed: isLoading ? null : () {
                       Navigator.of(context).pop();
                     },
-                    child: const Text('Telefon numarasını değiştir'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF6B7280),
+                    ),
+                    child: const Text(
+                      'Telefon numarasını değiştir',
+                      style: TextStyle(fontSize: 14),
+                    ),
                   ),
                 ],
               ),
             ),
-          );
+          ),
+        );
         },
       ),
     );
