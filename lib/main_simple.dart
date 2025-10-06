@@ -78,67 +78,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       return;
     }
 
-    // Show dialog to inform user about referral
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.card_giftcard, color: Colors.green[600]),
-            const SizedBox(width: 12),
-            const Text('Davet Kodu'),
-          ],
+    // Navigate directly to phone registration with referral code (seamless experience)
+    // No dialog - user goes straight to registration with code in background
+    print('🎯 Navigating to registration screen with referral code: $referralCode');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PhoneNumberScreen(
+          isRegistration: true,
+          referralCode: referralCode,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Davet edildiniz! Kayıt olduğunuzda ücretsiz kredi kazanacaksınız.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Text(
-                referralCode,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[900],
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              // Navigate to phone registration with referral code
-              // No need for BlocProvider - it's available from the MaterialApp ancestor
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => PhoneNumberScreen(
-                    isRegistration: true,
-                    referralCode: referralCode,
-                  ),
-                ),
-              );
-            },
-            child: const Text('Kayıt Ol'),
-          ),
-        ],
       ),
     );
   }
