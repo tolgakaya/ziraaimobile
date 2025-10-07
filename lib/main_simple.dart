@@ -8,6 +8,8 @@ import 'features/authentication/presentation/screens/splash_screen.dart';
 import 'features/authentication/presentation/screens/phone_auth/phone_number_screen.dart';
 import 'core/services/signalr_service.dart';
 import 'core/services/deep_link_service.dart';
+// import 'core/services/install_referrer_service.dart';  // TEMPORARILY DISABLED
+import 'core/services/sms_referral_service.dart';
 import 'dart:async';
 
 void main() async {
@@ -19,6 +21,16 @@ void main() async {
 }
 
 class MyApp extends StatefulWidget {
+  // Static flags to communicate with SplashScreen
+  static bool _smsCheckComplete = false;
+  static bool _smsReferralNavigated = false;
+
+  /// Public getter for SplashScreen to check if SMS navigation happened
+  static bool get hasSmsReferralNavigated => _smsReferralNavigated;
+
+  /// Public getter for SplashScreen to check if SMS check is complete
+  static bool get isSmsCheckComplete => _smsCheckComplete;
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -29,6 +41,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   StreamSubscription<String>? _deepLinkSubscription;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   String? _pendingReferralCode;
+  // bool _installReferrerChecked = false;  // TEMPORARILY DISABLED
+  bool _hasCheckedSms = false;
 
   @override
   void initState() {
@@ -36,11 +50,92 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // Don't initialize SignalR here - SplashScreen handles auto-login and SignalR
 
-    // Initialize deep link service with uni_links
+    // Check Install Referrer for deferred deep linking (first app launch after install)
+    // TEMPORARILY DISABLED - install_referrer package API changed, using SMS solution instead
+    // _checkInstallReferrer();
+
+    // Check SMS for referral code (deferred deep linking - app not installed scenario)
+    _checkSmsForReferralCode();
+
+    // Initialize deep link service with app_links
     _initializeDeepLinks();
   }
 
-  /// Initialize deep link handling with uni_links package
+  /// Check Play Store Install Referrer for deferred deep linking
+  /// This runs once after app installation from Play Store
+  /// TEMPORARILY DISABLED - install_referrer package incompatible, using SMS solution
+  /*
+  Future<void> _checkInstallReferrer() async {
+    if (_installReferrerChecked) return;
+
+    try {
+      final installReferrerService = getIt<InstallReferrerService>();
+
+      print('📦 Main: Checking install referrer...');
+      final referralCode = await installReferrerService.checkInstallReferrer();
+
+      if (referralCode != null) {
+        print('✅ Main: Install referrer code found: $referralCode');
+        _pendingReferralCode = referralCode;
+
+        // Wait for MaterialApp to be ready, then navigate
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted && _pendingReferralCode != null) {
+            _handleReferralCode(_pendingReferralCode!);
+            _pendingReferralCode = null;
+          }
+        });
+      } else {
+        print('📦 Main: No install referrer code found');
+      }
+
+      _installReferrerChecked = true;
+    } catch (e) {
+      print('❌ Main: Install referrer check error: $e');
+      _installReferrerChecked = true;
+    }
+  }
+  */
+
+  /// Check SMS for referral code (deferred deep linking)
+  /// This runs once after app installation when user doesn't have app installed
+  Future<void> _checkSmsForReferralCode() async {
+    // Bir kez kontrol et
+    if (_hasCheckedSms) {
+      print('ℹ️ SMS zaten kontrol edildi');
+      MyApp._smsCheckComplete = true;
+      return;
+    }
+
+    // UI hazır olmasını bekle - SplashScreen'den önce bitirmek için daha kısa
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    try {
+      print('🔍 SMS\'den referral kodu aranıyor...');
+
+      final smsService = getIt<SmsReferralService>();
+      final referralCode = await smsService.extractReferralFromSms();
+
+      _hasCheckedSms = true;  // İşaretlendi
+
+      if (referralCode != null) {
+        print('✅ SMS\'den kod bulundu: $referralCode');
+        _handleReferralCode(referralCode);
+      } else {
+        print('ℹ️ SMS\'de kod yok - normal flow devam ediyor');
+      }
+    } catch (e, stackTrace) {
+      print('⚠️ SMS kontrolü hatası: $e');
+      print('Stack trace: $stackTrace');
+      _hasCheckedSms = true;
+    } finally {
+      // Always mark SMS check as complete
+      MyApp._smsCheckComplete = true;
+      print('✅ SMS check complete - SplashScreen can now proceed');
+    }
+  }
+
+  /// Initialize deep link handling with app_links package
   Future<void> _initializeDeepLinks() async {
     await _deepLinkService.initialize();
 
@@ -81,6 +176,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Navigate directly to phone registration with referral code (seamless experience)
     // No dialog - user goes straight to registration with code in background
     print('🎯 Navigating to registration screen with referral code: $referralCode');
+
+    // Mark that SMS referral navigation is happening
+    MyApp._smsReferralNavigated = true;
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PhoneNumberScreen(

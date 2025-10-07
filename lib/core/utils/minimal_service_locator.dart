@@ -20,6 +20,8 @@ import '../../features/referral/data/services/referral_api_service.dart';
 import '../../features/referral/domain/repositories/referral_repository.dart';
 import '../../features/referral/data/repositories/referral_repository_impl.dart';
 import '../../features/referral/presentation/bloc/referral_bloc.dart';
+// import '../services/install_referrer_service.dart';  // TEMPORARILY DISABLED
+import '../services/sms_referral_service.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -35,6 +37,16 @@ Future<void> setupMinimalServiceLocator() async {
   
   getIt.registerLazySingleton<SecureStorageService>(
     () => SecureStorageService(),
+  );
+
+  // Deferred Deep Linking Services
+  // Install Referrer TEMPORARILY DISABLED - using SMS solution instead
+  // getIt.registerLazySingleton<InstallReferrerService>(
+  //   () => InstallReferrerService(),
+  // );
+
+  getIt.registerLazySingleton<SmsReferralService>(
+    () => SmsReferralService(),
   );
 
   // Token management
