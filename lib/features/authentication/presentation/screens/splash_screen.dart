@@ -11,6 +11,7 @@ import '../../../dashboard/presentation/bloc/notification_bloc.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import 'login_screen.dart';
+import '../../../../main_simple.dart' as main_app;
 
 /// Splash screen with automatic login check
 ///
@@ -38,8 +39,28 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       print('🔐 SplashScreen: Checking authentication status...');
 
-      // Wait a moment for better UX (splash should be visible briefly)
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Wait for SMS check to complete before deciding where to navigate
+      print('⏳ SplashScreen: Waiting for SMS check to complete...');
+      int waitTime = 0;
+      const int maxWaitTime = 3000; // Maximum 3 seconds
+      const int checkInterval = 100; // Check every 100ms
+
+      while (waitTime < maxWaitTime && !main_app.MyApp.isSmsCheckComplete) {
+        await Future.delayed(const Duration(milliseconds: checkInterval));
+        waitTime += checkInterval;
+      }
+
+      if (main_app.MyApp.isSmsCheckComplete) {
+        print('✅ SplashScreen: SMS check completed');
+
+        // Check if SMS referral navigation already happened
+        if (main_app.MyApp.hasSmsReferralNavigated) {
+          print('📱 SplashScreen: SMS referral navigation already happened - skipping login navigation');
+          return; // Don't navigate to login, register screen is already showing
+        }
+      } else {
+        print('⏰ SplashScreen: SMS check timeout - proceeding with normal flow');
+      }
 
       final tokenManager = GetIt.instance<TokenManager>();
       final authService = GetIt.instance<AuthService>();
