@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../../data/services/sponsor_service.dart';
-import '../../../../core/services/auth_service.dart';
 import '../../../authentication/presentation/bloc/auth_bloc.dart';
 import '../../../authentication/presentation/bloc/auth_event.dart';
 import 'dart:developer' as developer;
@@ -20,17 +19,9 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  String _selectedTier = 'S';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-
-  final List<Map<String, String>> _tiers = [
-    {'value': 'S', 'name': 'S Tier - 5/gün, 50/ay'},
-    {'value': 'M', 'name': 'M Tier - 20/gün, 200/ay'},
-    {'value': 'L', 'name': 'L Tier - 50/gün, 500/ay'},
-    {'value': 'XL', 'name': 'XL Tier - 200/gün, 2000/ay'},
-  ];
 
   @override
   void dispose() {
@@ -58,11 +49,10 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
         name: 'CreateSponsorProfile',
       );
 
-      final response = await sponsorService.createSponsorProfile(
+      await sponsorService.createSponsorProfile(
         companyName: _companyNameController.text.trim(),
         businessEmail: _businessEmailController.text.trim(),
         password: _passwordController.text,
-        tier: _selectedTier,
       );
 
       developer.log(
@@ -271,32 +261,6 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-
-              // Tier Selection
-              DropdownButtonFormField<String>(
-                value: _selectedTier,
-                decoration: InputDecoration(
-                  labelText: 'Sponsor Seviyesi *',
-                  prefixIcon: const Icon(Icons.stars),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                items: _tiers.map((tier) {
-                  return DropdownMenuItem(
-                    value: tier['value'],
-                    child: Text(tier['name']!),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedTier = value!;
-                  });
-                },
-              ),
               const SizedBox(height: 24),
 
               // Info Card
@@ -316,7 +280,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Profil oluşturulduktan sonra hem telefon hem de e-posta ile giriş yapabilirsiniz.',
+                        'Profil oluşturulduktan sonra hem telefon hem de e-posta ile giriş yapabilirsiniz. Sponsor seviyeniz paket satın alma ile belirlenecektir.',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.blue[900],

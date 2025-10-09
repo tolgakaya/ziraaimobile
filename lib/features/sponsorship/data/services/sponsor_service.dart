@@ -15,11 +15,11 @@ class SponsorService {
 
   /// Create sponsor profile for phone-registered user
   /// This upgrades a Farmer to dual-role (Farmer + Sponsor)
+  /// Tier will be assigned after purchasing a package
   Future<Map<String, dynamic>> createSponsorProfile({
     required String companyName,
     required String businessEmail,
     required String password,
-    required String tier,
   }) async {
     try {
       final token = await _authService.getToken();
@@ -29,7 +29,7 @@ class SponsorService {
       }
 
       developer.log(
-        'Creating sponsor profile: $companyName, tier: $tier',
+        'Creating sponsor profile: $companyName',
         name: 'SponsorService',
       );
 
@@ -39,7 +39,6 @@ class SponsorService {
           'companyName': companyName,
           'businessEmail': businessEmail,
           'password': password,
-          'tier': tier,
         },
         options: Options(
           headers: {
