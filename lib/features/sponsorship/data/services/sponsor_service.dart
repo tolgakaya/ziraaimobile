@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:injectable/injectable.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/services/auth_service.dart';
 import 'dart:developer' as developer;
 
+@lazySingleton
 class SponsorService {
   final Dio _dio;
   final AuthService _authService;
