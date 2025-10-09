@@ -15,6 +15,7 @@ import '../../../authentication/presentation/bloc/auth_event.dart';
 import '../../../authentication/presentation/bloc/auth_state.dart';
 import '../../../authentication/presentation/screens/login_screen.dart';
 import '../../../sponsorship/presentation/screens/create_sponsor_profile_screen.dart';
+import 'sponsor_dashboard_page.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   const FarmerDashboardPage({super.key});
@@ -27,12 +28,22 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
   int _selectedIndex = 0;
   Key _subscriptionCardKey = UniqueKey();
   Key _recentAnalysesKey = UniqueKey();
-  
+  bool _hasSponsorRole = false;
+
   void _refreshDashboard() {
     setState(() {
       _subscriptionCardKey = UniqueKey();
       _recentAnalysesKey = UniqueKey();
     });
+  }
+
+  void _navigateToSponsorDashboard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SponsorDashboardPage(),
+      ),
+    );
   }
 
   @override
@@ -180,54 +191,94 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // Sponsor Ol Button
-                        Container(
-                          height: 36,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF10B981), Color(0xFF059669)],
+                        // Conditional: Sponsor Ol Button OR Sponsor Paneli Button
+                        if (!_hasSponsorRole)
+                          Container(
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: TextButton(
-                            onPressed: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const CreateSponsorProfileScreen(),
-                                ),
-                              );
-
-                              // Refresh dashboard if profile was created
-                              if (result == true && mounted) {
-                                _refreshDashboard();
-                              }
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.business_center,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Sponsor Ol',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                            child: TextButton(
+                              onPressed: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const CreateSponsorProfileScreen(),
                                   ),
-                                ),
-                              ],
+                                );
+
+                                // Refresh dashboard and set sponsor role if profile was created
+                                if (result == true && mounted) {
+                                  setState(() {
+                                    _hasSponsorRole = true;
+                                  });
+                                  _refreshDashboard();
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.business_center,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Sponsor Ol',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: TextButton(
+                              onPressed: _navigateToSponsorDashboard,
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.dashboard,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Sponsor Paneli',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
                         const SizedBox(width: 8),
                         // Notifications Bell with Badge
                         const NotificationBellIcon(),
