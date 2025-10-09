@@ -14,6 +14,7 @@ import '../../features/plant_analysis/data/services/plant_analysis_api_service.d
 import '../services/auth_service.dart';
 import '../../features/dashboard/presentation/bloc/notification_bloc.dart';
 import '../../features/dashboard/presentation/bloc/notification_event.dart';
+import '../../features/sponsorship/data/services/sponsor_service.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -58,6 +59,14 @@ Future<void> setupSimpleDI() async {
     () => PlantAnalysisRepositoryImpl(
       getIt<PlantAnalysisApiService>(),
       getIt<AuthService>(),
+    ),
+  );
+
+  // Sponsor service
+  getIt.registerLazySingleton<SponsorService>(
+    () => SponsorService(
+      dio: getIt<Dio>(),
+      authService: getIt<AuthService>(),
     ),
   );
 

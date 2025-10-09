@@ -14,6 +14,7 @@ import '../../../authentication/presentation/bloc/auth_bloc.dart';
 import '../../../authentication/presentation/bloc/auth_event.dart';
 import '../../../authentication/presentation/bloc/auth_state.dart';
 import '../../../authentication/presentation/screens/login_screen.dart';
+import '../../../sponsorship/presentation/screens/create_sponsor_profile_screen.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   const FarmerDashboardPage({super.key});
@@ -179,6 +180,55 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        // Sponsor Ol Button
+                        Container(
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF10B981), Color(0xFF059669)],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: TextButton(
+                            onPressed: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CreateSponsorProfileScreen(),
+                                ),
+                              );
+
+                              // Refresh dashboard if profile was created
+                              if (result == true && mounted) {
+                                _refreshDashboard();
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.business_center,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Sponsor Ol',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         // Notifications Bell with Badge
                         const NotificationBellIcon(),
                         const SizedBox(width: 8),
