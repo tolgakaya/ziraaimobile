@@ -1,119 +1,204 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:get_it/get_it.dart';
 
-import 'app/app_router.dart';
-import 'app/app_theme.dart';
-import 'core/di/simple_injection.dart';
-// import 'core/security/security_manager.dart';
-import 'features/authentication/presentation/presentation.dart';
-import 'features/authentication/presentation/bloc/auth_event.dart';
+import 'core/utils/minimal_service_locator.dart';
+import 'features/authentication/presentation/bloc/auth_bloc.dart';
+import 'features/authentication/presentation/screens/splash_screen.dart';
+import 'features/authentication/presentation/screens/phone_auth/phone_number_screen.dart';
 import 'core/services/signalr_service.dart';
-import 'core/services/auth_service.dart';
-import 'core/services/signalr_notification_integration.dart';
-import 'features/dashboard/presentation/bloc/notification_bloc.dart';
-import 'features/dashboard/presentation/bloc/notification_event.dart';
-import 'dart:developer' as developer;
+import 'core/services/deep_link_service.dart';
+// import 'core/services/install_referrer_service.dart';  // TEMPORARILY DISABLED
+import 'core/services/sms_referral_service.dart';
+import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize dependency injection
-  await setupSimpleDI();
+  await setupMinimalServiceLocator();
 
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  // Set system UI overlay style for security
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
-
-  // Disable screenshots in production for security
-  // This would typically be enabled only in production builds
-  // await SystemChrome.setPreferredOrientations([
-  //   DeviceOrientation.portraitUp,
-  //   DeviceOrientation.portraitDown,
-  // ]);
-
-  runApp(const ZiraAIApp());
+  runApp(MyApp());
 }
 
-class ZiraAIApp extends StatefulWidget {
-  const ZiraAIApp({super.key});
+class MyApp extends StatefulWidget {
+  // Static flags to communicate with SplashScreen
+  static bool _smsCheckComplete = false;
+  static bool _smsReferralNavigated = false;
+
+  /// Public getter for SplashScreen to check if SMS navigation happened
+  static bool get hasSmsReferralNavigated => _smsReferralNavigated;
+
+  /// Public getter for SplashScreen to check if SMS check is complete
+  static bool get isSmsCheckComplete => _smsCheckComplete;
 
   @override
-  State<ZiraAIApp> createState() => _ZiraAIAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
-class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final SignalRService _signalRService = SignalRService();
-  SignalRNotificationIntegration? _signalRIntegration;
-  
+  final DeepLinkService _deepLinkService = DeepLinkService();
+  StreamSubscription<String>? _deepLinkSubscription;
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  String? _pendingReferralCode;
+  // bool _installReferrerChecked = false;  // TEMPORARILY DISABLED
+  bool _hasCheckedSms = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeSignalR();
+    // Don't initialize SignalR here - SplashScreen handles auto-login and SignalR
+
+    // Check Install Referrer for deferred deep linking (first app launch after install)
+    // TEMPORARILY DISABLED - install_referrer package API changed, using SMS solution instead
+    // _checkInstallReferrer();
+
+    // Check SMS for referral code (deferred deep linking - app not installed scenario)
+    _checkSmsForReferralCode();
+
+    // Initialize deep link service with app_links
+    _initializeDeepLinks();
   }
-  
-  Future<void> _initializeSignalR() async {
+
+  /// Check Play Store Install Referrer for deferred deep linking
+  /// This runs once after app installation from Play Store
+  /// TEMPORARILY DISABLED - install_referrer package incompatible, using SMS solution
+  /*
+  Future<void> _checkInstallReferrer() async {
+    if (_installReferrerChecked) return;
+
     try {
-      final authService = getIt<AuthService>();
-      final token = await authService.getToken();
-      
-      if (token != null && token.isNotEmpty) {
-        await _signalRService.initialize(token);
-        _setupSignalRIntegration();
-        developer.log('SignalR initialized successfully', name: 'MainApp');
+      final installReferrerService = getIt<InstallReferrerService>();
+
+      print('📦 Main: Checking install referrer...');
+      final referralCode = await installReferrerService.checkInstallReferrer();
+
+      if (referralCode != null) {
+        print('✅ Main: Install referrer code found: $referralCode');
+        _pendingReferralCode = referralCode;
+
+        // Wait for MaterialApp to be ready, then navigate
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted && _pendingReferralCode != null) {
+            _handleReferralCode(_pendingReferralCode!);
+            _pendingReferralCode = null;
+          }
+        });
       } else {
-        developer.log('No auth token available, skipping SignalR init', name: 'MainApp');
+        print('📦 Main: No install referrer code found');
       }
+
+      _installReferrerChecked = true;
     } catch (e) {
-      developer.log('Failed to initialize SignalR: $e', name: 'MainApp', error: e);
+      print('❌ Main: Install referrer check error: $e');
+      _installReferrerChecked = true;
     }
   }
-  
-  void _setupSignalRIntegration() {
-    if (_signalRIntegration == null) {
-      // Get NotificationBloc from GetIt
-      final notificationBloc = getIt<NotificationBloc>();
-      
-      // Initialize bloc by loading notifications
-      notificationBloc.add(const LoadNotifications());
-      
-      _signalRIntegration = SignalRNotificationIntegration(
-        signalRService: _signalRService,
-        notificationBloc: notificationBloc,
-      );
-      _signalRIntegration!.setupEventHandlers();
-      developer.log('SignalR integration setup complete', name: 'MainApp');
+  */
+
+  /// Check SMS for referral code (deferred deep linking)
+  /// This runs once after app installation when user doesn't have app installed
+  Future<void> _checkSmsForReferralCode() async {
+    // Bir kez kontrol et
+    if (_hasCheckedSms) {
+      print('ℹ️ SMS zaten kontrol edildi');
+      MyApp._smsCheckComplete = true;
+      return;
     }
+
+    // UI hazır olmasını bekle - SplashScreen'den önce bitirmek için daha kısa
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    try {
+      print('🔍 SMS\'den referral kodu aranıyor...');
+
+      final smsService = getIt<SmsReferralService>();
+      final referralCode = await smsService.extractReferralFromSms();
+
+      _hasCheckedSms = true;  // İşaretlendi
+
+      if (referralCode != null) {
+        print('✅ SMS\'den kod bulundu: $referralCode');
+        _handleReferralCode(referralCode);
+      } else {
+        print('ℹ️ SMS\'de kod yok - normal flow devam ediyor');
+      }
+    } catch (e, stackTrace) {
+      print('⚠️ SMS kontrolü hatası: $e');
+      print('Stack trace: $stackTrace');
+      _hasCheckedSms = true;
+    } finally {
+      // Always mark SMS check as complete
+      MyApp._smsCheckComplete = true;
+      print('✅ SMS check complete - SplashScreen can now proceed');
+    }
+  }
+
+  /// Initialize deep link handling with app_links package
+  Future<void> _initializeDeepLinks() async {
+    await _deepLinkService.initialize();
+
+    // Listen to referral code stream
+    _deepLinkSubscription = _deepLinkService.referralCodeStream.listen((referralCode) {
+      print('📱 Main: Referral code received from deep link: $referralCode');
+      // Store referral code for registration screen
+      // We'll navigate to PhoneNumberScreen with this code
+      if (mounted) {
+        _handleReferralCode(referralCode);
+      }
+    });
+  }
+
+  /// Handle received referral code from deep link
+  void _handleReferralCode(String referralCode) {
+    print('📱 Main: Referral code received from deep link: $referralCode');
+
+    // Use navigator key to access context
+    final context = navigatorKey.currentContext;
+    if (context == null || !mounted) {
+      print('⚠️ Navigator context not ready, will retry after delay');
+      _pendingReferralCode = referralCode;
+
+      // Retry after a short delay to give MaterialApp time to initialize
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && _pendingReferralCode != null) {
+          final code = _pendingReferralCode;
+          _pendingReferralCode = null;
+          if (code != null) {
+            _handleReferralCode(code);
+          }
+        }
+      });
+      return;
+    }
+
+    // Navigate directly to phone registration with referral code (seamless experience)
+    // No dialog - user goes straight to registration with code in background
+    print('🎯 Navigating to registration screen with referral code: $referralCode');
+
+    // Mark that SMS referral navigation is happening
+    MyApp._smsReferralNavigated = true;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PhoneNumberScreen(
+          isRegistration: true,
+          referralCode: referralCode,
+        ),
+      ),
+    );
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
-    // Handle SignalR connection lifecycle
-    if (state == AppLifecycleState.paused) {
-      developer.log('App paused - SignalR will auto-reconnect', name: 'MainApp');
-    } else if (state == AppLifecycleState.resumed) {
-      developer.log('App resumed', name: 'MainApp');
-      
-      // Check SignalR connection and reconnect if needed
+
+    // Reconnect SignalR when app resumes (if user is authenticated)
+    if (state == AppLifecycleState.resumed) {
       if (!_signalRService.isConnected) {
-        developer.log('SignalR disconnected, attempting to reconnect', name: 'MainApp');
-        _initializeSignalR();
+        print('🔄 App resumed: Attempting to reconnect SignalR...');
+        // SignalR will be reconnected automatically if token is valid
       }
     }
   }
@@ -121,57 +206,37 @@ class _ZiraAIAppState extends State<ZiraAIApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _signalRIntegration?.clearEventHandlers();
     _signalRService.disconnect();
+    _deepLinkSubscription?.cancel();
+    _deepLinkService.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<AuthBloc>(
-          create: (context) => getIt<AuthBloc>()
-            ..add(const AuthCheckStatusRequested()),
+    // Check for pending referral code after first frame
+    if (_pendingReferralCode != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final code = _pendingReferralCode;
+        _pendingReferralCode = null;
+        if (code != null) {
+          _handleReferralCode(code);
+        }
+      });
+    }
+
+    return BlocProvider(
+      create: (_) => GetIt.instance<AuthBloc>(),
+      child: MaterialApp(
+        navigatorKey: navigatorKey,
+        title: 'ZiraAI Mobile',
+        theme: ThemeData(
+          primarySwatch: Colors.green,
+          useMaterial3: true,
         ),
-      ],
-      child: MaterialApp.router(
-        title: 'ZiraAI',
+        home: const SplashScreen(), // Start with SplashScreen for auto-login
         debugShowCheckedModeBanner: false,
-
-        // Theme configuration
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.light,
-
-        // Localization with security-aware messages
-        locale: const Locale('tr', 'TR'),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('tr', 'TR'), // Turkish (Primary for ZiraAI)
-          Locale('en', 'US'), // English
-          Locale('ar', 'SA'), // Arabic
-        ],
-
-        // Router configuration
-        routerConfig: AppRouter.router,
-
-        // Builder for global configurations
-        builder: (context, child) {
-          return MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              // Clamp text scale for consistency
-              textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.2),
-            ),
-            child: child ?? const SizedBox(),
-          );
-        },
       ),
     );
   }
 }
-
