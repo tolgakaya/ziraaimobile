@@ -3,6 +3,11 @@ import 'package:get_it/get_it.dart';
 import '../../../authentication/presentation/bloc/auth_bloc.dart';
 import '../../../authentication/presentation/bloc/auth_event.dart';
 import '../../../authentication/presentation/screens/login_screen.dart';
+import '../../../sponsorship/data/services/sponsor_service.dart';
+import '../../../sponsorship/data/models/sponsor_dashboard_summary.dart';
+import '../widgets/sponsor_metric_card.dart';
+import '../widgets/sponsor_action_button.dart';
+import '../widgets/active_package_card.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SponsorDashboardPage extends StatefulWidget {
@@ -13,19 +18,41 @@ class SponsorDashboardPage extends StatefulWidget {
 }
 
 class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
-  int _selectedIndex = 0;
+  final SponsorService _sponsorService = GetIt.instance<SponsorService>();
 
-  // Mock data
-  final int _activePackages = 12;
-  final int _redeemedCodes = 345;
-  final int _totalFarmers = 234;
-  final String _roi = '15%';
-  final String _monthlyTrend = '+12%';
+  SponsorDashboardSummary? _summary;
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  void _onNavItemTapped(int index) {
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
     setState(() {
-      _selectedIndex = index;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      final summary = await _sponsorService.getDashboardSummary();
+
+      if (mounted) {
+        setState(() {
+          _summary = summary;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _showLogoutDialog(BuildContext context) {
@@ -83,381 +110,232 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      body: Column(
-        children: [
-          // Header with Profile Icon
-          Container(
-            decoration: const BoxDecoration(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header with ZiraAI Logo
+            Container(
+              padding: const EdgeInsets.all(16),
               color: Colors.white,
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                child: Row(
-                  children: [
-                    // Profile Icon
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFE4C4),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Color(0xFF8B4513),
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Dashboard Title
-                    const Expanded(
-                      child: Text(
-                        'Dashboard',
+              child: Row(
+                children: [
+                  // ZiraAI Logo
+                  Image.asset(
+                    'assets/logos/ziraai_logo.png',
+                    height: 56,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Text(
+                        'ZiraAI',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF111827),
                         ),
-                      ),
+                      );
+                    },
+                  ),
+                  const Spacer(),
+                  // Switch to Farmer Dashboard button
+                  IconButton(
+                    icon: const Icon(
+                      Icons.agriculture,
+                      color: Color(0xFF10B981),
                     ),
-                    // Logout Icon
-                    IconButton(
-                      icon: const Icon(
-                        Icons.logout,
-                        color: Color(0xFFEF4444),
-                        size: 24,
-                      ),
-                      onPressed: () => _showLogoutDialog(context),
-                      tooltip: 'Çıkış Yap',
+                    tooltip: 'Çiftçi Paneli',
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  // Logout button
+                  IconButton(
+                    icon: const Icon(
+                      Icons.logout,
+                      color: Color(0xFFEF4444),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Main Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Stats Grid (2x2)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          title: 'Active Packages',
-                          value: '$_activePackages',
-                          backgroundColor: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          title: 'Redeemed Codes',
-                          value: '$_redeemedCodes',
-                          backgroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
+                    onPressed: () => _showLogoutDialog(context),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          title: 'Total Farmers',
-                          value: '$_totalFarmers',
-                          backgroundColor: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          title: 'ROI',
-                          value: _roi,
-                          valueColor: const Color(0xFF10B981),
-                          backgroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Navigate to buy packages
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEF4444),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Buy Packages',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            // TODO: Navigate to send codes
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF111827),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(
-                              color: Color(0xFFE5E7EB),
-                              width: 2,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          child: const Text(
-                            'Send Codes',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Recent Activity Section
-                  const Text(
-                    'Recent Activity',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildActivityItem(
-                    icon: Icons.inventory_2_outlined,
-                    title: 'Package Purchase',
-                    subtitle: 'Standard Package - 100 Codes',
-                    time: '2h ago',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActivityItem(
-                    icon: Icons.qr_code,
-                    title: 'Code Redeemed',
-                    subtitle: 'Farmer John Doe',
-                    time: '5h ago',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActivityItem(
-                    icon: Icons.person_add_outlined,
-                    title: 'New Farmer Added',
-                    subtitle: 'Jane Smith',
-                    time: '1d ago',
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Redemption Trends Section
-                  const Text(
-                    'Redemption Trends',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Monthly Trend',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              _monthlyTrend,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF10B981),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'vs last month',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF9CA3AF),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // Main Content
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 64,
+                                color: Color(0xFFEF4444),
+                              ),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 32),
+                                child: Text(
+                                  'Hata: $_errorMessage',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                onPressed: _loadDashboardData,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Tekrar Dene'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF10B981),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _loadDashboardData,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Top Row: Metric Cards
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: SponsorMetricCard(
+                                        icon: Icons.send,
+                                        iconColor: const Color(0xFF3B82F6),
+                                        value: '${_summary!.sentCodesCount}/${_summary!.totalCodesCount}',
+                                        label: 'Gönderilen Kodlar',
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: SponsorMetricCard(
+                                        icon: Icons.analytics,
+                                        iconColor: const Color(0xFFF59E0B),
+                                        value: '${_summary!.totalAnalysesCount}',
+                                        label: 'Analizler',
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: SponsorMetricCard(
+                                        icon: Icons.shopping_bag,
+                                        iconColor: const Color(0xFF10B981),
+                                        value: '${_summary!.purchasesCount}',
+                                        label: 'Satın Alımlar',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Action Buttons
+                                SponsorActionButton(
+                                  icon: Icons.send,
+                                  label: 'Kod Dağıt',
+                                  color: const Color(0xFF3B82F6),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Kod Dağıtım - Yakında'),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                SponsorActionButton(
+                                  icon: Icons.shopping_cart,
+                                  label: 'Paket Satın Al',
+                                  color: const Color(0xFF10B981),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Paket Satın Alma - Yakında'),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                SponsorActionButton(
+                                  icon: Icons.bar_chart,
+                                  label: 'İstatistikleri Görüntüle',
+                                  color: const Color(0xFFF59E0B),
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('İstatistikler - Yakında'),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                const SizedBox(height: 24),
+
+                                // Active Packages Section
+                                const Text(
+                                  'Aktif Sponsorluk Paketleriniz',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF111827),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Package Cards
+                                if (_summary!.activePackages.isEmpty)
+                                  Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(32),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.inventory_outlined,
+                                            size: 64,
+                                            color: Colors.grey[400],
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'Henüz paket satın alınmadı',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: _summary!.activePackages.length,
+                                    itemBuilder: (context, index) {
+                                      return ActivePackageCard(
+                                        package: _summary!.activePackages[index],
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: _buildBottomNavigation(),
-    );
-  }
-
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    Color? valueColor,
-    required Color backgroundColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: valueColor ?? const Color(0xFF111827),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivityItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String time,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF6B7280),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            time,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF9CA3AF),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -467,7 +345,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -480,29 +358,20 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(
-                icon: Icons.home,
-                label: 'Dashboard',
-                index: 0,
+                icon: Icons.check_circle,
+                isSelected: true,
               ),
               _buildNavItem(
-                icon: Icons.inventory_2_outlined,
-                label: 'Packages',
-                index: 1,
+                icon: Icons.person_outline,
+                isSelected: false,
               ),
               _buildNavItem(
-                icon: Icons.qr_code,
-                label: 'Codes',
-                index: 2,
+                icon: Icons.bar_chart_outlined,
+                isSelected: false,
               ),
               _buildNavItem(
-                icon: Icons.people_outline,
-                label: 'Farmers',
-                index: 3,
-              ),
-              _buildNavItem(
-                icon: Icons.show_chart,
-                label: 'Analytics',
-                index: 4,
+                icon: Icons.search,
+                isSelected: false,
               ),
             ],
           ),
@@ -513,32 +382,12 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
 
   Widget _buildNavItem({
     required IconData icon,
-    required String label,
-    required int index,
+    required bool isSelected,
   }) {
-    final bool isSelected = _selectedIndex == index;
-
-    return InkWell(
-      onTap: () => _onNavItemTapped(index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              color: isSelected ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
-            ),
-          ),
-        ],
-      ),
+    return Icon(
+      icon,
+      color: isSelected ? const Color(0xFF10B981) : const Color(0xFF9CA3AF),
+      size: 28,
     );
   }
 }
