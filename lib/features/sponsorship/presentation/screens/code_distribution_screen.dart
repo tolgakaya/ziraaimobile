@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../data/models/sponsorship_code.dart';
 import '../../data/models/code_package.dart';
 import '../../data/models/code_recipient.dart';
@@ -385,22 +384,19 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
   Future<void> _pickContactsFromPhone() async {
     try {
-      // Check permission
-      final status = await Permission.contacts.status;
+      // Request permission using flutter_contacts (avoids conflict with telephony package)
+      final permissionGranted = await FlutterContacts.requestPermission();
 
-      if (status.isDenied) {
-        final result = await Permission.contacts.request();
-        if (!result.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Rehber izni gerekli'),
-                backgroundColor: Color(0xFFEF4444),
-              ),
-            );
-          }
-          return;
+      if (!permissionGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Rehber izni gerekli'),
+              backgroundColor: Color(0xFFEF4444),
+            ),
+          );
         }
+        return;
       }
 
       // Fetch contacts
