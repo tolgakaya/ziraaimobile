@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/services/auth_service.dart';
+import '../models/sponsor_dashboard_summary.dart';
 import 'dart:developer' as developer;
 
 @lazySingleton
@@ -114,6 +115,69 @@ class SponsorService {
       }
 
       throw Exception('Network error: ${e.message}');
+    }
+  }
+
+  /// Get sponsor dashboard summary
+  /// Endpoint: GET /api/v1/sponsorship/dashboard-summary
+  Future<SponsorDashboardSummary> getDashboardSummary() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching sponsor dashboard summary',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorDashboardSummary}',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Dashboard summary fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "message": "...", "data": {...} }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        return SponsorDashboardSummary.fromJson(responseData['data']);
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load dashboard');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get dashboard summary',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load dashboard')
+            : 'Failed to load dashboard';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting dashboard summary',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
     }
   }
 }
