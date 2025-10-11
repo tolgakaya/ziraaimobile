@@ -31,8 +31,16 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   List<SponsorshipCode> _allCodes = [];
   List<CodePackage> _packages = [];
   CodePackage? _selectedPackage;
-  List<CodeRecipient> _recipients = [];
+  // Store recipients per package (purchaseId -> recipients list)
+  // This prevents data loss when switching between packages
+  Map<int, List<CodeRecipient>> _packageRecipients = {};
   MessageChannel _selectedChannel = MessageChannel.sms; // SMS default
+
+  // Helper getter for current package recipients
+  List<CodeRecipient> get _currentRecipients {
+    if (_selectedPackage == null) return [];
+    return _packageRecipients[_selectedPackage!.purchaseId] ?? [];
+  }
 
   bool _isLoading = true;
   bool _isSending = false;
@@ -190,12 +198,11 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
           PackageSelectorWidget(
             selectedPackage: _selectedPackage,
             packages: _packages,
-            recipientCount: _recipients.length, // Pass current recipient count
+            recipientCount: _currentRecipients.length, // Current package recipient count for display
             onPackageSelected: (package) {
               setState(() {
                 _selectedPackage = package;
-                // DON'T clear recipients - allow multi-package distribution
-                // User can manually remove recipients if needed
+                // Recipients are now stored per-package, so switching preserves each package's list
               });
             },
           ),
@@ -213,8 +220,8 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
           const SizedBox(height: 12),
 
           // Recipients List
-          if (_recipients.isNotEmpty)
-            ..._recipients.map((recipient) {
+          if (_currentRecipients.isNotEmpty)
+            ..._currentRecipients.map((recipient) {
               return RecipientListItem(
                 recipient: recipient,
                 onDelete: () => _removeRecipient(recipient),
@@ -265,7 +272,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
           const SizedBox(height: 24),
 
           // Summary Card
-          if (_selectedPackage != null || _recipients.isNotEmpty)
+          if (_selectedPackage != null || _currentRecipients.isNotEmpty)
             _buildSummaryCard(),
           const SizedBox(height: 16),
 
@@ -307,17 +314,18 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   }
 
   Widget _buildSummaryCard() {
-    final recipientCount = _recipients.length;
-    final availableCodes = _selectedPackage?.codes.length ?? 0;
-    final totalPackageCodes = _selectedPackage?.totalCount ?? 0;
-    final remainingCodes = availableCodes - recipientCount;
-    final hasEnoughCodes = recipientCount <= availableCodes;
+    // Calculate totals across ALL packages
+    int totalRecipients = 0;
+    for (final recipients in _packageRecipients.values) {
+      totalRecipients += recipients.length;
+    }
 
-    // Get package name for display
+    // Get packages with recipients
+    final packagesWithRecipients = _packageRecipients.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .toList();
+
     final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
-    final tierName = _selectedPackage != null
-        ? tierNameMap[_selectedPackage!.tierId] ?? 'Bilinmeyen'
-        : 'Seçilmedi';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -332,28 +340,150 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Özet',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF111827),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Gönderim Özeti',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'TOPLAM: $totalRecipients kişi',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Show all packages with recipients
+          if (packagesWithRecipients.isNotEmpty) ...[
+            ...packagesWithRecipients.map((entry) {
+              final purchaseId = entry.key;
+              final recipients = entry.value;
+              
+              // Find the package for this purchaseId
+              final package = _packages.firstWhere(
+                (p) => p.purchaseId == purchaseId,
+                orElse: () => _packages.first,
+              );
+              
+              final tierName = tierNameMap[package.tierId] ?? 'Bilinmeyen';
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFE5E7EB),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Paket $tierName',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${recipients.length} kişi',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF111827),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Show recipients for this package
+                    ...recipients.take(3).map((recipient) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person, size: 12, color: Color(0xFF6B7280)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${recipient.name} - ${recipient.phone}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF6B7280),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                    if (recipients.length > 3)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '+${recipients.length - 3} kişi daha...',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF6B7280),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ] else ...[
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  'Henüz alıcı eklenmedi',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          _buildSummaryRow(
-            'Seçilen Paket',
-            'Paket $tierName',
-          ),
-          _buildSummaryRow(
-            'Kalan / Toplam Kod',
-            '$remainingCodes / $totalPackageCodes kod',
-            valueColor: remainingCodes <= 0 ? Colors.orange : null,
-          ),
-          _buildSummaryRow(
-            'Alıcı Sayısı',
-            '$recipientCount kişi',
-          ),
+          ],
+
+          const Divider(height: 24),
           _buildSummaryRow(
             'Gönderim Kanalı',
             _selectedChannel == MessageChannel.sms
@@ -361,29 +491,6 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                 : _selectedChannel == MessageChannel.whatsapp
                     ? 'WhatsApp'
                     : 'Seçilmedi',
-          ),
-          const Divider(height: 24),
-          Row(
-            children: [
-              Icon(
-                hasEnoughCodes ? Icons.check_circle : Icons.warning,
-                color: hasEnoughCodes ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  hasEnoughCodes
-                      ? '$recipientCount kod otomatik atanacak'
-                      : 'Yetersiz kod! $availableCodes kod mevcut, $recipientCount gerekli',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: hasEnoughCodes ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -417,9 +524,11 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   }
 
   void _showAddRecipientDialog() async {
+    if (_selectedPackage == null) return;
+
     // Check if we have available codes
-    final availableCodes = _selectedPackage?.codes.length ?? 0;
-    final currentRecipients = _recipients.length;
+    final availableCodes = _selectedPackage!.codes.length;
+    final currentRecipients = _currentRecipients.length;
 
     if (currentRecipients >= availableCodes) {
       _showMaxRecipientsDialog();
@@ -433,7 +542,8 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
     if (recipient != null) {
       setState(() {
-        _recipients.add(recipient);
+        final purchaseId = _selectedPackage!.purchaseId;
+        _packageRecipients[purchaseId] = [..._currentRecipients, recipient];
       });
     }
   }
@@ -468,8 +578,13 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   }
 
   void _removeRecipient(CodeRecipient recipient) {
+    if (_selectedPackage == null) return;
+
     setState(() {
-      _recipients.remove(recipient);
+      final purchaseId = _selectedPackage!.purchaseId;
+      final updatedList = List<CodeRecipient>.from(_currentRecipients);
+      updatedList.remove(recipient);
+      _packageRecipients[purchaseId] = updatedList;
     });
   }
 
@@ -505,9 +620,11 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       );
 
       if (selectedContacts != null && selectedContacts.isNotEmpty) {
+        if (_selectedPackage == null) return;
+
         // Check available space
-        final availableCodes = _selectedPackage?.codes.length ?? 0;
-        final currentRecipients = _recipients.length;
+        final availableCodes = _selectedPackage!.codes.length;
+        final currentRecipients = _currentRecipients.length;
         final remainingSlots = availableCodes - currentRecipients;
 
         if (remainingSlots <= 0) {
@@ -524,7 +641,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             final name = contact.displayName;
 
             // Check if contact already added
-            final exists = _recipients.any((r) =>
+            final exists = _currentRecipients.any((r) =>
               CodeRecipient.normalizePhone(r.phone) == CodeRecipient.normalizePhone(phone)
             );
 
@@ -543,11 +660,12 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
         if (newRecipients.isNotEmpty) {
           setState(() {
-            _recipients.addAll(newRecipients);
+            final purchaseId = _selectedPackage!.purchaseId;
+            _packageRecipients[purchaseId] = [..._currentRecipients, ...newRecipients];
           });
 
           if (mounted) {
-            final limitReached = _recipients.length >= availableCodes;
+            final limitReached = _currentRecipients.length >= availableCodes;
             final message = limitReached
                 ? '${newRecipients.length} kişi eklendi. Maksimum kişi sayısına ulaşıldı.'
                 : '${newRecipients.length} kişi eklendi';
@@ -576,10 +694,30 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
   bool _canSend() {
     if (_isSending) return false;
-    if (_selectedPackage == null) return false;
-    if (_recipients.isEmpty) return false;
     if (_selectedChannel == null) return false;
-    if (_recipients.length > _selectedPackage!.unusedCount) return false;
+    
+    // Check if we have ANY recipients across ALL packages
+    int totalRecipients = 0;
+    for (final recipients in _packageRecipients.values) {
+      totalRecipients += recipients.length;
+    }
+    
+    if (totalRecipients == 0) return false;
+    
+    // Check if each package has enough codes for its recipients
+    for (final entry in _packageRecipients.entries) {
+      if (entry.value.isEmpty) continue;
+      
+      final package = _packages.firstWhere(
+        (p) => p.purchaseId == entry.key,
+        orElse: () => _packages.first,
+      );
+      
+      final availableCodes = package.codes.where((c) => !c.isUsed).length;
+      if (entry.value.length > availableCodes) {
+        return false; // Not enough codes for this package
+      }
+    }
 
     return true;
   }
@@ -592,31 +730,52 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     });
 
     try {
-      // Get codes from selected package
-      final unusedCodes = _selectedPackage!.codes
-          .where((code) => !code.isUsed)
-          .take(_recipients.length)
-          .map((code) => code.code)
-          .toList();
+      // Collect ALL recipients and codes from ALL packages
+      final List<CodeRecipient> allRecipients = [];
+      final List<String> allCodes = [];
+
+      for (final entry in _packageRecipients.entries) {
+        if (entry.value.isEmpty) continue;
+
+        final purchaseId = entry.key;
+        final recipients = entry.value;
+
+        // Find the package
+        final package = _packages.firstWhere(
+          (p) => p.purchaseId == purchaseId,
+          orElse: () => _packages.first,
+        );
+
+        // Get unused codes for this package
+        final packageCodes = package.codes
+            .where((code) => !code.isUsed)
+            .take(recipients.length)
+            .map((code) => code.code)
+            .toList();
+
+        allRecipients.addAll(recipients);
+        allCodes.addAll(packageCodes);
+      }
 
       // Send links
       final channelName = _selectedChannel == MessageChannel.sms ? 'SMS' : 'WhatsApp';
 
       // DEBUG LOG
-      print('🚀 CODE DISTRIBUTION: Sending ${_recipients.length} links via $channelName');
-      print('🚀 CODE DISTRIBUTION: Selected codes: $unusedCodes');
-      print('🚀 CODE DISTRIBUTION: Recipients: ${_recipients.map((r) => '${r.name} (${r.phone})').toList()}');
+      print('🚀 BULK CODE DISTRIBUTION: Sending ${allRecipients.length} links via $channelName');
+      print('🚀 BULK CODE DISTRIBUTION: Total packages: ${_packageRecipients.entries.where((e) => e.value.isNotEmpty).length}');
+      print('🚀 BULK CODE DISTRIBUTION: Selected codes: $allCodes');
+      print('🚀 BULK CODE DISTRIBUTION: Recipients: ${allRecipients.map((r) => '${r.name} (${r.phone})').toList()}');
 
       final response = await _sponsorService.sendSponsorshipLinks(
-        recipients: _recipients,
+        recipients: allRecipients,
         channel: channelName,
-        selectedCodes: unusedCodes,
+        selectedCodes: allCodes,
       );
 
       // DEBUG LOG
-      print('🚀 CODE DISTRIBUTION: Response received - success: ${response.success}');
-      print('🚀 CODE DISTRIBUTION: Success count: ${response.data?.successCount}');
-      print('🚀 CODE DISTRIBUTION: Failure count: ${response.data?.failureCount}');
+      print('🚀 BULK CODE DISTRIBUTION: Response received - success: ${response.success}');
+      print('🚀 BULK CODE DISTRIBUTION: Success count: ${response.data?.successCount}');
+      print('🚀 BULK CODE DISTRIBUTION: Failure count: ${response.data?.failureCount}');
 
       if (mounted) {
         if (response.success) {
@@ -626,7 +785,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         }
       }
     } catch (e) {
-      print('🚀 CODE DISTRIBUTION: ERROR - $e');
+      print('🚀 BULK CODE DISTRIBUTION: ERROR - $e');
       if (mounted) {
         _showErrorDialog(e.toString());
       }
