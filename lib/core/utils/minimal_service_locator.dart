@@ -20,6 +20,7 @@ import '../../features/referral/data/services/referral_api_service.dart';
 import '../../features/referral/domain/repositories/referral_repository.dart';
 import '../../features/referral/data/repositories/referral_repository_impl.dart';
 import '../../features/referral/presentation/bloc/referral_bloc.dart';
+import '../../features/sponsorship/data/services/sponsor_service.dart';
 // import '../services/install_referrer_service.dart';  // TEMPORARILY DISABLED
 import '../services/sms_referral_service.dart';
 
@@ -120,6 +121,14 @@ Future<void> setupMinimalServiceLocator() async {
     () => SubscriptionService(
       getIt<NetworkClient>(),
       getIt<SecureStorageService>(),
+    ),
+  );
+
+  // Sponsor service
+  getIt.registerLazySingleton<SponsorService>(
+    () => SponsorService(
+      dio: getIt<Dio>(),
+      authService: getIt<AuthService>(),
     ),
   );
 
