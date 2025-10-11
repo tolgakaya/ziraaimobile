@@ -249,7 +249,9 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const CodeDistributionScreen(),
+                                        builder: (context) => CodeDistributionScreen(
+                                          dashboardSummary: _summary!,
+                                        ),
                                       ),
                                     ).then((_) {
                                       // Refresh dashboard when returning

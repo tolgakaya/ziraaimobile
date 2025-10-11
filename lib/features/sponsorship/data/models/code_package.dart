@@ -6,6 +6,7 @@ class CodePackage {
   final String tierName;
   final List<SponsorshipCode> codes;
   final DateTime purchaseDate;
+  final int? packageTotalCodes; // Total codes in package from dashboard (nullable for backward compatibility)
 
   CodePackage({
     required this.purchaseId,
@@ -13,11 +14,13 @@ class CodePackage {
     required this.tierName,
     required this.codes,
     required this.purchaseDate,
+    this.packageTotalCodes,
   });
 
   int get unusedCount => codes.where((code) => !code.isUsed).length;
 
-  int get totalCount => codes.length;
+  // Use packageTotalCodes from dashboard if available, otherwise fallback to codes.length
+  int get totalCount => packageTotalCodes ?? codes.length;
 
   String get displayName {
     // Tier name mapping
@@ -30,11 +33,15 @@ class CodePackage {
     };
 
     final name = tierNameMap[tierId] ?? 'Bilinmeyen';
-    return 'Paket $name ($unusedCount / $totalCount Kod)';
+    // Show unsent count (codes.length) vs total package codes
+    return 'Paket $name (${codes.length} / $totalCount Kod)';
   }
 
-  /// Group codes by purchaseId
-  static List<CodePackage> groupByPurchase(List<SponsorshipCode> codes) {
+  /// Group codes by purchaseId with optional dashboard total codes mapping
+  static List<CodePackage> groupByPurchase(
+    List<SponsorshipCode> codes, {
+    Map<int, int>? packageTotalCodesMap,
+  }) {
     if (codes.isEmpty) return [];
 
     // Group by purchaseId
@@ -58,6 +65,7 @@ class CodePackage {
         tierName: '', // Will be set by displayName getter
         codes: packageCodes,
         purchaseDate: firstCode.createdDate,
+        packageTotalCodes: packageTotalCodesMap?[purchaseId],
       );
     }).toList()
       ..sort((a, b) => b.purchaseDate.compareTo(a.purchaseDate)); // Sort by newest first

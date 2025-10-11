@@ -5,6 +5,7 @@ import '../../data/models/sponsorship_code.dart';
 import '../../data/models/code_package.dart';
 import '../../data/models/code_recipient.dart';
 import '../../data/models/send_link_response.dart';
+import '../../data/models/sponsor_dashboard_summary.dart';
 import '../../data/services/sponsor_service.dart';
 import '../widgets/package_selector_widget.dart';
 import '../widgets/recipient_list_item.dart';
@@ -13,7 +14,12 @@ import '../widgets/channel_selector_widget.dart';
 import 'code_distribution_success_screen.dart';
 
 class CodeDistributionScreen extends StatefulWidget {
-  const CodeDistributionScreen({super.key});
+  final SponsorDashboardSummary dashboardSummary;
+
+  const CodeDistributionScreen({
+    super.key,
+    required this.dashboardSummary,
+  });
 
   @override
   State<CodeDistributionScreen> createState() => _CodeDistributionScreenState();
@@ -49,10 +55,34 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       // This prevents duplicate code distribution (DistributionDate = NULL)
       final codes = await _sponsorService.getUnsentCodes();
 
+      // Create mapping of purchaseId -> totalCodes from dashboard
+      // Dashboard has tier-based info, but codes have purchaseId
+      // We'll match by tier for now (assuming one package per tier)
+      final Map<int, int> packageTotalCodesMap = {};
+
+      // Build map from dashboard active packages
+      for (final dashboardPackage in widget.dashboardSummary.activePackages) {
+        // Find a code with matching tier to get purchaseId
+        final matchingCode = codes.firstWhere(
+          (code) {
+            // Map tierId to tierName for comparison
+            final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
+            final codeTierName = tierNameMap[code.subscriptionTierId] ?? '';
+            return codeTierName == dashboardPackage.tierName;
+          },
+          orElse: () => codes.first,
+        );
+
+        packageTotalCodesMap[matchingCode.sponsorshipPurchaseId] = dashboardPackage.totalCodes;
+      }
+
       if (mounted) {
         setState(() {
           _allCodes = codes;
-          _packages = CodePackage.groupByPurchase(codes);
+          _packages = CodePackage.groupByPurchase(
+            codes,
+            packageTotalCodesMap: packageTotalCodesMap,
+          );
           // Set first package as default selection
           if (_packages.isNotEmpty) {
             _selectedPackage = _packages.first;
