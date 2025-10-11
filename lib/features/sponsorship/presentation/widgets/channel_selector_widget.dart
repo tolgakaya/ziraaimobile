@@ -57,36 +57,52 @@ class ChannelSelectorWidget extends StatelessWidget {
     required String label,
     required bool isSelected,
   }) {
+    // WhatsApp is disabled
+    final isDisabled = channel == MessageChannel.whatsapp;
+
     return GestureDetector(
-      onTap: () => onChannelSelected(channel),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF10B981).withOpacity(0.1) : Colors.white,
-          border: Border.all(
-            color: isSelected ? const Color(0xFF10B981) : const Color(0xFFE5E7EB),
-            width: isSelected ? 2 : 1,
+      onTap: isDisabled ? null : () => onChannelSelected(channel),
+      child: Opacity(
+        opacity: isDisabled ? 0.4 : 1.0,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF10B981).withOpacity(0.1) : Colors.white,
+            border: Border.all(
+              color: isSelected ? const Color(0xFF10B981) : const Color(0xFFE5E7EB),
+              width: isSelected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(12),
           ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF10B981) : const Color(0xFF6B7280),
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
                 color: isSelected ? const Color(0xFF10B981) : const Color(0xFF6B7280),
+                size: 24,
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? const Color(0xFF10B981) : const Color(0xFF6B7280),
+                ),
+              ),
+              if (isDisabled) ...[
+                const SizedBox(width: 4),
+                const Text(
+                  '(Yakında)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

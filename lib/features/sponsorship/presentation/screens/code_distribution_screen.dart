@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../data/models/sponsorship_code.dart';
 import '../../data/models/code_package.dart';
 import '../../data/models/code_recipient.dart';
@@ -24,7 +26,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   List<CodePackage> _packages = [];
   CodePackage? _selectedPackage;
   List<CodeRecipient> _recipients = [];
-  MessageChannel? _selectedChannel;
+  MessageChannel _selectedChannel = MessageChannel.sms; // SMS default
 
   bool _isLoading = true;
   bool _isSending = false;
@@ -182,20 +184,32 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
           // Add Recipient Buttons
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _showAddRecipientDialog,
-              icon: const Icon(Icons.person_add),
-              label: const Text('Manuel Ekle'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _pickContactsFromPhone,
+                  icon: const Icon(Icons.contacts),
+                  label: const Text('Telefon Rehberinden Seç'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: _showAddRecipientDialog,
+            icon: const Icon(Icons.person_add),
+            label: const Text('Manuel Ekle'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF10B981),
             ),
           ),
           const SizedBox(height: 24),
@@ -369,6 +383,90 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     });
   }
 
+  Future<void> _pickContactsFromPhone() async {
+    try {
+      // Check permission
+      final status = await Permission.contacts.status;
+
+      if (status.isDenied) {
+        final result = await Permission.contacts.request();
+        if (!result.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Rehber izni gerekli'),
+                backgroundColor: Color(0xFFEF4444),
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      // Fetch contacts
+      final contacts = await FlutterContacts.getContacts(
+        withProperties: true,
+        withPhoto: false,
+      );
+
+      if (!mounted) return;
+
+      // Show contact selection dialog
+      final selectedContacts = await showDialog<List<Contact>>(
+        context: context,
+        builder: (context) => _ContactSelectionDialog(contacts: contacts),
+      );
+
+      if (selectedContacts != null && selectedContacts.isNotEmpty) {
+        // Convert selected contacts to CodeRecipient
+        final newRecipients = <CodeRecipient>[];
+
+        for (final contact in selectedContacts) {
+          if (contact.phones.isNotEmpty) {
+            final phone = contact.phones.first.number;
+            final name = contact.displayName;
+
+            // Check if contact already added
+            final exists = _recipients.any((r) =>
+              CodeRecipient.normalizePhone(r.phone) == CodeRecipient.normalizePhone(phone)
+            );
+
+            if (!exists) {
+              newRecipients.add(CodeRecipient(
+                name: name,
+                phone: phone,
+              ));
+            }
+          }
+        }
+
+        if (newRecipients.isNotEmpty) {
+          setState(() {
+            _recipients.addAll(newRecipients);
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${newRecipients.length} kişi eklendi'),
+                backgroundColor: const Color(0xFF10B981),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
   bool _canSend() {
     if (_isSending) return false;
     if (_selectedPackage == null) return false;
@@ -475,6 +573,245 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             child: const Text('Tamam'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Contact Selection Dialog
+class _ContactSelectionDialog extends StatefulWidget {
+  final List<Contact> contacts;
+
+  const _ContactSelectionDialog({required this.contacts});
+
+  @override
+  State<_ContactSelectionDialog> createState() => _ContactSelectionDialogState();
+}
+
+class _ContactSelectionDialogState extends State<_ContactSelectionDialog> {
+  late List<Contact> _filteredContacts;
+  final Set<Contact> _selectedContacts = {};
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredContacts = widget.contacts;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterContacts(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredContacts = widget.contacts;
+      } else {
+        _filteredContacts = widget.contacts.where((contact) {
+          final name = contact.displayName.toLowerCase();
+          final searchQuery = query.toLowerCase();
+          return name.contains(searchQuery);
+        }).toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Kişi Seç',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Search Field
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Kişi ara...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: _filterContacts,
+            ),
+            const SizedBox(height: 16),
+
+            // Selected count
+            if (_selectedContacts.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      color: Color(0xFF10B981),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${_selectedContacts.length} kişi seçildi',
+                      style: const TextStyle(
+                        color: Color(0xFF10B981),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
+
+            // Contact List
+            Expanded(
+              child: _filteredContacts.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.person_off_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Kişi bulunamadı',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _filteredContacts.length,
+                      itemBuilder: (context, index) {
+                        final contact = _filteredContacts[index];
+                        final isSelected = _selectedContacts.contains(contact);
+                        final hasPhone = contact.phones.isNotEmpty;
+
+                        return ListTile(
+                          enabled: hasPhone,
+                          leading: CircleAvatar(
+                            backgroundColor: isSelected
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFE5E7EB),
+                            child: isSelected
+                                ? const Icon(Icons.check, color: Colors.white)
+                                : Text(
+                                    contact.displayName.isNotEmpty
+                                        ? contact.displayName[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      color: Color(0xFF6B7280),
+                                    ),
+                                  ),
+                          ),
+                          title: Text(
+                            contact.displayName,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: hasPhone
+                                  ? const Color(0xFF111827)
+                                  : const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                          subtitle: hasPhone
+                              ? Text(
+                                  contact.phones.first.number,
+                                  style: const TextStyle(
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                )
+                              : const Text(
+                                  'Telefon numarası yok',
+                                  style: TextStyle(
+                                    color: Color(0xFF9CA3AF),
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                          onTap: hasPhone
+                              ? () {
+                                  setState(() {
+                                    if (isSelected) {
+                                      _selectedContacts.remove(contact);
+                                    } else {
+                                      _selectedContacts.add(contact);
+                                    }
+                                  });
+                                }
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+
+            // Action Buttons
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'İptal',
+                      style: TextStyle(color: Color(0xFF6B7280)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _selectedContacts.isEmpty
+                        ? null
+                        : () => Navigator.pop(context, _selectedContacts.toList()),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      disabledBackgroundColor: Colors.grey[300],
+                    ),
+                    child: const Text('Ekle'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
