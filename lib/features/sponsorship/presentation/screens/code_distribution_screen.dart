@@ -10,6 +10,7 @@ import '../widgets/package_selector_widget.dart';
 import '../widgets/recipient_list_item.dart';
 import '../widgets/add_recipient_dialog.dart';
 import '../widgets/channel_selector_widget.dart';
+import 'code_distribution_success_screen.dart';
 
 class CodeDistributionScreen extends StatefulWidget {
   const CodeDistributionScreen({super.key});
@@ -50,6 +51,10 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         setState(() {
           _allCodes = codes;
           _packages = CodePackage.groupByPurchase(codes);
+          // Set first package as default selection
+          if (_packages.isNotEmpty) {
+            _selectedPackage = _packages.first;
+          }
           _isLoading = false;
         });
       }
@@ -518,31 +523,11 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   }
 
   void _showSuccessDialog(SendLinkResponse response) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green[600]),
-            const SizedBox(width: 12),
-            const Text('Başarılı!'),
-          ],
-        ),
-        content: Text(
-          '${response.data?.successCount ?? 0} kod başarıyla gönderildi!\n\n'
-          '${response.data?.failureCount ?? 0} başarısız gönderim.',
-          style: const TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back to dashboard
-            },
-            child: const Text('Tamam'),
-          ),
-        ],
+    // Navigate to success screen
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CodeDistributionSuccessScreen(response: response),
       ),
     );
   }
