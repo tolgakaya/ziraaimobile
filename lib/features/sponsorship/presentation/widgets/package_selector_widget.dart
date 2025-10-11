@@ -5,12 +5,14 @@ class PackageSelectorWidget extends StatelessWidget {
   final CodePackage? selectedPackage;
   final List<CodePackage> packages;
   final ValueChanged<CodePackage?> onPackageSelected;
+  final int recipientCount; // Number of recipients added
 
   const PackageSelectorWidget({
     super.key,
     required this.selectedPackage,
     required this.packages,
     required this.onPackageSelected,
+    this.recipientCount = 0,
   });
 
   @override
@@ -32,19 +34,31 @@ class PackageSelectorWidget extends StatelessWidget {
       );
     }
 
+    // Calculate remaining codes after recipients are added
+    final availableCodes = selectedPackage?.codes.length ?? 0;
+    final remainingCodes = availableCodes - recipientCount;
+    final totalCodes = selectedPackage?.totalCount ?? 0;
+
     return GestureDetector(
       onTap: () => _showPackageSelector(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF10B981),
+          color: remainingCodes <= 0 ? Colors.orange : const Color(0xFF10B981),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (remainingCodes <= 0)
+              const Icon(
+                Icons.warning,
+                color: Colors.white,
+                size: 18,
+              ),
+            if (remainingCodes <= 0) const SizedBox(width: 6),
             Text(
-              selectedPackage?.displayName ?? 'Paket Seç',
+              _getDisplayText(),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 15,
@@ -61,6 +75,22 @@ class PackageSelectorWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _getDisplayText() {
+    if (selectedPackage == null) {
+      return 'Paket Seç';
+    }
+
+    final availableCodes = selectedPackage!.codes.length;
+    final remainingCodes = availableCodes - recipientCount;
+    final totalCodes = selectedPackage!.totalCount;
+
+    // Get package tier name
+    final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
+    final tierName = tierNameMap[selectedPackage!.tierId] ?? 'Bilinmeyen';
+
+    return 'Paket $tierName ($remainingCodes / $totalCodes Kod)';
   }
 
   void _showPackageSelector(BuildContext context) {

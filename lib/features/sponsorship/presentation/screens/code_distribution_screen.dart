@@ -186,13 +186,16 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Package Selector
+          // Package Selector with dynamic remaining count
           PackageSelectorWidget(
             selectedPackage: _selectedPackage,
             packages: _packages,
+            recipientCount: _recipients.length, // Pass current recipient count
             onPackageSelected: (package) {
               setState(() {
                 _selectedPackage = package;
+                // Clear recipients when switching packages to avoid confusion
+                _recipients.clear();
               });
             },
           ),
@@ -401,6 +404,15 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   }
 
   void _showAddRecipientDialog() async {
+    // Check if we have available codes
+    final availableCodes = _selectedPackage?.codes.length ?? 0;
+    final currentRecipients = _recipients.length;
+
+    if (currentRecipients >= availableCodes) {
+      _showMaxRecipientsDialog();
+      return;
+    }
+
     final recipient = await showDialog<CodeRecipient>(
       context: context,
       builder: (context) => const AddRecipientDialog(),
@@ -411,6 +423,35 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         _recipients.add(recipient);
       });
     }
+  }
+
+  void _showMaxRecipientsDialog() {
+    final packageName = _selectedPackage?.displayName ?? 'Bu paket';
+    final availableCodes = _selectedPackage?.codes.length ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange[600]),
+            const SizedBox(width: 12),
+            const Text('Maksimum Kişi Sayısına Ulaşıldı'),
+          ],
+        ),
+        content: Text(
+          '$packageName için maksimum $availableCodes kişiye kod gönderebilirsiniz.\n\nDaha fazla kod göndermek için başka bir paket seçin veya yeni paket satın alın.',
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _removeRecipient(CodeRecipient recipient) {
@@ -451,6 +492,16 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       );
 
       if (selectedContacts != null && selectedContacts.isNotEmpty) {
+        // Check available space
+        final availableCodes = _selectedPackage?.codes.length ?? 0;
+        final currentRecipients = _recipients.length;
+        final remainingSlots = availableCodes - currentRecipients;
+
+        if (remainingSlots <= 0) {
+          _showMaxRecipientsDialog();
+          return;
+        }
+
         // Convert selected contacts to CodeRecipient
         final newRecipients = <CodeRecipient>[];
 
@@ -465,6 +516,10 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             );
 
             if (!exists) {
+              // Stop adding if we reach the limit
+              if (newRecipients.length + currentRecipients >= availableCodes) {
+                break;
+              }
               newRecipients.add(CodeRecipient(
                 name: name,
                 phone: phone,
@@ -479,10 +534,16 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
           });
 
           if (mounted) {
+            final limitReached = _recipients.length >= availableCodes;
+            final message = limitReached
+                ? '${newRecipients.length} kişi eklendi. Maksimum kişi sayısına ulaşıldı.'
+                : '${newRecipients.length} kişi eklendi';
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('${newRecipients.length} kişi eklendi'),
-                backgroundColor: const Color(0xFF10B981),
+                content: Text(message),
+                backgroundColor: limitReached ? Colors.orange : const Color(0xFF10B981),
+                duration: Duration(seconds: limitReached ? 4 : 2),
               ),
             );
           }
