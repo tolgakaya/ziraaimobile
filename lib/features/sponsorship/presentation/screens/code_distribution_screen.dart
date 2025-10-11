@@ -496,11 +496,21 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       // Send links
       final channelName = _selectedChannel == MessageChannel.sms ? 'SMS' : 'WhatsApp';
 
+      // DEBUG LOG
+      print('🚀 CODE DISTRIBUTION: Sending ${_recipients.length} links via $channelName');
+      print('🚀 CODE DISTRIBUTION: Selected codes: $unusedCodes');
+      print('🚀 CODE DISTRIBUTION: Recipients: ${_recipients.map((r) => '${r.name} (${r.phone})').toList()}');
+
       final response = await _sponsorService.sendSponsorshipLinks(
         recipients: _recipients,
         channel: channelName,
         selectedCodes: unusedCodes,
       );
+
+      // DEBUG LOG
+      print('🚀 CODE DISTRIBUTION: Response received - success: ${response.success}');
+      print('🚀 CODE DISTRIBUTION: Success count: ${response.data?.successCount}');
+      print('🚀 CODE DISTRIBUTION: Failure count: ${response.data?.failureCount}');
 
       if (mounted) {
         if (response.success) {
@@ -510,6 +520,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         }
       }
     } catch (e) {
+      print('🚀 CODE DISTRIBUTION: ERROR - $e');
       if (mounted) {
         _showErrorDialog(e.toString());
       }
