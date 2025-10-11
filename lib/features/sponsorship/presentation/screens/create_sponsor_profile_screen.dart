@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:dio/dio.dart';
 import '../../data/services/sponsor_service.dart';
-import '../../../authentication/presentation/bloc/auth_bloc.dart';
-import '../../../authentication/presentation/bloc/auth_event.dart';
+import '../../../../core/security/token_manager.dart';
 import 'dart:developer' as developer;
 
 class CreateSponsorProfileScreen extends StatefulWidget {
@@ -56,26 +56,71 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
       );
 
       developer.log(
-        'Sponsor profile created, refreshing token...',
+        'Sponsor profile created successfully',
         name: 'CreateSponsorProfile',
       );
+      print('✅ CreateSponsorProfile: Sponsor profile created successfully!');
 
-      // Refresh token to get updated roles
-      final authBloc = GetIt.instance<AuthBloc>();
-      authBloc.add(const AuthCheckStatusRequested());
+      // Get refresh token and attempt to refresh access token
+      final tokenManager = GetIt.instance<TokenManager>();
+      final refreshToken = await tokenManager.getRefreshToken();
 
-      if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sponsor profili başarıyla oluşturuldu!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
+      if (refreshToken != null) {
+        print('🔄 CreateSponsorProfile: Attempting token refresh to get updated roles...');
+        
+        final refreshSuccess = await _attemptTokenRefresh(refreshToken);
+        
+        if (refreshSuccess) {
+          print('✅ CreateSponsorProfile: Token refresh successful! Navigating to sponsor dashboard...');
+          
+          if (mounted) {
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Sponsor profili başarıyla oluşturuldu!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
 
-        // Navigate back and signal refresh
-        Navigator.of(context).pop(true);
+            // Wait a moment for snackbar
+            await Future.delayed(const Duration(milliseconds: 500));
+
+            // Navigate back and trigger sponsor dashboard navigation
+            Navigator.of(context).pop(true); // Return true to trigger sponsor dashboard navigation
+          }
+        } else {
+          print('⚠️ CreateSponsorProfile: Token refresh failed, requiring logout/login');
+          
+          if (mounted) {
+            // Show message that logout/login is needed
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Sponsor profili oluşturuldu! Lütfen çıkış yapıp tekrar giriş yapın.'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 4),
+              ),
+            );
+
+            await Future.delayed(const Duration(milliseconds: 500));
+            Navigator.of(context).pop(false);
+          }
+        }
+      } else {
+        print('⚠️ CreateSponsorProfile: No refresh token available');
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sponsor profili oluşturuldu! Lütfen çıkış yapıp tekrar giriş yapın.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+
+          await Future.delayed(const Duration(milliseconds: 500));
+          Navigator.of(context).pop(false);
+        }
       }
     } catch (e) {
       developer.log(
@@ -99,6 +144,92 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// Attempt to refresh access token (same logic as splash screen)
+  Future<bool> _attemptTokenRefresh(String refreshToken) async {
+    try {
+      print('🔄 CreateSponsorProfile: Starting token refresh API call...');
+
+      // Use Dio directly for refresh (create new instance to avoid circular dependencies)
+      final dio = Dio();
+
+      final response = await dio.post(
+        'https://ziraai-api-sit.up.railway.app/api/v1/auth/refresh-token',
+        data: {
+          'refreshToken': refreshToken,
+        },
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      print('📡 CreateSponsorProfile: Refresh API response status: ${response.statusCode}');
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        print('📦 CreateSponsorProfile: Refresh API response data keys: ${data.keys}');
+
+        // Extract new tokens
+        String? newAccessToken;
+        String? newRefreshToken;
+
+        if (data.containsKey('data')) {
+          final tokenData = data['data'] as Map<String, dynamic>;
+          newAccessToken = tokenData['token'] ?? tokenData['accessToken'];
+          newRefreshToken = tokenData['refreshToken'];
+          print('🔑 CreateSponsorProfile: Extracted from data.data - hasToken: ${newAccessToken != null}');
+        } else {
+          newAccessToken = data['token'] ?? data['accessToken'];
+          newRefreshToken = data['refreshToken'];
+          print('🔑 CreateSponsorProfile: Extracted from data - hasToken: ${newAccessToken != null}');
+        }
+
+        if (newAccessToken != null) {
+          print('💾 CreateSponsorProfile: Saving new access token...');
+          final tokenManager = GetIt.instance<TokenManager>();
+          await tokenManager.saveToken(newAccessToken);
+
+          if (newRefreshToken != null) {
+            print('💾 CreateSponsorProfile: Saving new refresh token...');
+            await tokenManager.saveRefreshToken(newRefreshToken);
+          }
+
+          // Verify roles in new token
+          final roles = await tokenManager.getUserRoles();
+          print('✅ CreateSponsorProfile: New token roles: $roles');
+
+          return true;
+        } else {
+          print('⚠️ CreateSponsorProfile: No access token in response!');
+        }
+      } else {
+        print('⚠️ CreateSponsorProfile: Invalid response - status: ${response.statusCode}');
+      }
+
+      return false;
+    } on DioException catch (e) {
+      print('❌ CreateSponsorProfile: Token refresh DioException');
+      print('   Status Code: ${e.response?.statusCode}');
+      print('   Response Data: ${e.response?.data}');
+      print('   Error Message: ${e.message}');
+      developer.log(
+        'Token refresh error',
+        name: 'CreateSponsorProfile',
+        error: e,
+      );
+      return false;
+    } catch (e) {
+      print('❌ CreateSponsorProfile: Token refresh exception: $e');
+      developer.log(
+        'Token refresh error',
+        name: 'CreateSponsorProfile',
+        error: e,
+      );
+      return false;
     }
   }
 
