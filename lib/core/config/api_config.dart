@@ -63,6 +63,10 @@ class ApiConfig {
   static const String getSponsorProfile = '/sponsorship/profile';
   static const String sponsorDashboardSummary = '/sponsorship/dashboard-summary';
 
+  // Code Distribution Endpoints
+  static const String sponsorshipCodes = '/sponsorship/codes';
+  static const String sendSponsorshipLink = '/sponsorship/send-link';
+
   // SignalR Hub Endpoint
   static String get signalRHubUrl => '$baseUrl/hubs/plantanalysis';
 
