@@ -2,57 +2,97 @@ import 'package:flutter/material.dart';
 import '../../../plant_analysis/presentation/pages/capture_screen.dart';
 
 class ActionButtons extends StatelessWidget {
-  const ActionButtons({super.key});
+  final bool hasSponsorRole;
+  final VoidCallback? onSponsorButtonTap;
+
+  const ActionButtons({
+    super.key,
+    this.hasSponsorRole = false,
+    this.onSponsorButtonTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // Analyze Plant Button
-        Expanded(
-          child: _ActionButton(
-            icon: Icons.camera_alt,
-            label: 'Bitki Analizi',
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF22C55E), // green-500
-                Color(0xFF16A34A), // green-600
-              ],
+    return SizedBox(
+      height: 220, // Fixed total height
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Left: Bitki Analizi Button (square-ish, full height)
+          Expanded(
+            flex: 1,
+            child: _ActionButton(
+              icon: Icons.camera_alt,
+              label: 'Bitki Analizi',
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF22C55E), // green-500
+                  Color(0xFF16A34A), // green-600
+                ],
+              ),
+              textColor: Colors.white,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CaptureScreen(),
+                  ),
+                );
+              },
             ),
-            textColor: Colors.white,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CaptureScreen(),
+          ),
+          const SizedBox(width: 12),
+          // Right: Two buttons stacked vertically
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                // Top: Geçmiş Button
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.history,
+                    label: 'Geçmiş',
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF6B7280), // gray-500
+                        Color(0xFF4B5563), // gray-600
+                      ],
+                    ),
+                    textColor: Colors.white,
+                    onTap: () {
+                      // Geçmiş buton işlevi - sonra eklenecek
+                    },
+                  ),
                 ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(width: 16),
-        // Placeholder Button (İkinci buton için)
-        Expanded(
-          child: _ActionButton(
-            icon: Icons.history,
-            label: 'Geçmiş',
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF6B7280), // gray-500
-                Color(0xFF4B5563), // gray-600
+                const SizedBox(height: 8),
+                // Bottom: Sponsor Paneli Button
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.grid_view_rounded,
+                    label: 'Sponsor Paneli',
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF3B82F6), // blue-500
+                        Color(0xFF2563EB), // blue-600
+                      ],
+                    ),
+                    textColor: Colors.white,
+                    onTap: onSponsorButtonTap ?? () {
+                      // Default action if no callback provided
+                    },
+                  ),
+                ),
               ],
             ),
-            textColor: Colors.white,
-            onTap: () {
-              // İkinci buton işlevi - sonra eklenecek
-            },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -130,7 +170,8 @@ class _ActionButtonState extends State<_ActionButton>
             onTapCancel: _onTapCancel,
             onTap: widget.onTap,
             child: Container(
-              height: 110,
+              width: double.infinity,
+              height: double.infinity,
               decoration: BoxDecoration(
                 gradient: widget.gradient,
                 borderRadius: BorderRadius.circular(20),

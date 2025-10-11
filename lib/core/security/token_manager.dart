@@ -152,6 +152,52 @@ class TokenManager {
     }
   }
 
+  /// Get user roles from JWT token
+  /// Returns list of roles from token claims
+  Future<List<String>> getUserRoles() async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        print('⚠️ TokenManager: No token available for role extraction');
+        return [];
+      }
+
+      final decodedToken = JwtDecoder.decode(token);
+
+      // Try different possible role claim names
+      final roleClaim = decodedToken['role'] ??
+                       decodedToken['roles'] ??
+                       decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+
+      if (roleClaim == null) {
+        print('⚠️ TokenManager: No role claim found in token');
+        return [];
+      }
+
+      // Handle both single role (string) and multiple roles (list)
+      if (roleClaim is String) {
+        print('✅ TokenManager: Found role: $roleClaim');
+        return [roleClaim];
+      } else if (roleClaim is List) {
+        final roles = roleClaim.cast<String>();
+        print('✅ TokenManager: Found roles: $roles');
+        return roles;
+      }
+
+      print('⚠️ TokenManager: Role claim has unexpected type: ${roleClaim.runtimeType}');
+      return [];
+    } catch (e) {
+      print('⚠️ TokenManager: Error extracting user roles: $e');
+      return [];
+    }
+  }
+
+  /// Check if user has a specific role
+  Future<bool> hasRole(String role) async {
+    final roles = await getUserRoles();
+    return roles.contains(role);
+  }
+
   void dispose() {
     // Clean up any resources
   }
