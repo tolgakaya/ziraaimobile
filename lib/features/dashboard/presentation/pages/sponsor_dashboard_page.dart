@@ -120,33 +120,33 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
               child: Row(
                 children: [
                   // ZiraAI Logo
-                  Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF10B981),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.eco,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
+                  Image.asset(
+                    'assets/logos/ziraai_logo.png',
+                    height: 56,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Text(
                         'ZiraAI',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF111827),
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                   const Spacer(),
+                  // Switch to Farmer Dashboard button
+                  IconButton(
+                    icon: const Icon(
+                      Icons.agriculture,
+                      color: Color(0xFF10B981),
+                    ),
+                    tooltip: 'Çiftçi Paneli',
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
                   // Logout button
                   IconButton(
                     icon: const Icon(
@@ -213,7 +213,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                         icon: Icons.send,
                                         iconColor: const Color(0xFF3B82F6),
                                         value: '${_summary!.sentCodesCount}/${_summary!.totalCodesCount}',
-                                        label: 'Sent Codes',
+                                        label: 'Gönderilen Kodlar',
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -222,7 +222,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                         icon: Icons.analytics,
                                         iconColor: const Color(0xFFF59E0B),
                                         value: '${_summary!.totalAnalysesCount}',
-                                        label: 'Analyses',
+                                        label: 'Analizler',
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -231,7 +231,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                         icon: Icons.shopping_bag,
                                         iconColor: const Color(0xFF10B981),
                                         value: '${_summary!.purchasesCount}',
-                                        label: 'Purchases',
+                                        label: 'Satın Alımlar',
                                       ),
                                     ),
                                   ],
@@ -242,12 +242,12 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                 // Action Buttons
                                 SponsorActionButton(
                                   icon: Icons.send,
-                                  label: 'Distribute Codes',
+                                  label: 'Kod Dağıt',
                                   color: const Color(0xFF3B82F6),
                                   onPressed: () {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Distribute Codes - Coming Soon'),
+                                        content: Text('Kod Dağıtım - Yakında'),
                                       ),
                                     );
                                   },
@@ -255,12 +255,12 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                 const SizedBox(height: 12),
                                 SponsorActionButton(
                                   icon: Icons.shopping_cart,
-                                  label: 'Purchase Package',
+                                  label: 'Paket Satın Al',
                                   color: const Color(0xFF10B981),
                                   onPressed: () {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Purchase Package - Coming Soon'),
+                                        content: Text('Paket Satın Alma - Yakında'),
                                       ),
                                     );
                                   },
@@ -268,12 +268,12 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                 const SizedBox(height: 12),
                                 SponsorActionButton(
                                   icon: Icons.bar_chart,
-                                  label: 'View Statistics',
+                                  label: 'İstatistikleri Görüntüle',
                                   color: const Color(0xFFF59E0B),
                                   onPressed: () {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('View Statistics - Coming Soon'),
+                                        content: Text('İstatistikler - Yakında'),
                                       ),
                                     );
                                   },
