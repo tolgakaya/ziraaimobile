@@ -194,8 +194,8 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             onPackageSelected: (package) {
               setState(() {
                 _selectedPackage = package;
-                // Clear recipients when switching packages to avoid confusion
-                _recipients.clear();
+                // DON'T clear recipients - allow multi-package distribution
+                // User can manually remove recipients if needed
               });
             },
           ),
@@ -308,8 +308,16 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
   Widget _buildSummaryCard() {
     final recipientCount = _recipients.length;
-    final availableCodes = _selectedPackage?.unusedCount ?? 0;
+    final availableCodes = _selectedPackage?.codes.length ?? 0;
+    final totalPackageCodes = _selectedPackage?.totalCount ?? 0;
+    final remainingCodes = availableCodes - recipientCount;
     final hasEnoughCodes = recipientCount <= availableCodes;
+
+    // Get package name for display
+    final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
+    final tierName = _selectedPackage != null
+        ? tierNameMap[_selectedPackage!.tierId] ?? 'Bilinmeyen'
+        : 'Seçilmedi';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -335,7 +343,12 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
           const SizedBox(height: 12),
           _buildSummaryRow(
             'Seçilen Paket',
-            _selectedPackage?.displayName ?? 'Seçilmedi',
+            'Paket $tierName',
+          ),
+          _buildSummaryRow(
+            'Kalan / Toplam Kod',
+            '$remainingCodes / $totalPackageCodes kod',
+            valueColor: remainingCodes <= 0 ? Colors.orange : null,
           ),
           _buildSummaryRow(
             'Alıcı Sayısı',
@@ -377,7 +390,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
+  Widget _buildSummaryRow(String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -392,10 +405,10 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF111827),
+              color: valueColor ?? const Color(0xFF111827),
             ),
           ),
         ],
