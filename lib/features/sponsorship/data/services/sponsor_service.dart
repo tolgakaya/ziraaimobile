@@ -184,8 +184,9 @@ class SponsorService {
     }
   }
 
-  /// Get unused sponsorship codes
+  /// Get unused sponsorship codes (includes both sent and unsent)
   /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnused=true
+  /// Use this for statistics only, NOT for distribution
   Future<List<SponsorshipCode>> getUnusedCodes() async {
     try {
       final token = await _authService.getToken();
@@ -250,6 +251,80 @@ class SponsorService {
     } catch (e) {
       developer.log(
         'Unexpected error getting unused codes',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Get UNSENT sponsorship codes (DistributionDate = NULL)
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true
+  /// RECOMMENDED: Use this for code distribution to prevent duplicate sends
+  Future<List<SponsorshipCode>> getUnsentCodes() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching UNSENT sponsorship codes (safe for distribution)',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorshipCodes}',
+        queryParameters: {'onlyUnsent': true},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Unsent codes fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "data": [...] }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        final codes = (responseData['data'] as List)
+            .map((json) => SponsorshipCode.fromJson(json))
+            .toList();
+
+        developer.log(
+          'Found ${codes.length} UNSENT codes ready for distribution',
+          name: 'SponsorService',
+        );
+
+        return codes;
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load codes');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get unsent codes',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load codes')
+            : 'Failed to load codes';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting unsent codes',
         name: 'SponsorService',
         error: e,
       );

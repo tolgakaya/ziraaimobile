@@ -45,7 +45,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     });
 
     try {
-      final codes = await _sponsorService.getUnusedCodes();
+      // IMPORTANT: Use getUnsentCodes() to get ONLY codes that have never been sent
+      // This prevents duplicate code distribution (DistributionDate = NULL)
+      final codes = await _sponsorService.getUnsentCodes();
 
       if (mounted) {
         setState(() {
