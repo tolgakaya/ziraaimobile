@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import '../../data/models/sponsorship_code.dart';
 import '../../data/models/code_package.dart';
 import '../../data/models/code_recipient.dart';
+import '../../data/models/send_link_response.dart';
 import '../../data/services/sponsor_service.dart';
 import '../widgets/package_selector_widget.dart';
 import '../widgets/recipient_list_item.dart';
