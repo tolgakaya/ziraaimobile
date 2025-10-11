@@ -15,6 +15,7 @@ import '../../../authentication/presentation/bloc/auth_event.dart';
 import '../../../authentication/presentation/bloc/auth_state.dart';
 import '../../../authentication/presentation/screens/login_screen.dart';
 import '../../../sponsorship/presentation/screens/create_sponsor_profile_screen.dart';
+import '../../../../core/security/token_manager.dart';
 import 'sponsor_dashboard_page.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
@@ -37,19 +38,86 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
     });
   }
 
-  void _navigateToSponsorDashboard() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SponsorDashboardPage(),
-      ),
-    );
+  Future<void> _navigateToSponsorDashboard() async {
+    print('🎯 FarmerDashboard: _navigateToSponsorDashboard called, _hasSponsorRole: $_hasSponsorRole');
+
+    // If not sponsor, navigate to create sponsor profile
+    if (!_hasSponsorRole) {
+      print('📝 FarmerDashboard: Opening CreateSponsorProfileScreen...');
+
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CreateSponsorProfileScreen(),
+        ),
+      );
+
+      print('↩️ FarmerDashboard: Returned from CreateSponsorProfileScreen, result: $result');
+
+      // Refresh dashboard and check sponsor role if profile was created
+      if (result == true && mounted) {
+        print('✅ FarmerDashboard: Profile created successfully, checking sponsor role...');
+
+        // Re-check sponsor role from token (it should be updated after profile creation)
+        await _checkSponsorRole();
+
+        print('🔄 FarmerDashboard: After _checkSponsorRole, _hasSponsorRole: $_hasSponsorRole');
+
+        _refreshDashboard();
+
+        // If sponsor role was successfully added, navigate to sponsor dashboard
+        if (_hasSponsorRole && mounted) {
+          print('🎉 FarmerDashboard: Navigating to SponsorDashboardPage!');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SponsorDashboardPage(),
+            ),
+          );
+        } else {
+          print('⚠️ FarmerDashboard: Sponsor role NOT found after refresh!');
+        }
+      }
+    } else {
+      print('✨ FarmerDashboard: User already has Sponsor role, opening SponsorDashboard');
+      // If already sponsor, navigate to sponsor dashboard
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsorDashboardPage(),
+        ),
+      );
+    }
   }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkSponsorRole();
+  }
+
+  Future<void> _checkSponsorRole() async {
+    try {
+      print('🔍 FarmerDashboard: Starting sponsor role check...');
+      final tokenManager = GetIt.instance<TokenManager>();
+
+      // Get all roles from token
+      final allRoles = await tokenManager.getUserRoles();
+      print('📋 FarmerDashboard: All roles in token: $allRoles');
+
+      final hasSponsor = await tokenManager.hasRole('Sponsor');
+
+      if (mounted) {
+        setState(() {
+          _hasSponsorRole = hasSponsor;
+        });
+      }
+
+      print('🔍 FarmerDashboard: Sponsor role check - hasSponsor: $hasSponsor');
+    } catch (e) {
+      print('⚠️ FarmerDashboard: Error checking sponsor role: $e');
+    }
   }
 
   @override
@@ -191,118 +259,29 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // Conditional: Sponsor Ol Button OR Sponsor Paneli Button
-                        if (!_hasSponsorRole)
-                          Container(
-                            height: 36,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF10B981), Color(0xFF059669)],
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: TextButton(
-                              onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const CreateSponsorProfileScreen(),
-                                  ),
-                                );
-
-                                // Refresh dashboard and set sponsor role if profile was created
-                                if (result == true && mounted) {
-                                  setState(() {
-                                    _hasSponsorRole = true;
-                                  });
-                                  _refreshDashboard();
-                                }
-                              },
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.business_center,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Sponsor Ol',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        else
-                          Container(
-                            height: 36,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: TextButton(
-                              onPressed: _navigateToSponsorDashboard,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.dashboard,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Sponsor Paneli',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        const SizedBox(width: 8),
                         // Notifications Bell with Badge
                         const NotificationBellIcon(),
                         const SizedBox(width: 8),
-                          // Logout Icon
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.logout,
-                                color: Color(0xFFEF4444), // Red color for logout
-                                size: 24,
-                              ),
-                              onPressed: () => _showLogoutDialog(context),
-                              tooltip: 'Çıkış Yap',
-                            ),
+                        // Logout Icon
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        ],
-                      ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.logout,
+                              color: Color(0xFFEF4444), // Red color for logout
+                              size: 24,
+                            ),
+                            onPressed: () => _showLogoutDialog(context),
+                            tooltip: 'Çıkış Yap',
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -316,7 +295,10 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Action Buttons
-                  const ActionButtons(),
+                  ActionButtons(
+                    hasSponsorRole: _hasSponsorRole,
+                    onSponsorButtonTap: _navigateToSponsorDashboard,
+                  ),
 
                   const SizedBox(height: 24),
 

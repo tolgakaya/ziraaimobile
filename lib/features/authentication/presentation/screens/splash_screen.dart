@@ -11,7 +11,7 @@ import '../../../dashboard/presentation/bloc/notification_bloc.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import 'login_screen.dart';
-import '../../../../main_simple.dart' as main_app;
+import '../../../../main.dart' as main_app;
 
 /// Splash screen with automatic login check
 ///
