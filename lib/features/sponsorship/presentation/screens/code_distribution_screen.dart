@@ -89,26 +89,41 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
               pageSize: 50,
             );
 
-      // Create mapping of purchaseId -> totalCodes from dashboard
-      // Dashboard has tier-based info, but codes have purchaseId
-      // We'll match by tier for now (assuming one package per tier)
+      // Create mapping of purchaseId -> totalCodes
+      // Use API's totalCount (total available codes for this filter) since it's more reliable
       final Map<int, int> packageTotalCodesMap = {};
 
-      // Build map from dashboard active packages
-      for (final dashboardPackage in widget.dashboardSummary.activePackages) {
-        // Find a code with matching tier to get purchaseId
-        if (result.items.isNotEmpty) {
-          final matchingCode = result.items.firstWhere(
-            (code) {
-              // Map tierId to tierName for comparison
-              final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
-              final codeTierName = tierNameMap[code.subscriptionTierId] ?? '';
-              return codeTierName == dashboardPackage.tierName;
-            },
-            orElse: () => result.items.first,
-          );
+      // Group codes by purchaseId to get count per package
+      final Map<int, int> purchaseIdCounts = {};
+      for (final code in result.items) {
+        purchaseIdCounts[code.sponsorshipPurchaseId] =
+            (purchaseIdCounts[code.sponsorshipPurchaseId] ?? 0) + 1;
+      }
 
-          packageTotalCodesMap[matchingCode.sponsorshipPurchaseId] = dashboardPackage.totalCodes;
+      // Use API's totalCount as the total available codes
+      // Distribute proportionally to each purchaseId based on loaded items
+      if (result.items.isNotEmpty && result.totalCount > 0) {
+        for (final entry in purchaseIdCounts.entries) {
+          final purchaseId = entry.key;
+          final loadedCount = entry.value;
+
+          // If we have all codes loaded, use actual count
+          // Otherwise, estimate total based on proportion
+          if (loadMore) {
+            // Keep existing totals during pagination
+            packageTotalCodesMap[purchaseId] ??= loadedCount;
+          } else {
+            // On initial load, use totalCount from API
+            // For single package, use full totalCount
+            // For multiple packages, distribute proportionally
+            if (purchaseIdCounts.length == 1) {
+              packageTotalCodesMap[purchaseId] = result.totalCount;
+            } else {
+              // Multiple packages: keep proportional to loaded items
+              final proportion = loadedCount / result.items.length;
+              packageTotalCodesMap[purchaseId] = (result.totalCount * proportion).round();
+            }
+          }
         }
       }
 
