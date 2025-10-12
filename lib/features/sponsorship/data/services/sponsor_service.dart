@@ -488,10 +488,13 @@ class SponsorService {
 
   /// Send sponsorship links to recipients
   /// Endpoint: POST /api/v1/sponsorship/send-link
+  /// 
+  /// [allowResendExpired] If true, allows resending expired codes with renewed expiry date (+30 days)
   Future<SendLinkResponse> sendSponsorshipLinks({
     required List<CodeRecipient> recipients,
     required String channel, // "SMS" or "WhatsApp"
     required List<String> selectedCodes,
+    bool allowResendExpired = false,
   }) async {
     try {
       final token = await _authService.getToken();
@@ -524,6 +527,7 @@ class SponsorService {
           'recipients': recipientsWithCodes,
           'channel': channel,
           'customMessage': null,
+          'allowResendExpired': allowResendExpired,
         },
         options: Options(
           headers: {

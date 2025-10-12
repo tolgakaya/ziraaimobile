@@ -54,6 +54,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
   // Mode toggle state
   bool _showExpiredCodes = false; // false = unsent (new codes), true = sent expired codes
+  bool _allowResendExpired = false; // Allow renewal of expired codes when resending
 
   @override
   void initState() {
@@ -180,6 +181,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                       if (_showExpiredCodes) {
                         setState(() {
                           _showExpiredCodes = false;
+                          _allowResendExpired = false;
                           _packageRecipients.clear(); // Clear recipients when switching
                           _selectedPackage = null;
                         });
@@ -233,6 +235,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                       if (!_showExpiredCodes) {
                         setState(() {
                           _showExpiredCodes = true;
+                          _allowResendExpired = false;
                           _packageRecipients.clear(); // Clear recipients when switching
                           _selectedPackage = null;
                         });
@@ -469,6 +472,83 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
               },
             ),
             const SizedBox(height: 24),
+
+            // Expired Code Renewal Warning (only show in expired mode)
+            if (_showExpiredCodes)
+              Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Color(0xFFF59E0B),
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Süresi Dolmuş Kodlar',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Seçtiğiniz kodların süresi dolmuş. Bu kodları tekrar göndermek için son kullanma tarihlerini yenilemelisiniz.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF92400E),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      value: _allowResendExpired,
+                      onChanged: (value) {
+                        setState(() {
+                          _allowResendExpired = value ?? false;
+                        });
+                      },
+                      title: const Text(
+                        'Son kullanma tarihini yenile ve gönder',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Kodlar 30 gün daha geçerli olacak',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
+                      activeColor: const Color(0xFFF59E0B),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ],
+                ),
+              ),
 
             // Load More Codes Button
             if (_hasMoreCodes && !_isLoadingMore)
@@ -1015,6 +1095,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         recipients: allRecipients,
         channel: channelName,
         selectedCodes: allCodes,
+        allowResendExpired: _showExpiredCodes && _allowResendExpired,
       );
 
       // DEBUG LOG
