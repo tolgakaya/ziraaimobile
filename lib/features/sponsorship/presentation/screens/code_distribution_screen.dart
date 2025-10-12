@@ -52,13 +52,16 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   bool _isLoadingMore = false;
   int _totalCodesAvailable = 0;
 
+  // Mode toggle state
+  bool _showExpiredCodes = false; // false = unsent (new codes), true = sent expired codes
+
   @override
   void initState() {
     super.initState();
-    _loadUnusedCodes();
+    _loadCodes();
   }
 
-  Future<void> _loadUnusedCodes({bool loadMore = false}) async {
+  Future<void> _loadCodes({bool loadMore = false}) async {
     // Prevent concurrent loads
     if (_isLoadingMore) return;
 
@@ -74,12 +77,16 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     });
 
     try {
-      // IMPORTANT: Use getUnsentCodes() to get ONLY codes that have never been sent
-      // This prevents duplicate code distribution (DistributionDate = NULL)
-      final result = await _sponsorService.getUnsentCodes(
-        page: loadMore ? _currentPage + 1 : 1,
-        pageSize: 50,
-      );
+      // Load codes based on current mode
+      final result = _showExpiredCodes
+          ? await _sponsorService.getSentExpiredCodes(
+              page: loadMore ? _currentPage + 1 : 1,
+              pageSize: 50,
+            )
+          : await _sponsorService.getUnsentCodes(
+              page: loadMore ? _currentPage + 1 : 1,
+              pageSize: 50,
+            );
 
       // Create mapping of purchaseId -> totalCodes from dashboard
       // Dashboard has tier-based info, but codes have purchaseId
@@ -155,6 +162,128 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: const BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_showExpiredCodes) {
+                        setState(() {
+                          _showExpiredCodes = false;
+                          _packageRecipients.clear(); // Clear recipients when switching
+                          _selectedPackage = null;
+                        });
+                        _loadCodes();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: !_showExpiredCodes
+                            ? const Color(0xFF10B981)
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          bottomLeft: Radius.circular(8),
+                        ),
+                        border: Border.all(
+                          color: const Color(0xFF10B981),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.fiber_new,
+                            size: 18,
+                            color: !_showExpiredCodes
+                                ? Colors.white
+                                : const Color(0xFF10B981),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Yeni Kodlar',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: !_showExpiredCodes
+                                  ? Colors.white
+                                  : const Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (!_showExpiredCodes) {
+                        setState(() {
+                          _showExpiredCodes = true;
+                          _packageRecipients.clear(); // Clear recipients when switching
+                          _selectedPackage = null;
+                        });
+                        _loadCodes();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _showExpiredCodes
+                            ? const Color(0xFFF59E0B)
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(8),
+                          bottomRight: Radius.circular(8),
+                        ),
+                        border: Border.all(
+                          color: const Color(0xFFF59E0B),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.restore,
+                            size: 18,
+                            color: _showExpiredCodes
+                                ? Colors.white
+                                : const Color(0xFFF59E0B),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Süresi Dolmuş',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _showExpiredCodes
+                                  ? Colors.white
+                                  : const Color(0xFFF59E0B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -187,7 +316,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: _loadUnusedCodes,
+              onPressed: _loadCodes,
               icon: const Icon(Icons.refresh),
               label: const Text('Tekrar Dene'),
               style: ElevatedButton.styleFrom(
@@ -215,7 +344,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Kullanılabilir kod bulunamadı',
+                _showExpiredCodes
+                    ? 'Süresi dolmuş kod bulunamadı'
+                    : 'Kullanılabilir kod bulunamadı',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -228,7 +359,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: () => _loadUnusedCodes(loadMore: false),
+      onRefresh: () => _loadCodes(loadMore: false),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -249,7 +380,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Toplam $_totalCodesAvailable kod mevcut. Şu an ${_allCodes.length} kod yüklendi.',
+                        _showExpiredCodes
+                            ? 'Toplam $_totalCodesAvailable süresi dolmuş kod mevcut. Şu an ${_allCodes.length} kod yüklendi.'
+                            : 'Toplam $_totalCodesAvailable kod mevcut. Şu an ${_allCodes.length} kod yüklendi.',
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF6B7280),
@@ -343,7 +476,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 24),
                 child: OutlinedButton.icon(
-                  onPressed: () => _loadUnusedCodes(loadMore: true),
+                  onPressed: () => _loadCodes(loadMore: true),
                   icon: const Icon(Icons.download),
                   label: const Text('Daha Fazla Kod Yükle'),
                   style: OutlinedButton.styleFrom(
@@ -411,9 +544,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text(
-                        'Kodları Gönder',
-                        style: TextStyle(
+                    : Text(
+                        _showExpiredCodes ? 'Kodları Tekrar Gönder' : 'Kodları Gönder',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
