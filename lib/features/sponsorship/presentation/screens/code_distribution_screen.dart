@@ -46,22 +46,40 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   bool _isSending = false;
   String? _errorMessage;
 
+  // Pagination state
+  int _currentPage = 1;
+  bool _hasMoreCodes = true;
+  bool _isLoadingMore = false;
+  int _totalCodesAvailable = 0;
+
   @override
   void initState() {
     super.initState();
     _loadUnusedCodes();
   }
 
-  Future<void> _loadUnusedCodes() async {
+  Future<void> _loadUnusedCodes({bool loadMore = false}) async {
+    // Prevent concurrent loads
+    if (_isLoadingMore) return;
+
     setState(() {
-      _isLoading = true;
+      if (loadMore) {
+        _isLoadingMore = true;
+      } else {
+        _isLoading = true;
+        _currentPage = 1;
+        _hasMoreCodes = true;
+      }
       _errorMessage = null;
     });
 
     try {
       // IMPORTANT: Use getUnsentCodes() to get ONLY codes that have never been sent
       // This prevents duplicate code distribution (DistributionDate = NULL)
-      final codes = await _sponsorService.getUnsentCodes();
+      final result = await _sponsorService.getUnsentCodes(
+        page: loadMore ? _currentPage + 1 : 1,
+        pageSize: 50,
+      );
 
       // Create mapping of purchaseId -> totalCodes from dashboard
       // Dashboard has tier-based info, but codes have purchaseId
@@ -71,31 +89,50 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       // Build map from dashboard active packages
       for (final dashboardPackage in widget.dashboardSummary.activePackages) {
         // Find a code with matching tier to get purchaseId
-        final matchingCode = codes.firstWhere(
-          (code) {
-            // Map tierId to tierName for comparison
-            final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
-            final codeTierName = tierNameMap[code.subscriptionTierId] ?? '';
-            return codeTierName == dashboardPackage.tierName;
-          },
-          orElse: () => codes.first,
-        );
+        if (result.items.isNotEmpty) {
+          final matchingCode = result.items.firstWhere(
+            (code) {
+              // Map tierId to tierName for comparison
+              final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
+              final codeTierName = tierNameMap[code.subscriptionTierId] ?? '';
+              return codeTierName == dashboardPackage.tierName;
+            },
+            orElse: () => result.items.first,
+          );
 
-        packageTotalCodesMap[matchingCode.sponsorshipPurchaseId] = dashboardPackage.totalCodes;
+          packageTotalCodesMap[matchingCode.sponsorshipPurchaseId] = dashboardPackage.totalCodes;
+        }
       }
 
       if (mounted) {
         setState(() {
-          _allCodes = codes;
+          if (loadMore) {
+            // Append new codes to existing list
+            _allCodes.addAll(result.items);
+            _currentPage++;
+          } else {
+            // Replace with fresh data
+            _allCodes = result.items;
+            _currentPage = result.page;
+          }
+
+          // Update pagination state
+          _hasMoreCodes = result.hasNextPage;
+          _totalCodesAvailable = result.totalCount;
+
+          // Rebuild packages from all loaded codes
           _packages = CodePackage.groupByPurchase(
-            codes,
+            _allCodes,
             packageTotalCodesMap: packageTotalCodesMap,
           );
-          // Set first package as default selection
-          if (_packages.isNotEmpty) {
+
+          // Set first package as default selection (only on initial load)
+          if (!loadMore && _packages.isNotEmpty && _selectedPackage == null) {
             _selectedPackage = _packages.first;
           }
+
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
     } catch (e) {
@@ -103,6 +140,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
     }
@@ -189,57 +227,128 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Package Selector with dynamic remaining count
-          PackageSelectorWidget(
-            selectedPackage: _selectedPackage,
-            packages: _packages,
-            recipientCount: _currentRecipients.length, // Current package recipient count for display
-            onPackageSelected: (package) {
-              setState(() {
-                _selectedPackage = package;
-                // Recipients are now stored per-package, so switching preserves each package's list
-              });
-            },
-          ),
-          const SizedBox(height: 24),
+    return RefreshIndicator(
+      onRefresh: () => _loadUnusedCodes(loadMore: false),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pagination Info Card
+            if (_totalCodesAvailable > 0)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 20, color: Color(0xFF6B7280)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Toplam $_totalCodesAvailable kod mevcut. Şu an ${_allCodes.length} kod yüklendi.',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-          // Recipients Section
-          const Text(
-            'Alıcı Listesi',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF111827),
+            // Package Selector with dynamic remaining count
+            PackageSelectorWidget(
+              selectedPackage: _selectedPackage,
+              packages: _packages,
+              recipientCount: _currentRecipients.length, // Current package recipient count for display
+              onPackageSelected: (package) {
+                setState(() {
+                  _selectedPackage = package;
+                  // Recipients are now stored per-package, so switching preserves each package's list
+                });
+              },
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 24),
 
-          // Recipients List
-          if (_currentRecipients.isNotEmpty)
-            ..._currentRecipients.map((recipient) {
-              return RecipientListItem(
-                recipient: recipient,
-                onDelete: () => _removeRecipient(recipient),
-              );
-            }),
+            // Recipients Section
+            const Text(
+              'Alıcı Listesi',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF111827),
+              ),
+            ),
+            const SizedBox(height: 12),
 
-          // Add Recipient Buttons
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _pickContactsFromPhone,
-                  icon: const Icon(Icons.contacts),
-                  label: const Text('Telefon Rehberinden Seç'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
+            // Recipients List
+            if (_currentRecipients.isNotEmpty)
+              ..._currentRecipients.map((recipient) {
+                return RecipientListItem(
+                  recipient: recipient,
+                  onDelete: () => _removeRecipient(recipient),
+                );
+              }),
+
+            // Add Recipient Buttons
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _pickContactsFromPhone,
+                    icon: const Icon(Icons.contacts),
+                    label: const Text('Telefon Rehberinden Seç'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _showAddRecipientDialog,
+              icon: const Icon(Icons.person_add),
+              label: const Text('Manuel Ekle'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF10B981),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Channel Selector
+            ChannelSelectorWidget(
+              selectedChannel: _selectedChannel,
+              onChannelSelected: (channel) {
+                setState(() {
+                  _selectedChannel = channel;
+                });
+              },
+            ),
+            const SizedBox(height: 24),
+
+            // Load More Codes Button
+            if (_hasMoreCodes && !_isLoadingMore)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 24),
+                child: OutlinedButton.icon(
+                  onPressed: () => _loadUnusedCodes(loadMore: true),
+                  icon: const Icon(Icons.download),
+                  label: const Text('Daha Fazla Kod Yükle'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF10B981),
+                    side: const BorderSide(color: Color(0xFF10B981)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -247,68 +356,72 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _showAddRecipientDialog,
-            icon: const Icon(Icons.person_add),
-            label: const Text('Manuel Ekle'),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF10B981),
-            ),
-          ),
-          const SizedBox(height: 24),
 
-          // Channel Selector
-          ChannelSelectorWidget(
-            selectedChannel: _selectedChannel,
-            onChannelSelected: (channel) {
-              setState(() {
-                _selectedChannel = channel;
-              });
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Summary Card
-          if (_selectedPackage != null || _currentRecipients.isNotEmpty)
-            _buildSummaryCard(),
-          const SizedBox(height: 16),
-
-          // Send Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _canSend() ? _sendLinks : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                disabledBackgroundColor: Colors.grey[300],
-              ),
-              child: _isSending
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
+            // Loading More Indicator
+            if (_isLoadingMore)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 24),
+                child: const Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
                       ),
-                    )
-                  : const Text(
-                      'Kodları Gönder',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      SizedBox(height: 8),
+                      Text(
+                        'Kodlar yükleniyor...',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Summary Card
+            if (_selectedPackage != null || _currentRecipients.isNotEmpty)
+              _buildSummaryCard(),
+            const SizedBox(height: 16),
+
+            // Send Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _canSend() ? _sendLinks : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  disabledBackgroundColor: Colors.grey[300],
+                ),
+                child: _isSending
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        'Kodları Gönder',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -694,14 +807,13 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
   bool _canSend() {
     if (_isSending) return false;
-    if (_selectedChannel == null) return false;
-    
+
     // Check if we have ANY recipients across ALL packages
     int totalRecipients = 0;
     for (final recipients in _packageRecipients.values) {
       totalRecipients += recipients.length;
     }
-    
+
     if (totalRecipients == 0) return false;
     
     // Check if each package has enough codes for its recipients

@@ -6,6 +6,7 @@ import '../models/sponsor_dashboard_summary.dart';
 import '../models/sponsorship_code.dart';
 import '../models/code_recipient.dart';
 import '../models/send_link_response.dart';
+import '../models/paginated_sponsorship_codes.dart';
 import 'dart:developer' as developer;
 
 @lazySingleton
@@ -258,10 +259,16 @@ class SponsorService {
     }
   }
 
-  /// Get UNSENT sponsorship codes (DistributionDate = NULL)
-  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true
+  /// Get UNSENT sponsorship codes with pagination (DistributionDate = NULL)
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true&page=1&pageSize=50
   /// RECOMMENDED: Use this for code distribution to prevent duplicate sends
-  Future<List<SponsorshipCode>> getUnsentCodes() async {
+  ///
+  /// Backend returns paginated format:
+  /// { "success": true, "data": { "items": [...], "totalCount": 100, "page": 1, ... } }
+  Future<PaginatedSponsorshipCodes> getUnsentCodes({
+    int page = 1,
+    int pageSize = 50,
+  }) async {
     try {
       final token = await _authService.getToken();
 
@@ -270,13 +277,17 @@ class SponsorService {
       }
 
       developer.log(
-        'Fetching UNSENT sponsorship codes (safe for distribution)',
+        'Fetching UNSENT sponsorship codes - Page $page (size: $pageSize)',
         name: 'SponsorService',
       );
 
       final response = await _dio.get(
         '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorshipCodes}',
-        queryParameters: {'onlyUnsent': true},
+        queryParameters: {
+          'onlyUnsent': true,
+          'page': page,
+          'pageSize': pageSize,
+        },
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -290,19 +301,46 @@ class SponsorService {
         name: 'SponsorService',
       );
 
-      // API returns: { "success": true, "data": [...] }
+      // API returns NEW PAGINATED FORMAT: { "success": true, "data": { "items": [...], ... } }
       final responseData = response.data;
       if (responseData['success'] == true && responseData['data'] != null) {
-        final codes = (responseData['data'] as List)
-            .map((json) => SponsorshipCode.fromJson(json))
-            .toList();
+        final paginatedData = responseData['data'];
 
-        developer.log(
-          'Found ${codes.length} UNSENT codes ready for distribution',
-          name: 'SponsorService',
-        );
+        // Check if this is the new paginated format (has 'items' field)
+        if (paginatedData is Map<String, dynamic> && paginatedData.containsKey('items')) {
+          // NEW FORMAT: Paginated response
+          final result = PaginatedSponsorshipCodes.fromJson(paginatedData);
 
-        return codes;
+          developer.log(
+            'Found ${result.itemCount} codes on page ${result.page}/${result.totalPages} (total: ${result.totalCount})',
+            name: 'SponsorService',
+          );
+
+          return result;
+        } else if (paginatedData is List) {
+          // OLD FORMAT: Direct array (backward compatibility)
+          developer.log(
+            'WARNING: Backend returned old format (direct array). Converting to paginated format.',
+            name: 'SponsorService',
+          );
+
+          final codes = (paginatedData as List)
+              .map((json) => SponsorshipCode.fromJson(json))
+              .toList();
+
+          // Wrap in paginated structure for backward compatibility
+          return PaginatedSponsorshipCodes(
+            items: codes,
+            totalCount: codes.length,
+            page: page,
+            pageSize: pageSize,
+            totalPages: 1,
+            hasPreviousPage: false,
+            hasNextPage: false,
+          );
+        } else {
+          throw Exception('Unexpected response format');
+        }
       } else {
         throw Exception(responseData['message'] ?? 'Failed to load codes');
       }
