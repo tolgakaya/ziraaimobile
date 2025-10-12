@@ -46,56 +46,116 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   bool _isSending = false;
   String? _errorMessage;
 
+  // Pagination state
+  int _currentPage = 1;
+  bool _hasMoreCodes = true;
+  bool _isLoadingMore = false;
+  int _totalCodesAvailable = 0;
+
+  // Mode toggle state
+  bool _showExpiredCodes = false; // false = unsent (new codes), true = sent expired codes
+  bool _allowResendExpired = false; // Allow renewal of expired codes when resending
+
   @override
   void initState() {
     super.initState();
-    _loadUnusedCodes();
+    _loadCodes();
   }
 
-  Future<void> _loadUnusedCodes() async {
+  Future<void> _loadCodes({bool loadMore = false}) async {
+    // Prevent concurrent loads
+    if (_isLoadingMore) return;
+
     setState(() {
-      _isLoading = true;
+      if (loadMore) {
+        _isLoadingMore = true;
+      } else {
+        _isLoading = true;
+        _currentPage = 1;
+        _hasMoreCodes = true;
+      }
       _errorMessage = null;
     });
 
     try {
-      // IMPORTANT: Use getUnsentCodes() to get ONLY codes that have never been sent
-      // This prevents duplicate code distribution (DistributionDate = NULL)
-      final codes = await _sponsorService.getUnsentCodes();
+      // Load codes based on current mode
+      final result = _showExpiredCodes
+          ? await _sponsorService.getSentExpiredCodes(
+              page: loadMore ? _currentPage + 1 : 1,
+              pageSize: 50,
+            )
+          : await _sponsorService.getUnsentCodes(
+              page: loadMore ? _currentPage + 1 : 1,
+              pageSize: 50,
+            );
 
-      // Create mapping of purchaseId -> totalCodes from dashboard
-      // Dashboard has tier-based info, but codes have purchaseId
-      // We'll match by tier for now (assuming one package per tier)
+      // Create mapping of purchaseId -> totalCodes
+      // Use API's totalCount (total available codes for this filter) since it's more reliable
       final Map<int, int> packageTotalCodesMap = {};
 
-      // Build map from dashboard active packages
-      for (final dashboardPackage in widget.dashboardSummary.activePackages) {
-        // Find a code with matching tier to get purchaseId
-        final matchingCode = codes.firstWhere(
-          (code) {
-            // Map tierId to tierName for comparison
-            final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
-            final codeTierName = tierNameMap[code.subscriptionTierId] ?? '';
-            return codeTierName == dashboardPackage.tierName;
-          },
-          orElse: () => codes.first,
-        );
+      // Group codes by purchaseId to get count per package
+      final Map<int, int> purchaseIdCounts = {};
+      for (final code in result.items) {
+        purchaseIdCounts[code.sponsorshipPurchaseId] =
+            (purchaseIdCounts[code.sponsorshipPurchaseId] ?? 0) + 1;
+      }
 
-        packageTotalCodesMap[matchingCode.sponsorshipPurchaseId] = dashboardPackage.totalCodes;
+      // Use API's totalCount as the total available codes
+      // Distribute proportionally to each purchaseId based on loaded items
+      if (result.items.isNotEmpty && result.totalCount > 0) {
+        for (final entry in purchaseIdCounts.entries) {
+          final purchaseId = entry.key;
+          final loadedCount = entry.value;
+
+          // If we have all codes loaded, use actual count
+          // Otherwise, estimate total based on proportion
+          if (loadMore) {
+            // Keep existing totals during pagination
+            packageTotalCodesMap[purchaseId] ??= loadedCount;
+          } else {
+            // On initial load, use totalCount from API
+            // For single package, use full totalCount
+            // For multiple packages, distribute proportionally
+            if (purchaseIdCounts.length == 1) {
+              packageTotalCodesMap[purchaseId] = result.totalCount;
+            } else {
+              // Multiple packages: keep proportional to loaded items
+              final proportion = loadedCount / result.items.length;
+              packageTotalCodesMap[purchaseId] = (result.totalCount * proportion).round();
+            }
+          }
+        }
       }
 
       if (mounted) {
         setState(() {
-          _allCodes = codes;
+          if (loadMore) {
+            // Append new codes to existing list
+            _allCodes.addAll(result.items);
+            _currentPage++;
+          } else {
+            // Replace with fresh data
+            _allCodes = result.items;
+            _currentPage = result.page;
+          }
+
+          // Update pagination state
+          _hasMoreCodes = result.hasNextPage;
+          _totalCodesAvailable = result.totalCount;
+
+          // Rebuild packages from all loaded codes
           _packages = CodePackage.groupByPurchase(
-            codes,
+            _allCodes,
             packageTotalCodesMap: packageTotalCodesMap,
           );
-          // Set first package as default selection
-          if (_packages.isNotEmpty) {
+
+          // Set first package as default selection (only on initial load)
+          if (!loadMore && _packages.isNotEmpty && _selectedPackage == null) {
             _selectedPackage = _packages.first;
           }
+
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
     } catch (e) {
@@ -103,8 +163,53 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
+    }
+  }
+
+  /// Smart loading: Auto-load more codes when recipients approach loaded code limit
+  /// Trigger: When recipients reach 70% of loaded codes
+  Future<void> _checkAndAutoLoadCodes() async {
+    // Don't load if already loading or no more codes available
+    if (_isLoadingMore || !_hasMoreCodes) return;
+
+    // Calculate total recipients across all packages
+    int totalRecipients = 0;
+    for (final recipients in _packageRecipients.values) {
+      totalRecipients += recipients.length;
+    }
+
+    // Calculate loaded available codes
+    int loadedCodes = _allCodes.where((c) => !c.isUsed).length;
+
+    // If recipients reached 70% threshold, auto-load more codes silently
+    if (loadedCodes > 0 && totalRecipients >= loadedCodes * 0.7) {
+      await _loadCodes(loadMore: true);
+    }
+  }
+
+  /// Ensure all needed codes are loaded before sending
+  /// Load all remaining pages if recipients exceed currently loaded codes
+  Future<bool> _ensureAllCodesLoaded() async {
+    while (true) {
+      // Calculate total recipients
+      int totalRecipients = 0;
+      for (final recipients in _packageRecipients.values) {
+        totalRecipients += recipients.length;
+      }
+
+      // Calculate available codes
+      int availableCodes = _allCodes.where((c) => !c.isUsed).length;
+
+      // If we have enough codes or no more to load, stop
+      if (availableCodes >= totalRecipients || !_hasMoreCodes) {
+        return availableCodes >= totalRecipients;
+      }
+
+      // Load more codes
+      await _loadCodes(loadMore: true);
     }
   }
 
@@ -117,6 +222,130 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: const BoxDecoration(
+              border: Border(
+                top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_showExpiredCodes) {
+                        setState(() {
+                          _showExpiredCodes = false;
+                          _allowResendExpired = false;
+                          _packageRecipients.clear(); // Clear recipients when switching
+                          _selectedPackage = null;
+                        });
+                        _loadCodes();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: !_showExpiredCodes
+                            ? const Color(0xFF10B981)
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          bottomLeft: Radius.circular(8),
+                        ),
+                        border: Border.all(
+                          color: const Color(0xFF10B981),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.fiber_new,
+                            size: 18,
+                            color: !_showExpiredCodes
+                                ? Colors.white
+                                : const Color(0xFF10B981),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Yeni Kodlar',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: !_showExpiredCodes
+                                  ? Colors.white
+                                  : const Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (!_showExpiredCodes) {
+                        setState(() {
+                          _showExpiredCodes = true;
+                          _allowResendExpired = false;
+                          _packageRecipients.clear(); // Clear recipients when switching
+                          _selectedPackage = null;
+                        });
+                        _loadCodes();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _showExpiredCodes
+                            ? const Color(0xFFF59E0B)
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(8),
+                          bottomRight: Radius.circular(8),
+                        ),
+                        border: Border.all(
+                          color: const Color(0xFFF59E0B),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.restore,
+                            size: 18,
+                            color: _showExpiredCodes
+                                ? Colors.white
+                                : const Color(0xFFF59E0B),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Süresi Dolmuş',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _showExpiredCodes
+                                  ? Colors.white
+                                  : const Color(0xFFF59E0B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -149,7 +378,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: _loadUnusedCodes,
+              onPressed: _loadCodes,
               icon: const Icon(Icons.refresh),
               label: const Text('Tekrar Dene'),
               style: ElevatedButton.styleFrom(
@@ -177,7 +406,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Kullanılabilir kod bulunamadı',
+                _showExpiredCodes
+                    ? 'Süresi dolmuş kod bulunamadı'
+                    : 'Kullanılabilir kod bulunamadı',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -189,57 +420,207 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Package Selector with dynamic remaining count
-          PackageSelectorWidget(
-            selectedPackage: _selectedPackage,
-            packages: _packages,
-            recipientCount: _currentRecipients.length, // Current package recipient count for display
-            onPackageSelected: (package) {
-              setState(() {
-                _selectedPackage = package;
-                // Recipients are now stored per-package, so switching preserves each package's list
-              });
-            },
-          ),
-          const SizedBox(height: 24),
+    return RefreshIndicator(
+      onRefresh: () => _loadCodes(loadMore: false),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Pagination Info Card
+            if (_totalCodesAvailable > 0)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 20, color: Color(0xFF6B7280)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _showExpiredCodes
+                            ? 'Toplam $_totalCodesAvailable süresi dolmuş kod mevcut. Şu an ${_allCodes.length} kod yüklendi.'
+                            : 'Toplam $_totalCodesAvailable kod mevcut. Şu an ${_allCodes.length} kod yüklendi.',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-          // Recipients Section
-          const Text(
-            'Alıcı Listesi',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF111827),
+            // Package Selector with dynamic remaining count
+            PackageSelectorWidget(
+              selectedPackage: _selectedPackage,
+              packages: _packages,
+              recipientCount: _currentRecipients.length, // Current package recipient count for display
+              onPackageSelected: (package) {
+                setState(() {
+                  _selectedPackage = package;
+                  // Recipients are now stored per-package, so switching preserves each package's list
+                });
+              },
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 24),
 
-          // Recipients List
-          if (_currentRecipients.isNotEmpty)
-            ..._currentRecipients.map((recipient) {
-              return RecipientListItem(
-                recipient: recipient,
-                onDelete: () => _removeRecipient(recipient),
-              );
-            }),
+            // Recipients Section
+            const Text(
+              'Alıcı Listesi',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF111827),
+              ),
+            ),
+            const SizedBox(height: 12),
 
-          // Add Recipient Buttons
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _pickContactsFromPhone,
-                  icon: const Icon(Icons.contacts),
-                  label: const Text('Telefon Rehberinden Seç'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
+            // Recipients List
+            if (_currentRecipients.isNotEmpty)
+              ..._currentRecipients.map((recipient) {
+                return RecipientListItem(
+                  recipient: recipient,
+                  onDelete: () => _removeRecipient(recipient),
+                );
+              }),
+
+            // Add Recipient Buttons
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _pickContactsFromPhone,
+                    icon: const Icon(Icons.contacts),
+                    label: const Text('Telefon Rehberinden Seç'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _showAddRecipientDialog,
+              icon: const Icon(Icons.person_add),
+              label: const Text('Manuel Ekle'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF10B981),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Channel Selector
+            ChannelSelectorWidget(
+              selectedChannel: _selectedChannel,
+              onChannelSelected: (channel) {
+                setState(() {
+                  _selectedChannel = channel;
+                });
+              },
+            ),
+            const SizedBox(height: 24),
+
+            // Expired Code Renewal Warning (only show in expired mode)
+            if (_showExpiredCodes)
+              Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Color(0xFFF59E0B),
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Süresi Dolmuş Kodlar',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF92400E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Seçtiğiniz kodların süresi dolmuş. Bu kodları tekrar göndermek için son kullanma tarihlerini yenilemelisiniz.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF92400E),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      value: _allowResendExpired,
+                      onChanged: (value) {
+                        setState(() {
+                          _allowResendExpired = value ?? false;
+                        });
+                      },
+                      title: const Text(
+                        'Son kullanma tarihini yenile ve gönder',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Kodlar 30 gün daha geçerli olacak',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
+                      activeColor: const Color(0xFFF59E0B),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ],
+                ),
+              ),
+
+            // Load More Codes Button
+            if (_hasMoreCodes && !_isLoadingMore)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 24),
+                child: OutlinedButton.icon(
+                  onPressed: () => _loadCodes(loadMore: true),
+                  icon: const Icon(Icons.download),
+                  label: const Text('Daha Fazla Kod Yükle'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF10B981),
+                    side: const BorderSide(color: Color(0xFF10B981)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -247,68 +628,72 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _showAddRecipientDialog,
-            icon: const Icon(Icons.person_add),
-            label: const Text('Manuel Ekle'),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF10B981),
-            ),
-          ),
-          const SizedBox(height: 24),
 
-          // Channel Selector
-          ChannelSelectorWidget(
-            selectedChannel: _selectedChannel,
-            onChannelSelected: (channel) {
-              setState(() {
-                _selectedChannel = channel;
-              });
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Summary Card
-          if (_selectedPackage != null || _currentRecipients.isNotEmpty)
-            _buildSummaryCard(),
-          const SizedBox(height: 16),
-
-          // Send Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _canSend() ? _sendLinks : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                disabledBackgroundColor: Colors.grey[300],
-              ),
-              child: _isSending
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
+            // Loading More Indicator
+            if (_isLoadingMore)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 24),
+                child: const Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
                       ),
-                    )
-                  : const Text(
-                      'Kodları Gönder',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      SizedBox(height: 8),
+                      Text(
+                        'Kodlar yükleniyor...',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Summary Card
+            if (_selectedPackage != null || _currentRecipients.isNotEmpty)
+              _buildSummaryCard(),
+            const SizedBox(height: 16),
+
+            // Send Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _canSend() ? _sendLinks : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  disabledBackgroundColor: Colors.grey[300],
+                ),
+                child: _isSending
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        _showExpiredCodes ? 'Kodları Tekrar Gönder' : 'Kodları Gönder',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -545,6 +930,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         final purchaseId = _selectedPackage!.purchaseId;
         _packageRecipients[purchaseId] = [..._currentRecipients, recipient];
       });
+      
+      // Smart loading: Check if we need to load more codes
+      _checkAndAutoLoadCodes();
     }
   }
 
@@ -664,6 +1052,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             _packageRecipients[purchaseId] = [..._currentRecipients, ...newRecipients];
           });
 
+          // Smart loading: Check if we need to load more codes
+          _checkAndAutoLoadCodes();
+
           if (mounted) {
             final limitReached = _currentRecipients.length >= availableCodes;
             final message = limitReached
@@ -694,14 +1085,13 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
   bool _canSend() {
     if (_isSending) return false;
-    if (_selectedChannel == null) return false;
-    
+
     // Check if we have ANY recipients across ALL packages
     int totalRecipients = 0;
     for (final recipients in _packageRecipients.values) {
       totalRecipients += recipients.length;
     }
-    
+
     if (totalRecipients == 0) return false;
     
     // Check if each package has enough codes for its recipients
@@ -730,6 +1120,15 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     });
 
     try {
+      // IMPORTANT: Ensure all needed codes are loaded before sending
+      final hasEnoughCodes = await _ensureAllCodesLoaded();
+      
+      if (!hasEnoughCodes) {
+        if (mounted) {
+          _showErrorDialog('Yeterli kod bulunamadı. Lütfen daha fazla paket satın alın.');
+        }
+        return;
+      }
       // Collect ALL recipients and codes from ALL packages
       final List<CodeRecipient> allRecipients = [];
       final List<String> allCodes = [];
@@ -770,6 +1169,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         recipients: allRecipients,
         channel: channelName,
         selectedCodes: allCodes,
+        allowResendExpired: _showExpiredCodes && _allowResendExpired,
       );
 
       // DEBUG LOG

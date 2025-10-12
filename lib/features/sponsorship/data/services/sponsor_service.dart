@@ -6,6 +6,7 @@ import '../models/sponsor_dashboard_summary.dart';
 import '../models/sponsorship_code.dart';
 import '../models/code_recipient.dart';
 import '../models/send_link_response.dart';
+import '../models/paginated_sponsorship_codes.dart';
 import 'dart:developer' as developer;
 
 @lazySingleton
@@ -258,10 +259,21 @@ class SponsorService {
     }
   }
 
-  /// Get UNSENT sponsorship codes (DistributionDate = NULL)
-  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true
-  /// RECOMMENDED: Use this for code distribution to prevent duplicate sends
-  Future<List<SponsorshipCode>> getUnsentCodes() async {
+  /// Get SENT + EXPIRED + UNUSED sponsorship codes with pagination
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlySentExpired=true&page=1&pageSize=50
+  /// Use this for resending expired codes to farmers
+  ///
+  /// Filters:
+  /// - DistributionDate IS NOT NULL (sent to farmers)
+  /// - ExpiryDate < NOW (expired)
+  /// - IsUsed = false (not redeemed)
+  ///
+  /// Backend returns paginated format:
+  /// { "success": true, "data": { "items": [...], "totalCount": 100, "page": 1, ... } }
+  Future<PaginatedSponsorshipCodes> getSentExpiredCodes({
+    int page = 1,
+    int pageSize = 50,
+  }) async {
     try {
       final token = await _authService.getToken();
 
@@ -270,13 +282,128 @@ class SponsorService {
       }
 
       developer.log(
-        'Fetching UNSENT sponsorship codes (safe for distribution)',
+        'Fetching SENT EXPIRED sponsorship codes - Page $page (size: $pageSize)',
         name: 'SponsorService',
       );
 
       final response = await _dio.get(
         '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorshipCodes}',
-        queryParameters: {'onlyUnsent': true},
+        queryParameters: {
+          'onlySentExpired': true,
+          'page': page,
+          'pageSize': pageSize,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Sent expired codes fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns paginated format: { "success": true, "data": { "items": [...], ... } }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        final paginatedData = responseData['data'];
+
+        // Check if this is the new paginated format (has 'items' field)
+        if (paginatedData is Map<String, dynamic> && paginatedData.containsKey('items')) {
+          // NEW FORMAT: Paginated response
+          final result = PaginatedSponsorshipCodes.fromJson(paginatedData);
+
+          developer.log(
+            'Found ${result.itemCount} expired codes on page ${result.page}/${result.totalPages} (total: ${result.totalCount})',
+            name: 'SponsorService',
+          );
+
+          return result;
+        } else if (paginatedData is List) {
+          // OLD FORMAT: Direct array (backward compatibility)
+          developer.log(
+            'WARNING: Backend returned old format (direct array). Converting to paginated format.',
+            name: 'SponsorService',
+          );
+
+          final codes = (paginatedData as List)
+              .map((json) => SponsorshipCode.fromJson(json))
+              .toList();
+
+          // Wrap in paginated structure for backward compatibility
+          return PaginatedSponsorshipCodes(
+            items: codes,
+            totalCount: codes.length,
+            page: page,
+            pageSize: pageSize,
+            totalPages: 1,
+            hasPreviousPage: false,
+            hasNextPage: false,
+          );
+        } else {
+          throw Exception('Unexpected response format');
+        }
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load codes');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get sent expired codes',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load codes')
+            : 'Failed to load codes';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting sent expired codes',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Get UNSENT sponsorship codes with pagination (DistributionDate = NULL)
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true&page=1&pageSize=50
+  /// RECOMMENDED: Use this for code distribution to prevent duplicate sends
+  ///
+  /// Backend returns paginated format:
+  /// { "success": true, "data": { "items": [...], "totalCount": 100, "page": 1, ... } }
+  Future<PaginatedSponsorshipCodes> getUnsentCodes({
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching UNSENT sponsorship codes - Page $page (size: $pageSize)',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorshipCodes}',
+        queryParameters: {
+          'onlyUnsent': true,
+          'page': page,
+          'pageSize': pageSize,
+        },
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -290,19 +417,46 @@ class SponsorService {
         name: 'SponsorService',
       );
 
-      // API returns: { "success": true, "data": [...] }
+      // API returns NEW PAGINATED FORMAT: { "success": true, "data": { "items": [...], ... } }
       final responseData = response.data;
       if (responseData['success'] == true && responseData['data'] != null) {
-        final codes = (responseData['data'] as List)
-            .map((json) => SponsorshipCode.fromJson(json))
-            .toList();
+        final paginatedData = responseData['data'];
 
-        developer.log(
-          'Found ${codes.length} UNSENT codes ready for distribution',
-          name: 'SponsorService',
-        );
+        // Check if this is the new paginated format (has 'items' field)
+        if (paginatedData is Map<String, dynamic> && paginatedData.containsKey('items')) {
+          // NEW FORMAT: Paginated response
+          final result = PaginatedSponsorshipCodes.fromJson(paginatedData);
 
-        return codes;
+          developer.log(
+            'Found ${result.itemCount} codes on page ${result.page}/${result.totalPages} (total: ${result.totalCount})',
+            name: 'SponsorService',
+          );
+
+          return result;
+        } else if (paginatedData is List) {
+          // OLD FORMAT: Direct array (backward compatibility)
+          developer.log(
+            'WARNING: Backend returned old format (direct array). Converting to paginated format.',
+            name: 'SponsorService',
+          );
+
+          final codes = (paginatedData as List)
+              .map((json) => SponsorshipCode.fromJson(json))
+              .toList();
+
+          // Wrap in paginated structure for backward compatibility
+          return PaginatedSponsorshipCodes(
+            items: codes,
+            totalCount: codes.length,
+            page: page,
+            pageSize: pageSize,
+            totalPages: 1,
+            hasPreviousPage: false,
+            hasNextPage: false,
+          );
+        } else {
+          throw Exception('Unexpected response format');
+        }
       } else {
         throw Exception(responseData['message'] ?? 'Failed to load codes');
       }
@@ -334,10 +488,13 @@ class SponsorService {
 
   /// Send sponsorship links to recipients
   /// Endpoint: POST /api/v1/sponsorship/send-link
+  /// 
+  /// [allowResendExpired] If true, allows resending expired codes with renewed expiry date (+30 days)
   Future<SendLinkResponse> sendSponsorshipLinks({
     required List<CodeRecipient> recipients,
     required String channel, // "SMS" or "WhatsApp"
     required List<String> selectedCodes,
+    bool allowResendExpired = false,
   }) async {
     try {
       final token = await _authService.getToken();
@@ -370,6 +527,7 @@ class SponsorService {
           'recipients': recipientsWithCodes,
           'channel': channel,
           'customMessage': null,
+          'allowResendExpired': allowResendExpired,
         },
         options: Options(
           headers: {

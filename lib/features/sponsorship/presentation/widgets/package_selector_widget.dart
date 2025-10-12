@@ -35,9 +35,10 @@ class PackageSelectorWidget extends StatelessWidget {
     }
 
     // Calculate remaining codes after recipients are added
-    final availableCodes = selectedPackage?.codes.length ?? 0;
+    // Use totalCount from dashboard (total unsent codes), not codes.length (loaded codes)
+    final availableCodes = selectedPackage?.totalCount ?? 0;
     final remainingCodes = availableCodes - recipientCount;
-    final totalCodes = selectedPackage?.totalCount ?? 0;
+    final loadedCodes = selectedPackage?.codes.length ?? 0;
 
     return GestureDetector(
       onTap: () => _showPackageSelector(context),
@@ -82,9 +83,10 @@ class PackageSelectorWidget extends StatelessWidget {
       return 'Paket Seç';
     }
 
-    final availableCodes = selectedPackage!.codes.length;
-    final remainingCodes = availableCodes - recipientCount;
+    // Use totalCount from dashboard (total unsent codes), not codes.length (loaded codes)
     final totalCodes = selectedPackage!.totalCount;
+    final remainingCodes = totalCodes - recipientCount;
+    final loadedCodes = selectedPackage!.codes.length;
 
     // Get package tier name
     final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
