@@ -154,6 +154,50 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     }
   }
 
+  /// Smart loading: Auto-load more codes when recipients approach loaded code limit
+  /// Trigger: When recipients reach 70% of loaded codes
+  Future<void> _checkAndAutoLoadCodes() async {
+    // Don't load if already loading or no more codes available
+    if (_isLoadingMore || !_hasMoreCodes) return;
+
+    // Calculate total recipients across all packages
+    int totalRecipients = 0;
+    for (final recipients in _packageRecipients.values) {
+      totalRecipients += recipients.length;
+    }
+
+    // Calculate loaded available codes
+    int loadedCodes = _allCodes.where((c) => !c.isUsed).length;
+
+    // If recipients reached 70% threshold, auto-load more codes silently
+    if (loadedCodes > 0 && totalRecipients >= loadedCodes * 0.7) {
+      await _loadCodes(loadMore: true);
+    }
+  }
+
+  /// Ensure all needed codes are loaded before sending
+  /// Load all remaining pages if recipients exceed currently loaded codes
+  Future<bool> _ensureAllCodesLoaded() async {
+    while (true) {
+      // Calculate total recipients
+      int totalRecipients = 0;
+      for (final recipients in _packageRecipients.values) {
+        totalRecipients += recipients.length;
+      }
+
+      // Calculate available codes
+      int availableCodes = _allCodes.where((c) => !c.isUsed).length;
+
+      // If we have enough codes or no more to load, stop
+      if (availableCodes >= totalRecipients || !_hasMoreCodes) {
+        return availableCodes >= totalRecipients;
+      }
+
+      // Load more codes
+      await _loadCodes(loadMore: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -871,6 +915,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         final purchaseId = _selectedPackage!.purchaseId;
         _packageRecipients[purchaseId] = [..._currentRecipients, recipient];
       });
+      
+      // Smart loading: Check if we need to load more codes
+      _checkAndAutoLoadCodes();
     }
   }
 
@@ -990,6 +1037,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             _packageRecipients[purchaseId] = [..._currentRecipients, ...newRecipients];
           });
 
+          // Smart loading: Check if we need to load more codes
+          _checkAndAutoLoadCodes();
+
           if (mounted) {
             final limitReached = _currentRecipients.length >= availableCodes;
             final message = limitReached
@@ -1055,6 +1105,15 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     });
 
     try {
+      // IMPORTANT: Ensure all needed codes are loaded before sending
+      final hasEnoughCodes = await _ensureAllCodesLoaded();
+      
+      if (!hasEnoughCodes) {
+        if (mounted) {
+          _showErrorDialog('Yeterli kod bulunamadı. Lütfen daha fazla paket satın alın.');
+        }
+        return;
+      }
       // Collect ALL recipients and codes from ALL packages
       final List<CodeRecipient> allRecipients = [];
       final List<String> allCodes = [];
