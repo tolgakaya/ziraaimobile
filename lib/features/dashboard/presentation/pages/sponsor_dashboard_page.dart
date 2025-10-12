@@ -5,6 +5,7 @@ import '../../../authentication/presentation/bloc/auth_event.dart';
 import '../../../authentication/presentation/screens/login_screen.dart';
 import '../../../sponsorship/data/services/sponsor_service.dart';
 import '../../../sponsorship/data/models/sponsor_dashboard_summary.dart';
+import '../../../sponsorship/presentation/screens/code_distribution_screen.dart';
 import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
@@ -245,11 +246,17 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                   label: 'Kod Dağıt',
                                   color: const Color(0xFF3B82F6),
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Kod Dağıtım - Yakında'),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => CodeDistributionScreen(
+                                          dashboardSummary: _summary!,
+                                        ),
                                       ),
-                                    );
+                                    ).then((_) {
+                                      // Refresh dashboard when returning
+                                      _loadDashboardData();
+                                    });
                                   },
                                 ),
                                 const SizedBox(height: 12),

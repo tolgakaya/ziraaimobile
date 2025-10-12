@@ -3,6 +3,9 @@ import 'package:injectable/injectable.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/services/auth_service.dart';
 import '../models/sponsor_dashboard_summary.dart';
+import '../models/sponsorship_code.dart';
+import '../models/code_recipient.dart';
+import '../models/send_link_response.dart';
 import 'dart:developer' as developer;
 
 @lazySingleton
@@ -174,6 +177,233 @@ class SponsorService {
     } catch (e) {
       developer.log(
         'Unexpected error getting dashboard summary',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Get unused sponsorship codes (includes both sent and unsent)
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnused=true
+  /// Use this for statistics only, NOT for distribution
+  Future<List<SponsorshipCode>> getUnusedCodes() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching unused sponsorship codes',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorshipCodes}',
+        queryParameters: {'onlyUnused': true},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Unused codes fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "data": [...] }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        final codes = (responseData['data'] as List)
+            .map((json) => SponsorshipCode.fromJson(json))
+            .toList();
+
+        developer.log(
+          'Found ${codes.length} unused codes',
+          name: 'SponsorService',
+        );
+
+        return codes;
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load codes');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get unused codes',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load codes')
+            : 'Failed to load codes';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting unused codes',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Get UNSENT sponsorship codes (DistributionDate = NULL)
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true
+  /// RECOMMENDED: Use this for code distribution to prevent duplicate sends
+  Future<List<SponsorshipCode>> getUnsentCodes() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching UNSENT sponsorship codes (safe for distribution)',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorshipCodes}',
+        queryParameters: {'onlyUnsent': true},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Unsent codes fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "data": [...] }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        final codes = (responseData['data'] as List)
+            .map((json) => SponsorshipCode.fromJson(json))
+            .toList();
+
+        developer.log(
+          'Found ${codes.length} UNSENT codes ready for distribution',
+          name: 'SponsorService',
+        );
+
+        return codes;
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load codes');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get unsent codes',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load codes')
+            : 'Failed to load codes';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting unsent codes',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Send sponsorship links to recipients
+  /// Endpoint: POST /api/v1/sponsorship/send-link
+  Future<SendLinkResponse> sendSponsorshipLinks({
+    required List<CodeRecipient> recipients,
+    required String channel, // "SMS" or "WhatsApp"
+    required List<String> selectedCodes,
+  }) async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      // Auto-assign codes to recipients
+      final recipientsWithCodes = <Map<String, dynamic>>[];
+      for (int i = 0; i < recipients.length; i++) {
+        final recipient = recipients[i];
+        final code = selectedCodes[i];
+
+        recipientsWithCodes.add({
+          'code': code,
+          'phone': CodeRecipient.normalizePhone(recipient.phone),
+          'name': recipient.name,
+        });
+      }
+
+      developer.log(
+        'Sending ${recipientsWithCodes.length} links via $channel',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.post(
+        '${ApiConfig.apiBaseUrl}${ApiConfig.sendSponsorshipLink}',
+        data: {
+          'recipients': recipientsWithCodes,
+          'channel': channel,
+          'customMessage': null,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Links sent successfully',
+        name: 'SponsorService',
+      );
+
+      return SendLinkResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to send links',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to send links')
+            : 'Failed to send links';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error sending links',
         name: 'SponsorService',
         error: e,
       );
