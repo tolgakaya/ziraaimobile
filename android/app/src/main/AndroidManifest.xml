@@ -54,6 +54,19 @@
                     android:pathPrefix="/ref"/>
             </intent-filter>
 
+            <!-- Deep linking for sponsorship redemption - Environment specific -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+
+                <!-- Deep link for sponsorship code redemption -->
+                <data
+                    android:scheme="https"
+                    android:host="${deepLinkHost}"
+                    android:pathPrefix="/redeem"/>
+            </intent-filter>
+
             <!-- Custom scheme fallback -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>

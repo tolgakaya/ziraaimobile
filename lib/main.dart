@@ -10,6 +10,7 @@ import 'core/services/signalr_service.dart';
 import 'core/services/deep_link_service.dart';
 // import 'core/services/install_referrer_service.dart';  // TEMPORARILY DISABLED
 import 'core/services/sms_referral_service.dart';
+import 'core/services/sponsorship_sms_listener.dart';
 import 'dart:async';
 
 void main() async {
@@ -56,6 +57,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // Check SMS for referral code (deferred deep linking - app not installed scenario)
     _checkSmsForReferralCode();
+
+    // Initialize sponsorship SMS listener for automatic code detection
+    _initializeSponsorshipSmsListener();
 
     // Initialize deep link service with app_links
     _initializeDeepLinks();
@@ -135,6 +139,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
+  /// Initialize sponsorship SMS listener
+  /// This enables automatic code detection from SMS messages
+  Future<void> _initializeSponsorshipSmsListener() async {
+    try {
+      print('🎁 Main: Initializing sponsorship SMS listener...');
+
+      final smsListener = SponsorshipSmsListener();
+      await smsListener.initialize();
+
+      print('✅ Main: Sponsorship SMS listener initialized successfully');
+    } catch (e) {
+      print('❌ Main: Failed to initialize sponsorship SMS listener: $e');
+      // Don't block app startup if SMS listener fails
+    }
+  }
+
   /// Initialize deep link handling with app_links package
   Future<void> _initializeDeepLinks() async {
     await _deepLinkService.initialize();
@@ -147,6 +167,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (mounted) {
         _handleReferralCode(referralCode);
       }
+    });
+
+    // Listen to sponsorship code stream (NOT IMPLEMENTED YET - navigation handled in login_screen.dart)
+    // Sponsorship codes are handled via post-login hook, not direct navigation
+    // This stream can be used for real-time notifications if needed
+    _deepLinkService.sponsorshipCodeStream.listen((sponsorshipCode) {
+      print('📱 Main: Sponsorship code received from deep link: $sponsorshipCode');
+      // Note: Actual navigation happens in login_screen.dart post-login hook
+      // This is just for logging/monitoring purposes
     });
   }
 
