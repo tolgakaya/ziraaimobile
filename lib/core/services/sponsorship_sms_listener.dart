@@ -2,6 +2,8 @@ import 'package:telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:get_it/get_it.dart';
+import '../services/navigation_service.dart';
+import '../../features/sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 
 /// SMS-based automatic sponsorship code redemption service
 /// Listens for incoming SMS with sponsorship codes and auto-fills redemption screen
@@ -236,17 +238,28 @@ class SponsorshipSmsListener {
     print('[SponsorshipSMS] 🎁 Notification: Sponsorship code $code received!');
   }
 
-  /// Navigate to sponsorship redemption screen
+  /// Navigate to sponsorship redemption screen using global navigation service
   void _navigateToRedemption(String code) {
     try {
-      // Use GetIt to get navigation service if available
-      // Or use a navigation callback registered during initialization
-      print('[SponsorshipSMS] 🧭 Navigate to redemption screen with code: $code');
+      print('[SponsorshipSMS] 🧭 Attempting to navigate to redemption screen with code: $code');
 
-      // Navigation will be handled by the app's navigation system
-      // This is a placeholder - actual implementation depends on your navigation setup
+      // Get navigation service from GetIt
+      final navigationService = GetIt.instance<NavigationService>();
+
+      if (!navigationService.isReady) {
+        print('[SponsorshipSMS] ⚠️ Navigation service not ready - code saved for later');
+        return;
+      }
+
+      // Navigate to redemption screen with auto-filled code
+      navigationService.navigateTo(
+        SponsorshipRedemptionScreen(autoFilledCode: code),
+      );
+
+      print('[SponsorshipSMS] ✅ Successfully navigated to redemption screen');
     } catch (e) {
       print('[SponsorshipSMS] ❌ Navigation error: $e');
+      print('[SponsorshipSMS] 💾 Code is saved in storage and will be available after login');
     }
   }
 

@@ -8,6 +8,7 @@ import 'features/authentication/presentation/screens/splash_screen.dart';
 import 'features/authentication/presentation/screens/phone_auth/phone_number_screen.dart';
 import 'core/services/signalr_service.dart';
 import 'core/services/deep_link_service.dart';
+import 'core/services/navigation_service.dart';
 // import 'core/services/install_referrer_service.dart';  // TEMPORARILY DISABLED
 import 'core/services/sms_referral_service.dart';
 import 'core/services/sponsorship_sms_listener.dart';
@@ -49,6 +50,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Register NavigationService with the navigator key
+    GetIt.instance.registerSingleton<NavigationService>(
+      NavigationService(navigatorKey),
+    );
+
     // Don't initialize SignalR here - SplashScreen handles auto-login and SignalR
 
     // Check Install Referrer for deferred deep linking (first app launch after install)
