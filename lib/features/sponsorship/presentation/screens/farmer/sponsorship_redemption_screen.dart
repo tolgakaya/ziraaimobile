@@ -240,8 +240,7 @@ class _SponsorshipRedemptionScreenState
           TextButton(
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Close redemption screen
-              // Navigate to home/dashboard
+              Navigator.of(context).pop(true); // Close redemption screen with success flag
             },
             style: TextButton.styleFrom(
               backgroundColor: Colors.green,

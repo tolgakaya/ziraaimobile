@@ -113,16 +113,22 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
     }
   }
 
-  void _navigateToSponsorshipRedemption(String code) {
+  void _navigateToSponsorshipRedemption(String code) async {
     print('[Dashboard] 🧭 Navigating to redemption screen with code: $code');
 
-    Navigator.of(context).push(
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => SponsorshipRedemptionScreen(
           autoFilledCode: code,
         ),
       ),
     );
+
+    // Refresh dashboard if redemption was successful
+    if (result == true && mounted) {
+      print('[Dashboard] 🔄 Refreshing dashboard after successful redemption');
+      _refreshDashboard();
+    }
 
     // Show notification
     ScaffoldMessenger.of(context).showSnackBar(
