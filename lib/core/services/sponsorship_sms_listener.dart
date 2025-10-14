@@ -90,12 +90,39 @@ class SponsorshipSmsListener {
           print('[SponsorshipSMS] 📱 New SMS received from ${message.address}');
           await _processSmsMessage(message.body ?? '');
         },
+        onBackgroundMessage: _onBackgroundMessage,
         listenInBackground: true,
       );
 
       print('[SponsorshipSMS] 👂 Background SMS listener started');
     } catch (e) {
       print('[SponsorshipSMS] ❌ Failed to start SMS listener: $e');
+    }
+  }
+
+  /// Background message handler (must be static or top-level)
+  static Future<void> _onBackgroundMessage(SmsMessage message) async {
+    print('[SponsorshipSMS] 📱 Background SMS received from ${message.address}');
+
+    final messageBody = message.body ?? '';
+    final match = _codeRegex.firstMatch(messageBody);
+
+    if (match != null) {
+      final code = match.group(0)!;
+      print('[SponsorshipSMS] ✅ Background code extracted: $code');
+
+      // Save to SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_storageKeyCode, code);
+        await prefs.setInt(
+          _storageKeyTimestamp,
+          DateTime.now().millisecondsSinceEpoch,
+        );
+        print('[SponsorshipSMS] 💾 Background code saved: $code');
+      } catch (e) {
+        print('[SponsorshipSMS] ❌ Background save error: $e');
+      }
     }
   }
 
