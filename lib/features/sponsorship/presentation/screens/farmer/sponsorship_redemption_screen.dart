@@ -59,8 +59,9 @@ class _SponsorshipRedemptionScreenState
   }
 
   void _validateCodeFormat(String code) {
-    // Validate format: AGRI-XXXXX or SPONSOR-XXXXX
-    final isValid = RegExp(r'^(AGRI|SPONSOR)-[A-Z0-9]+$').hasMatch(code);
+    // Validate format: AGRI-XXXX-XXXXXXXX or SPONSOR-XXXX-XXXXXXXX
+    // Supports hyphens in code: AGRI-2025-52834B45
+    final isValid = RegExp(r'^(AGRI|SPONSOR)-[A-Z0-9\-]+$').hasMatch(code);
 
     setState(() {
       _isCodeValid = isValid;

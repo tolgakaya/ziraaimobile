@@ -16,9 +16,10 @@ class SponsorshipSmsListener {
   final Telephony telephony = Telephony.instance;
 
   // Regex to match sponsorship codes
-  // Format: AGRI-XXXXX or SPONSOR-XXXXX
+  // Format: AGRI-XXXX-XXXXXXXX or SPONSOR-XXXX-XXXXXXXX
+  // Supports hyphens in code: AGRI-2025-52834B45
   static final RegExp _codeRegex = RegExp(
-    r'(AGRI-[A-Z0-9]+|SPONSOR-[A-Z0-9]+)',
+    r'(AGRI-[A-Z0-9\-]+|SPONSOR-[A-Z0-9\-]+)',
     caseSensitive: true,
   );
 
