@@ -35,7 +35,7 @@ flutter run lib/main.dart -d emulator-5554 --flavor staging
 ### Adım 3: SMS Gönder (Backend'den gönderilmiş gibi simüle et)
 ```bash
 # Test SMS'i gönder
-adb emu sms send 5551234567 "🎁 Chimera Tarım A.Ş. size Medium paketi hediye etti! Sponsorluk Kodunuz: AGRI-TEST123. Uygulamayı indirin: https://play.google.com/store/apps/details?id=com.ziraai.app"
+adb emu sms send 5551234567 "🎁 Chimera Tarım A.Ş. size Medium paketi hediye etti! Sponsorluk Kodunuz: AGRI-2025-52834B45. Uygulamayı indirin: https://play.google.com/store/apps/details?id=com.ziraai.app"
 ```
 
 ### Adım 4: SMS Loglarını İzle

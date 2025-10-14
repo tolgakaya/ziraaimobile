@@ -202,63 +202,68 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   /// Check for pending sponsorship code from SMS after authentication
-  /// If code exists and not expired, navigate to redemption screen
-  Future<void> _checkPendingSponsorshipCode() async {
+  /// Returns the pending code if found (will be handled after dashboard navigation)
+  Future<String?> _checkPendingSponsorshipCode() async {
     try {
       print('[OTP] 🔍 Checking for pending sponsorship code...');
 
       final pendingCode = await SponsorshipSmsListener.checkPendingCode();
 
-      if (pendingCode != null && mounted) {
+      if (pendingCode != null) {
         print('[OTP] ✅ Found pending code: $pendingCode');
-
         // Clear from storage
         await SponsorshipSmsListener.clearPendingCode();
-
-        // Small delay to let dashboard initialize first
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        // Navigate to redemption screen with auto-filled code
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => SponsorshipRedemptionScreen(
-                autoFilledCode: pendingCode,
-              ),
-            ),
-          );
-
-          // Show notification
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.card_giftcard, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Sponsorluk kodu bulundu! SMS\'den kod otomatik dolduruldu.',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.green.shade600,
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        }
+        return pendingCode;
       } else {
         print('[OTP] ℹ️ No pending sponsorship code found');
+        return null;
       }
     } catch (e) {
       print('[OTP] ❌ Error checking pending code: $e');
-      // Don't block authentication flow if this fails
+      return null;
     }
+  }
+
+  /// Navigate to redemption screen after dashboard is ready
+  void _navigateToRedemption(String code) {
+    // Wait for dashboard to be fully initialized
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+
+      print('[OTP] 🧭 Navigating to redemption screen with code: $code');
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SponsorshipRedemptionScreen(
+            autoFilledCode: code,
+          ),
+        ),
+      );
+
+      // Show notification
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.card_giftcard, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Sponsorluk kodu bulundu! SMS\'den kod otomatik dolduruldu.',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    });
   }
 
   @override
@@ -271,8 +276,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             // Initialize SignalR after successful authentication
             await _initializeSignalRAfterAuth();
 
-            // Check for pending sponsorship code from SMS
-            await _checkPendingSponsorshipCode();
+            // Check for pending sponsorship code from SMS (but don't navigate yet)
+            final pendingCode = await _checkPendingSponsorshipCode();
 
             // Navigate to dashboard
             if (mounted) {
@@ -282,6 +287,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 ),
                 (route) => false,
               );
+
+              // If pending code exists, navigate to redemption screen after dashboard loads
+              if (pendingCode != null) {
+                _navigateToRedemption(pendingCode);
+              }
             }
           } else if (state is PhoneOtpSent) {
             // OTP resent successfully
