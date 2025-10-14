@@ -7,6 +7,7 @@ import '../models/sponsorship_code.dart';
 import '../models/code_recipient.dart';
 import '../models/send_link_response.dart';
 import '../models/paginated_sponsorship_codes.dart';
+import '../models/sponsorship_tier_comparison.dart';
 import 'dart:developer' as developer;
 
 @lazySingleton
@@ -486,9 +487,162 @@ class SponsorService {
     }
   }
 
+  /// Get sponsorship tiers for package purchase selection
+  /// Endpoint: GET /api/v1/sponsorship/tiers-for-purchase
+  /// No authentication required (AllowAnonymous)
+  Future<List<SponsorshipTierComparison>> getTiersForPurchase() async {
+    try {
+      developer.log(
+        'Fetching sponsorship tiers for purchase',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}/sponsorship/tiers-for-purchase',
+        options: Options(
+          headers: {
+            'x-dev-arch-version': '1.0',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Sponsorship tiers fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "message": "...", "data": [...] }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        final allTiers = (responseData['data'] as List)
+            .map((json) => SponsorshipTierComparison.fromJson(json))
+            .toList();
+
+        // Filter out Trial tier - it's for farmers only, not sponsors
+        final tiers = allTiers
+            .where((tier) => tier.tierName.toUpperCase() != 'TRIAL')
+            .toList();
+
+        developer.log(
+          'Found ${tiers.length} sponsorship tiers (filtered from ${allTiers.length})',
+          name: 'SponsorService',
+        );
+
+        return tiers;
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load tiers');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get sponsorship tiers',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load tiers')
+            : 'Failed to load tiers';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting sponsorship tiers',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Purchase a sponsorship package
+  /// Endpoint: POST /api/v1/sponsorship/purchase-package
+  ///
+  /// Creates a new sponsorship package purchase with specified tier and quantity.
+  /// Payment is processed through mock gateway (test mode).
+  ///
+  /// Returns: { "success": true, "message": "...", "data": { "packageId": "...", "codes": [...], ... } }
+  Future<Map<String, dynamic>> purchasePackage({
+    required int tierId,
+    required int quantity,
+    required double totalAmount,
+    required String paymentMethod,
+    required String paymentReference,
+    required String companyName,
+    required String taxNumber,
+    required String invoiceAddress,
+  }) async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Purchasing package: Tier $tierId, Quantity $quantity, Amount $totalAmount',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.post(
+        '${ApiConfig.apiBaseUrl}${ApiConfig.purchasePackage}',
+        data: {
+          'subscriptionTierId': tierId,
+          'quantity': quantity,
+          'totalAmount': totalAmount,
+          'paymentMethod': paymentMethod,
+          'paymentReference': paymentReference,
+          'companyName': companyName,
+          'taxNumber': taxNumber,
+          'invoiceAddress': invoiceAddress,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Package purchased successfully',
+        name: 'SponsorService',
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to purchase package',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to purchase package')
+            : 'Failed to purchase package';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error purchasing package',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
   /// Send sponsorship links to recipients
   /// Endpoint: POST /api/v1/sponsorship/send-link
-  /// 
+  ///
   /// [allowResendExpired] If true, allows resending expired codes with renewed expiry date (+30 days)
   Future<SendLinkResponse> sendSponsorshipLinks({
     required List<CodeRecipient> recipients,

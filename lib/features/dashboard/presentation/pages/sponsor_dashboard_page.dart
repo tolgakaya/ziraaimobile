@@ -6,6 +6,7 @@ import '../../../authentication/presentation/screens/login_screen.dart';
 import '../../../sponsorship/data/services/sponsor_service.dart';
 import '../../../sponsorship/data/models/sponsor_dashboard_summary.dart';
 import '../../../sponsorship/presentation/screens/code_distribution_screen.dart';
+import '../../../sponsorship/presentation/screens/tier_selection_screen.dart';
 import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
@@ -18,7 +19,7 @@ class SponsorDashboardPage extends StatefulWidget {
   State<SponsorDashboardPage> createState() => _SponsorDashboardPageState();
 }
 
-class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
+class _SponsorDashboardPageState extends State<SponsorDashboardPage> with WidgetsBindingObserver {
   final SponsorService _sponsorService = GetIt.instance<SponsorService>();
 
   SponsorDashboardSummary? _summary;
@@ -28,7 +29,23 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadDashboardData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Refresh dashboard when app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      _loadDashboardData();
+    }
   }
 
   Future<void> _loadDashboardData() async {
@@ -265,11 +282,15 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> {
                                   label: 'Paket Satın Al',
                                   color: const Color(0xFF10B981),
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Paket Satın Alma - Yakında'),
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const TierSelectionScreen(),
                                       ),
-                                    );
+                                    ).then((_) {
+                                      // Refresh dashboard when returning
+                                      _loadDashboardData();
+                                    });
                                   },
                                 ),
                                 const SizedBox(height: 12),
