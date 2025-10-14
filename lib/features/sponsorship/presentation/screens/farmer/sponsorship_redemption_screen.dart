@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get_it/get_it.dart';
 import '../../../../../core/services/sponsorship_sms_listener.dart';
 import '../../../data/services/sponsor_service.dart';
 
@@ -28,7 +29,7 @@ class SponsorshipRedemptionScreen extends StatefulWidget {
 class _SponsorshipRedemptionScreenState
     extends State<SponsorshipRedemptionScreen> {
   final TextEditingController _codeController = TextEditingController();
-  final SponsorService _sponsorService = SponsorService();
+  late final SponsorService _sponsorService;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -37,6 +38,9 @@ class _SponsorshipRedemptionScreenState
   @override
   void initState() {
     super.initState();
+
+    // Initialize service from GetIt
+    _sponsorService = GetIt.instance<SponsorService>();
 
     // Auto-fill code from arguments (deep link or SMS)
     if (widget.autoFilledCode != null && widget.autoFilledCode!.isNotEmpty) {
