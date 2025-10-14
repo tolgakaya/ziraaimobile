@@ -276,22 +276,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             // Initialize SignalR after successful authentication
             await _initializeSignalRAfterAuth();
 
-            // Check for pending sponsorship code from SMS (but don't navigate yet)
+            // Check for pending sponsorship code from SMS
             final pendingCode = await _checkPendingSponsorshipCode();
 
-            // Navigate to dashboard
+            // Navigate to dashboard (pass pending code as parameter)
             if (mounted) {
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (_) => const FarmerDashboardPage(),
+                  builder: (_) => FarmerDashboardPage(
+                    pendingSponsorshipCode: pendingCode,
+                  ),
                 ),
                 (route) => false,
               );
-
-              // If pending code exists, navigate to redemption screen after dashboard loads
-              if (pendingCode != null) {
-                _navigateToRedemption(pendingCode);
-              }
             }
           } else if (state is PhoneOtpSent) {
             // OTP resent successfully
