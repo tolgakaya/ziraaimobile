@@ -1,8 +1,9 @@
 import 'package:telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:telephony/telephony.dart';
 import 'package:get_it/get_it.dart';
 import '../services/navigation_service.dart';
+import '../services/auth_service.dart';
 import '../../features/sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 
 /// SMS-based automatic sponsorship code redemption service
@@ -50,35 +51,21 @@ class SponsorshipSmsListener {
     print('[SponsorshipSMS] ✅ Sponsorship SMS listener initialized successfully');
   }
 
-  /// Request SMS permission from user
+  /// Request SMS permission from user using Telephony package
   Future<bool> _requestSmsPermission() async {
     try {
-      // Already granted?
-      if (await Permission.sms.isGranted) {
-        print('[SponsorshipSMS] ✅ SMS permission already granted');
-        return true;
-      }
+      print('[SponsorshipSMS] 📋 Checking SMS permission...');
 
-      print('[SponsorshipSMS] 📋 Requesting SMS permission...');
+      // Use Telephony's built-in permission check (doesn't conflict)
+      final bool? hasPermission = await telephony.requestPhoneAndSmsPermissions;
 
-      // Request permission
-      final status = await Permission.sms.request();
-
-      if (status.isGranted) {
+      if (hasPermission == true) {
         print('[SponsorshipSMS] ✅ SMS permission granted');
         return true;
-      } else if (status.isDenied) {
+      } else {
         print('[SponsorshipSMS] ⚠️ SMS permission denied');
         return false;
-      } else if (status.isPermanentlyDenied) {
-        print('[SponsorshipSMS] ⚠️ SMS permission permanently denied');
-        print('   User must enable manually from settings');
-        // Open app settings
-        await openAppSettings();
-        return false;
       }
-
-      return false;
     } catch (e) {
       print('[SponsorshipSMS] ❌ Permission error: $e');
       return false;
@@ -88,16 +75,19 @@ class SponsorshipSmsListener {
   /// Start listening for incoming SMS messages
   Future<void> _startListening() async {
     try {
+      print('[SponsorshipSMS] 🎧 Setting up SMS listener callbacks...');
+
       telephony.listenIncomingSms(
         onNewMessage: (SmsMessage message) async {
-          print('[SponsorshipSMS] 📱 New SMS received from ${message.address}');
+          print('[SponsorshipSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.address}');
+          print('[SponsorshipSMS] 📱🔔 Message body: ${message.body}');
           await _processSmsMessage(message.body ?? '');
         },
         onBackgroundMessage: _onBackgroundMessage,
         listenInBackground: true,
       );
 
-      print('[SponsorshipSMS] 👂 Background SMS listener started');
+      print('[SponsorshipSMS] 👂 Background SMS listener started successfully');
     } catch (e) {
       print('[SponsorshipSMS] ❌ Failed to start SMS listener: $e');
     }
@@ -219,12 +209,20 @@ class SponsorshipSmsListener {
     }
   }
 
-  /// Check if user is logged in
+  /// Check if user is logged in by checking SecureStorage token
   Future<bool> _isUserLoggedIn() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      return token != null && token.isNotEmpty;
+      // Check if user has valid token in SecureStorage via AuthService
+      final authService = GetIt.instance<AuthService>();
+      final isAuthenticated = await authService.isAuthenticated();
+
+      if (isAuthenticated) {
+        print('[SponsorshipSMS] ✅ User logged in (token found in SecureStorage)');
+        return true;
+      }
+
+      print('[SponsorshipSMS] ℹ️ User not logged in - no token');
+      return false;
     } catch (e) {
       print('[SponsorshipSMS] ❌ Error checking login status: $e');
       return false;
@@ -239,15 +237,25 @@ class SponsorshipSmsListener {
   }
 
   /// Navigate to sponsorship redemption screen using global navigation service
-  void _navigateToRedemption(String code) {
+  void _navigateToRedemption(String code, {int retryCount = 0}) {
     try {
-      print('[SponsorshipSMS] 🧭 Attempting to navigate to redemption screen with code: $code');
+      print('[SponsorshipSMS] 🧭 Attempting to navigate to redemption screen with code: $code (retry: $retryCount)');
 
       // Get navigation service from GetIt
       final navigationService = GetIt.instance<NavigationService>();
 
       if (!navigationService.isReady) {
-        print('[SponsorshipSMS] ⚠️ Navigation service not ready - code saved for later');
+        // Navigation context not ready yet - retry after delay
+        if (retryCount < 5) {
+          final delayMs = 500 * (retryCount + 1); // Increasing delay: 500ms, 1000ms, 1500ms...
+          print('[SponsorshipSMS] ⚠️ Navigation service not ready - retrying in ${delayMs}ms (attempt ${retryCount + 1}/5)');
+
+          Future.delayed(Duration(milliseconds: delayMs), () {
+            _navigateToRedemption(code, retryCount: retryCount + 1);
+          });
+        } else {
+          print('[SponsorshipSMS] ⚠️ Navigation service not ready after 5 retries - code saved for later');
+        }
         return;
       }
 
