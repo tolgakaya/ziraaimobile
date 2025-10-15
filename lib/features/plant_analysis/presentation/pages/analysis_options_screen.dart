@@ -117,6 +117,11 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
         },
         // Right - Success
         (data) {
+          print('✅ Analysis submitted successfully, navigating back to dashboard...');
+          print('   Analysis ID: ${data.analysisId}');
+          print('   Status: ${data.status}');
+          print('   Widget mounted: $mounted');
+          
           // Show success message
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +145,19 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
           }
 
           // Navigate back to dashboard - async analysis runs in background
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          print('🧭 Attempting to navigate back to dashboard...');
+          print('   Context mounted: $mounted');
+          
+          if (mounted) {
+            try {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              print('✅ Navigation completed successfully');
+            } catch (e) {
+              print('❌ Navigation error: $e');
+            }
+          } else {
+            print('⚠️ Widget not mounted, skipping navigation');
+          }
         },
       );
     } catch (e) {
