@@ -1,5 +1,5 @@
 import 'package:telephony/telephony.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:telephony/telephony.dart';
 
 /// SMS'lerden referral kodu çıkarmak için servis
 /// İlk uygulama açılışında kullanılır (deferred deep linking)
@@ -67,31 +67,19 @@ class SmsReferralService {
     }
   }
 
-  /// SMS okuma izni iste
+  /// SMS okuma izni iste (using Telephony package)
   Future<bool> _requestSmsPermission() async {
     try {
-      // Zaten var mı?
-      if (await Permission.sms.isGranted) {
-        print('✅ SMS izni zaten var');
-        return true;
-      }
-
       print('📋 SMS izni isteniyor...');
 
-      // İzin iste
-      final status = await Permission.sms.request();
+      // Use Telephony's built-in permission request
+      final bool? hasPermission = await telephony.requestPhoneAndSmsPermissions;
 
-      if (status.isGranted) {
+      if (hasPermission == true) {
         print('✅ SMS izni verildi');
         return true;
-      } else if (status.isDenied) {
+      } else {
         print('⚠️ SMS izni reddedildi');
-        return false;
-      } else if (status.isPermanentlyDenied) {
-        print('⚠️ SMS izni kalıcı olarak reddedildi');
-        print('   Kullanıcı ayarlardan manuel açmalı');
-        // Ayarlara yönlendir
-        await openAppSettings();
         return false;
       }
 

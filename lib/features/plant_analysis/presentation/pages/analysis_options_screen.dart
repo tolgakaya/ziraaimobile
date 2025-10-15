@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
 import '../../../../core/services/image_processing_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/error/plant_analysis_exceptions.dart';
 import '../../../../core/widgets/error_widgets.dart';
 import '../../../subscription/presentation/screens/subscription_status_screen.dart';
+import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 
 class AnalysisOptionsScreen extends StatefulWidget {
   final File selectedImage;
@@ -117,6 +119,11 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
         },
         // Right - Success
         (data) {
+          print('✅ Analysis submitted successfully, navigating back to dashboard...');
+          print('   Analysis ID: ${data.analysisId}');
+          print('   Status: ${data.status}');
+          print('   Widget mounted: $mounted');
+          
           // Show success message
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +147,27 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
           }
 
           // Navigate back to dashboard - async analysis runs in background
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          print('🧭 Attempting to navigate back to dashboard...');
+          print('   Context mounted: $mounted');
+          
+          if (mounted) {
+            try {
+              // Import needed for FarmerDashboardPage
+              // Use pushAndRemoveUntil to clear stack and show fresh dashboard
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const FarmerDashboardPage(),
+                ),
+                (route) => false, // Remove all previous routes including splash
+              );
+              
+              print('✅ Navigation completed - fresh dashboard loaded');
+            } catch (e) {
+              print('❌ Navigation error: $e');
+            }
+          } else {
+            print('⚠️ Widget not mounted, skipping navigation');
+          }
         },
       );
     } catch (e) {
