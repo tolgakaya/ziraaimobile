@@ -722,4 +722,130 @@ class SponsorService {
       throw Exception('Unexpected error: $e');
     }
   }
+
+  /// Redeem sponsorship code (Farmer endpoint)
+  /// Endpoint: POST /api/v1/sponsorship/redeem
+  ///
+  /// Validates and activates a sponsorship subscription for the authenticated farmer.
+  /// If farmer already has active sponsored subscription, code will be queued.
+  ///
+  /// Returns: { "success": true, "message": "...", "data": { subscription details } }
+  Future<Map<String, dynamic>> redeemSponsorshipCode(String code) async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Redeeming sponsorship code: $code',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.post(
+        '${ApiConfig.apiBaseUrl}/sponsorship/redeem',
+        data: {
+          'code': code,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Code redeemed successfully',
+        name: 'SponsorService',
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to redeem code',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to redeem code')
+            : 'Failed to redeem code';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error redeeming code',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Validate sponsorship code (Optional pre-check)
+  /// Endpoint: GET /api/v1/sponsorship/validate/{code}
+  ///
+  /// Checks if code is valid before attempting redemption.
+  /// Useful for showing tier information to user before redeeming.
+  ///
+  /// Returns: { "success": true, "data": { "code": "...", "subscriptionTier": "...", "isValid": true, ... } }
+  Future<Map<String, dynamic>> validateSponsorshipCode(String code) async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Validating sponsorship code: $code',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}/sponsorship/validate/$code',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+
+      developer.log(
+        'Code validation completed',
+        name: 'SponsorService',
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to validate code',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to validate code')
+            : 'Failed to validate code';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error validating code',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
 }

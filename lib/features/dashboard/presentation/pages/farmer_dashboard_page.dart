@@ -17,9 +17,16 @@ import '../../../authentication/presentation/screens/login_screen.dart';
 import '../../../sponsorship/presentation/screens/create_sponsor_profile_screen.dart';
 import '../../../../core/security/token_manager.dart';
 import 'sponsor_dashboard_page.dart';
+import 'package:flutter/scheduler.dart';
+import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
-  const FarmerDashboardPage({super.key});
+  final String? pendingSponsorshipCode;
+
+  const FarmerDashboardPage({
+    super.key,
+    this.pendingSponsorshipCode,
+  });
 
   @override
   State<FarmerDashboardPage> createState() => _FarmerDashboardPageState();
@@ -95,6 +102,57 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkSponsorRole();
+
+    // Handle pending sponsorship code navigation
+    if (widget.pendingSponsorshipCode != null) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _navigateToSponsorshipRedemption(widget.pendingSponsorshipCode!);
+        }
+      });
+    }
+  }
+
+  void _navigateToSponsorshipRedemption(String code) async {
+    print('[Dashboard] 🧭 Navigating to redemption screen with code: $code');
+
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SponsorshipRedemptionScreen(
+          autoFilledCode: code,
+        ),
+      ),
+    );
+
+    // Refresh dashboard if redemption was successful
+    if (result == true && mounted) {
+      print('[Dashboard] 🔄 Refreshing dashboard after successful redemption');
+      _refreshDashboard();
+    }
+
+    // Show notification
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.card_giftcard, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Sponsorluk kodu bulundu! SMS\'den kod otomatik dolduruldu.',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
   }
 
   Future<void> _checkSponsorRole() async {

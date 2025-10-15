@@ -13,7 +13,9 @@ import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../../../../core/services/signalr_service.dart';
 import '../../../../core/services/signalr_notification_integration.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/sponsorship_sms_listener.dart';
 import '../../../dashboard/presentation/bloc/notification_bloc.dart';
+import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -123,6 +125,66 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Check for pending sponsorship code from SMS after login
+  /// If code exists and not expired, navigate to redemption screen
+  Future<void> _checkPendingSponsorshipCode() async {
+    try {
+      print('[Login] 🔍 Checking for pending sponsorship code...');
+
+      final pendingCode = await SponsorshipSmsListener.checkPendingCode();
+
+      if (pendingCode != null && mounted) {
+        print('[Login] ✅ Found pending code: $pendingCode');
+
+        // Clear from storage
+        await SponsorshipSmsListener.clearPendingCode();
+
+        // Small delay to let dashboard initialize first
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Navigate to redemption screen with auto-filled code
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => SponsorshipRedemptionScreen(
+                autoFilledCode: pendingCode,
+              ),
+            ),
+          );
+
+          // Show notification
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.card_giftcard, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Sponsorluk kodu bulundu! SMS\'den kod otomatik dolduruldu.',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade600,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+      } else {
+        print('[Login] ℹ️ No pending sponsorship code found');
+      }
+    } catch (e) {
+      print('[Login] ❌ Error checking pending code: $e');
+      // Don't block login flow if this fails
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -130,6 +192,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (state is AuthAuthenticated) {
           // Initialize SignalR after successful login
           await _initializeSignalRAfterLogin();
+
+          // Check for pending sponsorship code from SMS
+          await _checkPendingSponsorshipCode();
 
           // Navigate to dashboard on successful login
           Navigator.of(context).pushReplacement(

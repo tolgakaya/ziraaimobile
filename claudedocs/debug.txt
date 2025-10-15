@@ -1,0 +1,475 @@
+Running Gradle task 'assembleStagingDebug'...                      39.3s
+√ Built build\app\outputs\flutter-apk\app-staging-debug.apk
+Installing build\app\outputs\flutter-apk\app-staging-debug.apk...      1,276ms
+D/FlutterJNI( 9348): Beginning load of flutter...
+D/FlutterJNI( 9348): flutter (null) was loaded normally!
+I/flutter ( 9348): [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+Syncing files to device sdk gphone64 x86 64...                     131ms
+
+Flutter run key commands.
+r Hot reload.
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on sdk gphone64 x86 64 is available at: http://127.0.0.1:61126/ob1RHSN82aY=/
+I/flutter ( 9348): 🎁 Main: Initializing sponsorship SMS listener...
+I/flutter ( 9348): [SponsorshipSMS] 🚀 Initializing sponsorship SMS listener...
+I/flutter ( 9348): 📱 DeepLink: Initializing app_links service...
+I/flutter ( 9348): 🔐 SplashScreen: Checking authentication status...
+I/flutter ( 9348): ⏳ SplashScreen: Waiting for SMS check to complete...
+I/Choreographer( 9348): Skipped 64 frames!  The application may be doing too much work on its main thread.
+I/aai.app.staging( 9348): Compiler allocated 5174KB to compile void android.view.ViewRootImpl.performTraversals()
+I/WindowExtensionsImpl( 9348): Initializing Window Extensions, vendor API level=6, activity embedding enabled=true
+W/HWUI    ( 9348): Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+W/HWUI    ( 9348): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+I/Gralloc4( 9348): mapper 4.x is not supported
+I/flutter ( 9348): 🔍 SMS'den referral kodu aranıyor...
+The Flutter DevTools debugger and profiler on sdk gphone64 x86 64 is available at: http://127.0.0.1:9100?uri=http://127.0.0.1:61126/ob1RHSN82aY=/
+I/flutter ( 9348): [SponsorshipSMS] ✅ SMS permission already granted
+I/flutter ( 9348): [SponsorshipSMS] 👂 Background SMS listener started
+I/flutter ( 9348): 📱 DeepLink: No initial link found
+I/flutter ( 9348): ✅ DeepLink: Service initialized successfully
+I/Choreographer( 9348): Skipped 49 frames!  The application may be doing too much work on its main thread.
+I/HWUI    ( 9348): Davey! duration=874ms; Flags=1, FrameTimelineVsyncId=73194, IntendedVsync=16682593746070, Vsync=16683410412704, InputEventId=0, HandleInputStart=16683416634100, AnimationStart=16683416656500, PerformTraversalsStart=16683416964800, DrawStart=16683425841800, FrameDeadline=16682610412736, FrameInterval=16683416264800, FrameStartTime=16666666, SyncQueued=16683426709700, SyncStart=16683427489900, IssueDrawCommandsStart=16683428217300, SwapBuffers=16683447913000, FrameCompleted=16683468906600, DequeueBufferDuration=19883000, QueueBufferDuration=281100, GpuCompleted=16683461129100, SwapBuffersCompleted=16683468906600, DisplayPresentTime=72904454231359566, CommandSubmissionCompleted=16683447913000,
+I/flutter ( 9348): ✅ SMS izni zaten var
+I/flutter ( 9348): 📱 SMS'ler taranıyor (son 24 saat)...
+I/flutter ( 9348): Column is address
+I/flutter ( 9348): Column is body
+I/flutter ( 9348): Column is date
+I/flutter ( 9348): Column is address
+I/flutter ( 9348): Column is body
+I/flutter ( 9348): Column is date
+I/flutter ( 9348): [SponsorshipSMS] 🔍 Checking 2 recent SMS (last 7 days)
+I/flutter ( 9348): [SponsorshipSMS] 🔎 Processing message:  Chimera Tarım A.Ş. size Medium paketi hediye ett...
+I/flutter ( 9348): [SponsorshipSMS] ✅ Sponsorship code extracted: AGRI-2025
+I/flutter ( 9348): Column is address
+I/flutter ( 9348): Column is body
+I/flutter ( 9348): Column is date
+I/flutter ( 9348): Column is address
+I/flutter ( 9348): Column is body
+I/flutter ( 9348): Column is date
+I/flutter ( 9348): Column is address
+I/flutter ( 9348): Column is body
+I/flutter ( 9348): Column is date
+I/flutter ( 9348): Column is address
+I/flutter ( 9348): Column is body
+I/flutter ( 9348): Column is date
+I/flutter ( 9348): Column is address
+I/flutter ( 9348): Column is body
+I/flutter ( 9348): Column is date
+I/flutter ( 9348): Column is address
+I/flutter ( 9348): Column is body
+I/flutter ( 9348): Column is date
+I/flutter ( 9348): ℹ️ 24 saatten eski mesajlara ulaşıldı, durduruldu
+I/flutter ( 9348): ℹ️ SMS'lerde ZIRA kodu bulunamadı - manuel giriş yapılacak
+I/flutter ( 9348): ℹ️ SMS'de kod yok - normal flow devam ediyor
+I/flutter ( 9348): ✅ SMS check complete - SplashScreen can now proceed
+I/flutter ( 9348): [SponsorshipSMS] 💾 Code saved to storage: AGRI-2025
+I/flutter ( 9348): [SponsorshipSMS] 👤 User not logged in - code saved for after login
+I/flutter ( 9348): [SponsorshipSMS] ✅ Found sponsorship code in recent SMS
+I/flutter ( 9348): [SponsorshipSMS] ✅ Recent SMS check completed
+I/flutter ( 9348): [SponsorshipSMS] ✅ Sponsorship SMS listener initialized successfully
+I/flutter ( 9348): ✅ Main: Sponsorship SMS listener initialized successfully
+I/flutter ( 9348): ✅ SplashScreen: SMS check completed
+I/flutter ( 9348): ✅ SplashScreen: Token found, checking validity...
+I/flutter ( 9348): ✅ SplashScreen: Token is valid, auto-login successful
+I/flutter ( 9348): 🔌 SplashScreen: Initializing SignalR after auto-login...
+I/flutter ( 9348): 🔌 SignalR: Starting initialization...
+I/flutter ( 9348): 🔌 SignalR: Connecting to hub: https://ziraai-api-sit.up.railway.app/hubs/plantanalysis
+I/flutter ( 9348): 📡 SignalR: Registering event handlers...
+I/flutter ( 9348): 📝 SignalR: Registering AnalysisCompleted (without Receive prefix)...
+I/flutter ( 9348): 📝 SignalR: Registering ReceiveAnalysisCompleted...
+I/flutter ( 9348): ✅ SignalR: Event handlers registered successfully!
+I/flutter ( 9348): 🔌 SignalR: Starting connection...
+D/EGL_emulation( 9348): app_time_stats: avg=27.70ms min=2.14ms max=160.34ms count=28
+I/flutter ( 9348): ✅ SignalR: Connected successfully!
+I/flutter ( 9348): 🔑 SignalR: Joining user group...
+I/flutter ( 9348): 🔑 SignalR: Extracted userId from JWT: 160
+I/flutter ( 9348): ! SignalR: Failed to join user group (non-critical): Failed to invoke 'JoinUserGroup' due to an error on the server. HubException: Method does not exist.
+I/flutter ( 9348): 🏓 SignalR: Sending test ping...
+D/EGL_emulation( 9348): app_time_stats: avg=19.54ms min=10.14ms max=64.68ms count=52
+I/flutter ( 9348): 🏓 SignalR: Pong received: 2025-10-14T10:42:48.7873405Z
+I/flutter ( 9348): ✅ SignalR: Ping sent successfully
+I/flutter ( 9348): 🔗 SignalRIntegration: Setting up event handlers...
+I/flutter ( 9348): ✅ SignalRIntegration: Event handlers setup complete!
+I/flutter ( 9348): ✅ SplashScreen: SignalR initialized successfully
+I/flutter ( 9348): 🔍 FarmerDashboard: Starting sponsor role check...
+I/flutter ( 9348): 🔔 NotificationBellIcon: Builder triggered!
+I/flutter ( 9348): 🔔 NotificationBellIcon: Current state type: NotificationInitial
+I/flutter ( 9348): 🔔 NotificationBellIcon: State is NOT NotificationLoaded: NotificationInitial()
+I/flutter ( 9348): 🔄 Loading subscription data...
+I/flutter ( 9348): 🔄 Loading subscription data...
+I/flutter ( 9348): 🔍 Subscription data: null
+I/flutter ( 9348): 🚀🚀🚀 CLAUDE: Starting to load analyses with NEW CODE! 🚀🚀🚀
+D/ProfileInstaller( 9348): Installing profile for com.ziraai.app.staging
+W/WindowOnBackDispatcher( 9348): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 9348): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/flutter ( 9348): ✅ TokenManager: Found role: Farmer
+I/flutter ( 9348): 📋 FarmerDashboard: All roles in token: [Farmer]
+I/flutter ( 9348): ✅ Token found, making API request...
+I/flutter ( 9348): ✅ Token found, making API request...
+I/flutter ( 9348): 🚀 CLAUDE: Making API call to plantanalyses/list
+I/flutter ( 9348): *** Request ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/subscriptions/usage-status
+I/flutter ( 9348): method: GET
+I/flutter ( 9348): responseType: ResponseType.json
+I/flutter ( 9348): followRedirects: true
+I/flutter ( 9348): persistentConnection: true
+I/flutter ( 9348): connectTimeout: 0:00:30.000000
+I/flutter ( 9348): sendTimeout: null
+I/flutter ( 9348): receiveTimeout: 0:00:30.000000
+I/flutter ( 9348): receiveDataWhenStatusError: true
+I/flutter ( 9348): extra: {}
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  Content-Type: application/json
+I/flutter ( 9348):  Accept: application/json
+I/flutter ( 9348):  Authorization: Bearer eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjE2MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJVc2VyIDExMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJGYXJtZXIiLCJuYmYiOjE3NjA0MzgwNDAsImV4cCI6MTc2MDQ0MTY0MCwiaXNzIjoiWmlyYUFJX1N0YWdpbmciLCJhdWQiOiJaaXJhQUlfU3RhZ2luZ19Vc2VycyJ9.dRQU4TEYb2TmFh9X-xVIau8M3ZTFRhRQhe-V3j6Rpgk  
+I/flutter ( 9348): data:
+I/flutter ( 9348): null
+I/flutter ( 9348):
+I/flutter ( 9348): *** Request ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/subscriptions/usage-status
+I/flutter ( 9348): method: GET
+I/flutter ( 9348): responseType: ResponseType.json
+I/flutter ( 9348): followRedirects: true
+I/flutter ( 9348): persistentConnection: true
+I/flutter ( 9348): connectTimeout: 0:00:30.000000
+I/flutter ( 9348): sendTimeout: null
+I/flutter ( 9348): receiveTimeout: 0:00:30.000000
+I/flutter ( 9348): receiveDataWhenStatusError: true
+I/flutter ( 9348): extra: {}
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  Content-Type: application/json
+I/flutter ( 9348):  Accept: application/json
+I/flutter ( 9348):  Authorization: Bearer eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjE2MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJVc2VyIDExMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJGYXJtZXIiLCJuYmYiOjE3NjA0MzgwNDAsImV4cCI6MTc2MDQ0MTY0MCwiaXNzIjoiWmlyYUFJX1N0YWdpbmciLCJhdWQiOiJaaXJhQUlfU3RhZ2luZ19Vc2VycyJ9.dRQU4TEYb2TmFh9X-xVIau8M3ZTFRhRQhe-V3j6Rpgk  
+I/flutter ( 9348): data:
+I/flutter ( 9348): null
+I/flutter ( 9348):
+I/flutter ( 9348): *** Request ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/plantanalyses/list?page=1&pageSize=10
+I/flutter ( 9348): method: GET
+I/flutter ( 9348): responseType: ResponseType.json
+I/flutter ( 9348): followRedirects: true
+I/flutter ( 9348): persistentConnection: true
+I/flutter ( 9348): connectTimeout: 0:00:30.000000
+I/flutter ( 9348): sendTimeout: null
+I/flutter ( 9348): receiveTimeout: 0:00:30.000000
+I/flutter ( 9348): receiveDataWhenStatusError: true
+I/flutter ( 9348): extra: {}
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  Content-Type: application/json
+I/flutter ( 9348):  Accept: application/json
+I/flutter ( 9348):  Authorization: Bearer eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjE2MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJVc2VyIDExMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJGYXJtZXIiLCJuYmYiOjE3NjA0MzgwNDAsImV4cCI6MTc2MDQ0MTY0MCwiaXNzIjoiWmlyYUFJX1N0YWdpbmciLCJhdWQiOiJaaXJhQUlfU3RhZ2luZ19Vc2VycyJ9.dRQU4TEYb2TmFh9X-xVIau8M3ZTFRhRQhe-V3j6Rpgk  
+I/flutter ( 9348): data:
+I/flutter ( 9348): null
+I/flutter ( 9348):
+I/flutter ( 9348): ✅ TokenManager: Found role: Farmer
+I/flutter ( 9348): 🔍 FarmerDashboard: Sponsor role check - hasSponsor: false
+I/flutter ( 9348): 🔍 Subscription data: null
+D/EGL_emulation( 9348): app_time_stats: avg=43.44ms min=13.45ms max=351.93ms count=23
+I/flutter ( 9348): *** Response ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/plantanalyses/list?page=1&pageSize=10
+I/flutter ( 9348): statusCode: 200
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  date: Tue, 14 Oct 2025 10:42:49 GMT
+I/flutter ( 9348):  transfer-encoding: chunked
+I/flutter ( 9348):  api-supported-versions: 1.0
+I/flutter ( 9348):  content-type: application/json; charset=utf-8
+I/flutter ( 9348):  server: railway-edge
+I/flutter ( 9348):  x-railway-edge: railway/europe-west4-drams3a
+I/flutter ( 9348):  x-railway-request-id: loYGQcgyTme0YbCerJsmnA
+I/flutter ( 9348): Response Text:
+I/flutter ( 9348): {"data":{"analyses":[],"totalCount":0,"page":1,"pageSize":10,"totalPages":0,"hasNextPage":false,"hasPreviousPage":false,"completedCount":0,"processingCount":0,"failedCount":0,"sponsoredCount":0,"paginationInfo":"Page 1 of 0 (0 total)","isEmpty":true,"isLastPage":true,"isFirstPage":true},"success":true,"message":"Found 0 plant analyses (page 1 of 0)"}
+I/flutter ( 9348):
+I/flutter ( 9348): 🚀 CLAUDE: Response data type: _Map<String, dynamic>
+I/flutter ( 9348): 🚀 CLAUDE: Response data content: {analyses: [], totalCount: 0, page: 1, pageSize: 10, totalPages: 0, hasNextPage: false, hasPreviousPage: false, completedCount: 0, processingCount: 0, failedCount: 0, sponsoredCount: 0, paginationInfo: Page 1 of 0 (0 total), isEmpty: true, isLastPage: true, isFirstPage: true}
+I/flutter ( 9348): 🚀 CLAUDE: Data is Map, extracting analyses array
+I/flutter ( 9348): 🚀 CLAUDE: Found 0 analyses, converting to AnalysisItem
+I/flutter ( 9348): *** Response ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/subscriptions/usage-status
+I/flutter ( 9348): statusCode: 200
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  date: Tue, 14 Oct 2025 10:42:49 GMT
+I/flutter ( 9348):  transfer-encoding: chunked
+I/flutter ( 9348):  api-supported-versions: 1.0
+I/flutter ( 9348):  content-type: application/json; charset=utf-8
+I/flutter ( 9348):  server: railway-edge
+I/flutter ( 9348):  x-railway-edge: railway/europe-west4-drams3a
+I/flutter ( 9348):  x-railway-request-id: 9lz5x-20Rv2t0XOBjUJq2g
+I/flutter ( 9348): Response Text:
+I/flutter ( 9348): {"data":{"hasActiveSubscription":true,"subscriptionStatus":"Active","tierName":"Trial","dailyUsed":0,"dailyLimit":1,"dailyRemaining":1,"dailyUsagePercentage":0,"nextDailyReset":"2025-10-15T00:00:00+00:00","monthlyUsed":0,"monthlyLimit":30,"monthlyRemaining":30,"monthlyUsagePercentage":0,"nextMonthlyReset":"2025-11-01T00:00:00","subscriptionEndDate":"2025-11-13T10:33:05.123078+00:00","canMakeRequest":true,"referralCredits":0},"success":true}
+I/flutter ( 9348):
+I/flutter ( 9348): 📡 API Response: 200
+I/flutter ( 9348): 📊 API Data: {data: {hasActiveSubscription: true, subscriptionStatus: Active, tierName: Trial, dailyUsed: 0, dailyLimit: 1, dailyRemaining: 1, dailyUsagePercentage: 0, nextDailyReset: 2025-10-15T00:00:00+00:00, monthlyUsed: 0, monthlyLimit: 30, monthlyRemaining: 30, monthlyUsagePercentage: 0, nextMonthlyReset: 2025-11-01T00:00:00, subscriptionEndDate: 2025-11-13T10:33:05.123078+00:00, canMakeRequest: true, referralCredits: 0}, success: true}
+I/flutter ( 9348): ✅ Subscription data loaded successfully
+I/flutter ( 9348): *** Response ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/subscriptions/usage-status
+I/flutter ( 9348): statusCode: 200
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  date: Tue, 14 Oct 2025 10:42:49 GMT
+I/flutter ( 9348):  transfer-encoding: chunked
+I/flutter ( 9348):  api-supported-versions: 1.0
+I/flutter ( 9348):  content-type: application/json; charset=utf-8
+I/flutter ( 9348):  server: railway-edge
+I/flutter ( 9348):  x-railway-edge: railway/europe-west4-drams3a
+I/flutter ( 9348):  x-railway-request-id: E4K1MsPnQqOoAuB5w9P4nw
+I/flutter ( 9348): Response Text:
+I/flutter ( 9348): {"data":{"hasActiveSubscription":true,"subscriptionStatus":"Active","tierName":"Trial","dailyUsed":0,"dailyLimit":1,"dailyRemaining":1,"dailyUsagePercentage":0,"nextDailyReset":"2025-10-15T00:00:00+00:00","monthlyUsed":0,"monthlyLimit":30,"monthlyRemaining":30,"monthlyUsagePercentage":0,"nextMonthlyReset":"2025-11-01T00:00:00","subscriptionEndDate":"2025-11-13T10:33:05.123078+00:00","canMakeRequest":true,"referralCredits":0},"success":true}
+I/flutter ( 9348):
+I/flutter ( 9348): 📡 API Response: 200
+I/flutter ( 9348): 📊 API Data: {data: {hasActiveSubscription: true, subscriptionStatus: Active, tierName: Trial, dailyUsed: 0, dailyLimit: 1, dailyRemaining: 1, dailyUsagePercentage: 0, nextDailyReset: 2025-10-15T00:00:00+00:00, monthlyUsed: 0, monthlyLimit: 30, monthlyRemaining: 30, monthlyUsagePercentage: 0, nextMonthlyReset: 2025-11-01T00:00:00, subscriptionEndDate: 2025-11-13T10:33:05.123078+00:00, canMakeRequest: true, referralCredits: 0}, success: true}
+I/flutter ( 9348): ✅ Subscription data loaded successfully
+I/flutter ( 9348): 🔍 Subscription data: {hasActiveSubscription: true, subscriptionStatus: Active, tierName: Trial, dailyUsed: 0, dailyLimit: 1, dailyRemaining: 1, dailyUsagePercentage: 0, nextDailyReset: 2025-10-15T00:00:00+00:00, monthlyUsed: 0, monthlyLimit: 30, monthlyRemaining: 30, monthlyUsagePercentage: 0, nextMonthlyReset: 2025-11-01T00:00:00, subscriptionEndDate: 2025-11-13T10:33:05.123078+00:00, canMakeRequest: true, referralCredits: 0}
+W/WindowOnBackDispatcher( 9348): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 9348): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+D/EGL_emulation( 9348): app_time_stats: avg=3581.35ms min=13.51ms max=99729.88ms count=28
+D/EGL_emulation( 9348): app_time_stats: avg=38.93ms min=3.91ms max=666.92ms count=28
+W/WindowOnBackDispatcher( 9348): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 9348): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/ImeTracker( 9348): com.ziraai.app.staging:b5b96236: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InputMethodManager( 9348): showSoftInput() view=io.flutter.embedding.android.FlutterView{4a46672 VFE...... .F....ID 0,0-1080,2424 #1 aid=1073741824} flags=0 reason=SHOW_SOFT_INPUT
+D/EGL_emulation( 9348): app_time_stats: avg=7279.04ms min=10.96ms max=43206.23ms count=6
+D/InputConnectionAdaptor( 9348): The input method toggled cursor monitoring on
+D/InsetsController( 9348): show(ime(), fromIme=true)
+W/InteractionJankMonitor( 9348): Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.ziraai.app.staging
+I/ImeTracker( 9348): com.ziraai.app.staging:6f24a930: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InputMethodManager( 9348): showSoftInput() view=io.flutter.embedding.android.FlutterView{4a46672 VFE...... .F...... 0,0-1080,2424 #1 aid=1073741824} flags=0 reason=SHOW_SOFT_INPUT
+I/ImeTracker( 9348): com.ziraai.app.staging:1b5f805: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InputMethodManager( 9348): showSoftInput() view=io.flutter.embedding.android.FlutterView{4a46672 VFE...... .F...... 0,0-1080,2424 #1 aid=1073741824} flags=0 reason=SHOW_SOFT_INPUT
+D/InsetsController( 9348): show(ime(), fromIme=true)
+I/ImeTracker( 9348): com.ziraai.app.staging:6f24a930: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+D/InsetsController( 9348): show(ime(), fromIme=true)
+I/ImeTracker( 9348): com.ziraai.app.staging:1b5f805: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+I/ImeTracker( 9348): com.ziraai.app.staging:b5b96236: onShown
+D/EGL_emulation( 9348): app_time_stats: avg=122.68ms min=22.01ms max=499.40ms count=12
+D/EGL_emulation( 9348): app_time_stats: avg=78.86ms min=10.91ms max=201.32ms count=13
+D/EGL_emulation( 9348): app_time_stats: avg=368.63ms min=230.91ms max=499.03ms count=4
+D/EGL_emulation( 9348): app_time_stats: avg=337.39ms min=189.93ms max=465.32ms count=4
+D/EGL_emulation( 9348): app_time_stats: avg=284.84ms min=90.42ms max=495.27ms count=4
+D/EGL_emulation( 9348): app_time_stats: avg=325.52ms min=282.06ms max=366.48ms count=4
+D/EGL_emulation( 9348): app_time_stats: avg=469.73ms min=415.80ms max=503.28ms count=3
+I/flutter ( 9348): *** Request ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/auth/login-phone
+I/flutter ( 9348): method: POST
+I/flutter ( 9348): responseType: ResponseType.json
+I/flutter ( 9348): followRedirects: true
+I/flutter ( 9348): persistentConnection: true
+I/flutter ( 9348): connectTimeout: 0:00:30.000000
+I/flutter ( 9348): sendTimeout: null
+I/flutter ( 9348): receiveTimeout: 0:00:30.000000
+I/flutter ( 9348): receiveDataWhenStatusError: true
+I/flutter ( 9348): extra: {}
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  Content-Type: application/json
+I/flutter ( 9348):  Accept: application/json
+I/flutter ( 9348): data:
+I/flutter ( 9348): {mobilePhone: 05061111111}
+I/flutter ( 9348):
+D/EGL_emulation( 9348): app_time_stats: avg=28.18ms min=9.22ms max=386.56ms count=36
+D/EGL_emulation( 9348): app_time_stats: avg=16.62ms min=13.61ms max=19.83ms count=61
+I/flutter ( 9348): *** Response ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/auth/login-phone
+I/flutter ( 9348): statusCode: 200
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  date: Tue, 14 Oct 2025 10:45:25 GMT
+I/flutter ( 9348):  transfer-encoding: chunked
+I/flutter ( 9348):  api-supported-versions: 1.0
+I/flutter ( 9348):  content-type: application/json; charset=utf-8
+I/flutter ( 9348):  server: railway-edge
+I/flutter ( 9348):  x-railway-edge: railway/europe-west4-drams3a
+I/flutter ( 9348):  x-railway-request-id: 4p8MbQYrRbiEUeLtrJsmnA
+I/flutter ( 9348): Response Text:
+I/flutter ( 9348): {"data":{"status":"Ok","message":"SendMobileCode238355"},"success":true}
+I/flutter ( 9348):
+W/WindowOnBackDispatcher( 9348): OnBackInvokedCallback is not enabled for the application.
+W/WindowOnBackDispatcher( 9348): Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+I/ImeTracker( 9348): com.ziraai.app.staging:5a7b34c8: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT fromUser false
+D/InsetsController( 9348): hide(ime(), fromIme=true)
+D/EGL_emulation( 9348): app_time_stats: avg=8393.82ms min=3.34ms max=147896.06ms count=19
+I/ImeTracker( 9348): com.ziraai.app.staging:aad80af8: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_ON_ANIMATION_STATE_CHANGED fromUser false
+I/ImeTracker( 9348): com.ziraai.app.staging:5a7b34c8: onHidden
+D/EGL_emulation( 9348): app_time_stats: avg=61.41ms min=3.84ms max=551.24ms count=19
+I/flutter ( 9348): *** Request ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/auth/verify-phone-otp
+I/flutter ( 9348): method: POST
+I/flutter ( 9348): responseType: ResponseType.json
+I/flutter ( 9348): followRedirects: true
+I/flutter ( 9348): persistentConnection: true
+I/flutter ( 9348): connectTimeout: 0:00:30.000000
+I/flutter ( 9348): sendTimeout: null
+I/flutter ( 9348): receiveTimeout: 0:00:30.000000
+I/flutter ( 9348): receiveDataWhenStatusError: true
+I/flutter ( 9348): extra: {}
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  Content-Type: application/json
+I/flutter ( 9348):  Accept: application/json
+I/flutter ( 9348): data:
+I/flutter ( 9348): {mobilePhone: 05061111111, code: 238355}
+I/flutter ( 9348):
+I/flutter ( 9348): *** Response ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/auth/verify-phone-otp
+I/flutter ( 9348): statusCode: 200
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  date: Tue, 14 Oct 2025 10:45:27 GMT
+I/flutter ( 9348):  transfer-encoding: chunked
+I/flutter ( 9348):  api-supported-versions: 1.0
+I/flutter ( 9348):  content-type: application/json; charset=utf-8
+I/flutter ( 9348):  server: railway-edge
+I/flutter ( 9348):  x-railway-edge: railway/europe-west4-drams3a
+I/flutter ( 9348):  x-railway-request-id: BglqSlcjTVGFYfGUrJsmnA
+I/flutter ( 9348): Response Text:
+I/flutter ( 9348): {"data":{"provider":"Phone","token":"eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjE2MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJVc2VyIDExMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJGYXJtZXIiLCJuYmYiOjE3NjA0Mzg3MjcsImV4cCI6MTc2MDQ0MjMyNywiaXNzIjoiWmlyYUFJX1N0YWdpbmciLCJhdWQiOiJaaXJhQUlfU3RhZ2luZ19Vc2VycyJ9.TsTwvAdsG_I8CcoJii_AiJ0RHoVfi3zyAOhT9Q3mFnc","expiration":"2025-10-14T11:45:27.8380028+00:00","refreshToken":"h45vJzSqEtKtj4GAoepopOmfSNggoMD3HIccLO1IS/g="},"success":true,"message":"SuccessfulLogin"}
+I/flutter ( 9348):
+I/flutter ( 9348): 🔌 Phone Auth: Initializing SignalR after successful authentication...
+I/flutter ( 9348): 🔌 SignalR: Starting initialization...
+I/flutter ( 9348): 🔄 SignalR: Token changed, reconnecting...
+I/flutter ( 9348): ❌ SignalR: Connection closed: null
+I/flutter ( 9348): 🔌 SignalR: Disconnected
+I/flutter ( 9348): 🔌 SignalR: Connecting to hub: https://ziraai-api-sit.up.railway.app/hubs/plantanalysis
+I/flutter ( 9348): 📡 SignalR: Registering event handlers...
+I/flutter ( 9348): 📝 SignalR: Registering AnalysisCompleted (without Receive prefix)...
+I/flutter ( 9348): 📝 SignalR: Registering ReceiveAnalysisCompleted...
+I/flutter ( 9348): ✅ SignalR: Event handlers registered successfully!
+I/flutter ( 9348): 🔌 SignalR: Starting connection...
+D/EGL_emulation( 9348): app_time_stats: avg=44.24ms min=14.30ms max=420.81ms count=23
+I/flutter ( 9348): ✅ SignalR: Connected successfully!
+I/flutter ( 9348): 🔑 SignalR: Joining user group...
+I/flutter ( 9348): 🔑 SignalR: Extracted userId from JWT: 160
+I/flutter ( 9348): ! SignalR: Failed to join user group (non-critical): Failed to invoke 'JoinUserGroup' due to an error on the server. HubException: Method does not exist.
+I/flutter ( 9348): 🏓 SignalR: Sending test ping...
+I/flutter ( 9348): 🏓 SignalR: Pong received: 2025-10-14T10:45:28.854563Z
+I/flutter ( 9348): ✅ SignalR: Ping sent successfully
+I/flutter ( 9348): 🔗 SignalRIntegration: Setting up event handlers...
+I/flutter ( 9348): ✅ SignalRIntegration: Event handlers setup complete!
+I/flutter ( 9348): ✅ Phone Auth: SignalR initialized and integrated successfully
+I/flutter ( 9348): [OTP] 🔍 Checking for pending sponsorship code...
+I/flutter ( 9348): [SponsorshipSMS] ✅ Found pending code: AGRI-2025 (0h old)
+I/flutter ( 9348): [OTP] ✅ Found pending code: AGRI-2025
+I/flutter ( 9348): [SponsorshipSMS] 🗑️ Pending code cleared
+I/flutter ( 9348): 🔍 FarmerDashboard: Starting sponsor role check...
+I/flutter ( 9348): 🔔 NotificationBellIcon: Builder triggered!
+I/flutter ( 9348): 🔔 NotificationBellIcon: Current state type: NotificationInitial
+I/flutter ( 9348): 🔔 NotificationBellIcon: State is NOT NotificationLoaded: NotificationInitial()
+I/flutter ( 9348): 🔄 Loading subscription data...
+I/flutter ( 9348): 🔄 Loading subscription data...
+I/flutter ( 9348): 🔍 Subscription data: null
+I/flutter ( 9348): 🚀🚀🚀 CLAUDE: Starting to load analyses with NEW CODE! 🚀🚀🚀
+I/flutter ( 9348): ✅ TokenManager: Found role: Farmer
+I/flutter ( 9348): 📋 FarmerDashboard: All roles in token: [Farmer]
+I/flutter ( 9348): ✅ Token found, making API request...
+I/flutter ( 9348): ✅ Token found, making API request...
+I/flutter ( 9348): 🚀 CLAUDE: Making API call to plantanalyses/list
+I/flutter ( 9348): ✅ TokenManager: Found role: Farmer
+I/flutter ( 9348): 🔍 FarmerDashboard: Sponsor role check - hasSponsor: false
+I/flutter ( 9348): *** Request ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/subscriptions/usage-status
+I/flutter ( 9348): method: GET
+I/flutter ( 9348): responseType: ResponseType.json
+I/flutter ( 9348): followRedirects: true
+I/flutter ( 9348): persistentConnection: true
+I/flutter ( 9348): connectTimeout: 0:00:30.000000
+I/flutter ( 9348): sendTimeout: null
+I/flutter ( 9348): receiveTimeout: 0:00:30.000000
+I/flutter ( 9348): receiveDataWhenStatusError: true
+I/flutter ( 9348): extra: {}
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  Content-Type: application/json
+I/flutter ( 9348):  Accept: application/json
+I/flutter ( 9348):  Authorization: Bearer eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjE2MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJVc2VyIDExMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJGYXJtZXIiLCJuYmYiOjE3NjA0Mzg3MjcsImV4cCI6MTc2MDQ0MjMyNywiaXNzIjoiWmlyYUFJX1N0YWdpbmciLCJhdWQiOiJaaXJhQUlfU3RhZ2luZ19Vc2VycyJ9.TsTwvAdsG_I8CcoJii_AiJ0RHoVfi3zyAOhT9Q3mFnc  
+I/flutter ( 9348): data:
+I/flutter ( 9348): null
+I/flutter ( 9348):
+I/flutter ( 9348): *** Request ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/subscriptions/usage-status
+I/flutter ( 9348): method: GET
+I/flutter ( 9348): responseType: ResponseType.json
+I/flutter ( 9348): followRedirects: true
+I/flutter ( 9348): persistentConnection: true
+I/flutter ( 9348): connectTimeout: 0:00:30.000000
+I/flutter ( 9348): sendTimeout: null
+I/flutter ( 9348): receiveTimeout: 0:00:30.000000
+I/flutter ( 9348): receiveDataWhenStatusError: true
+I/flutter ( 9348): extra: {}
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  Content-Type: application/json
+I/flutter ( 9348):  Accept: application/json
+I/flutter ( 9348):  Authorization: Bearer eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjE2MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJVc2VyIDExMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJGYXJtZXIiLCJuYmYiOjE3NjA0Mzg3MjcsImV4cCI6MTc2MDQ0MjMyNywiaXNzIjoiWmlyYUFJX1N0YWdpbmciLCJhdWQiOiJaaXJhQUlfU3RhZ2luZ19Vc2VycyJ9.TsTwvAdsG_I8CcoJii_AiJ0RHoVfi3zyAOhT9Q3mFnc  
+I/flutter ( 9348): data:
+I/flutter ( 9348): null
+I/flutter ( 9348):
+I/flutter ( 9348): *** Request ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/plantanalyses/list?page=1&pageSize=10
+I/flutter ( 9348): method: GET
+I/flutter ( 9348): responseType: ResponseType.json
+I/flutter ( 9348): followRedirects: true
+I/flutter ( 9348): persistentConnection: true
+I/flutter ( 9348): connectTimeout: 0:00:30.000000
+I/flutter ( 9348): sendTimeout: null
+I/flutter ( 9348): receiveTimeout: 0:00:30.000000
+I/flutter ( 9348): receiveDataWhenStatusError: true
+I/flutter ( 9348): extra: {}
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  Content-Type: application/json
+I/flutter ( 9348):  Accept: application/json
+I/flutter ( 9348):  Authorization: Bearer eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjE2MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJVc2VyIDExMTEiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJGYXJtZXIiLCJuYmYiOjE3NjA0Mzg3MjcsImV4cCI6MTc2MDQ0MjMyNywiaXNzIjoiWmlyYUFJX1N0YWdpbmciLCJhdWQiOiJaaXJhQUlfU3RhZ2luZ19Vc2VycyJ9.TsTwvAdsG_I8CcoJii_AiJ0RHoVfi3zyAOhT9Q3mFnc  
+I/flutter ( 9348): data:
+I/flutter ( 9348): null
+I/flutter ( 9348):
+I/flutter ( 9348): 🔍 Subscription data: null
+I/flutter ( 9348): *** Response ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/subscriptions/usage-status
+I/flutter ( 9348): statusCode: 200
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  date: Tue, 14 Oct 2025 10:45:28 GMT
+I/flutter ( 9348):  transfer-encoding: chunked
+I/flutter ( 9348):  api-supported-versions: 1.0
+I/flutter ( 9348):  content-type: application/json; charset=utf-8
+I/flutter ( 9348):  server: railway-edge
+I/flutter ( 9348):  x-railway-edge: railway/europe-west4-drams3a
+I/flutter ( 9348):  x-railway-request-id: DzCv7A12QFCqBBU8rJsmnA
+I/flutter ( 9348): Response Text:
+I/flutter ( 9348): {"data":{"hasActiveSubscription":true,"subscriptionStatus":"Active","tierName":"Trial","dailyUsed":0,"dailyLimit":1,"dailyRemaining":1,"dailyUsagePercentage":0,"nextDailyReset":"2025-10-15T00:00:00+00:00","monthlyUsed":0,"monthlyLimit":30,"monthlyRemaining":30,"monthlyUsagePercentage":0,"nextMonthlyReset":"2025-11-01T00:00:00","subscriptionEndDate":"2025-11-13T10:33:05.123078+00:00","canMakeRequest":true,"referralCredits":0},"success":true}
+I/flutter ( 9348):
+I/flutter ( 9348): 📡 API Response: 200
+I/flutter ( 9348): 📊 API Data: {data: {hasActiveSubscription: true, subscriptionStatus: Active, tierName: Trial, dailyUsed: 0, dailyLimit: 1, dailyRemaining: 1, dailyUsagePercentage: 0, nextDailyReset: 2025-10-15T00:00:00+00:00, monthlyUsed: 0, monthlyLimit: 30, monthlyRemaining: 30, monthlyUsagePercentage: 0, nextMonthlyReset: 2025-11-01T00:00:00, subscriptionEndDate: 2025-11-13T10:33:05.123078+00:00, canMakeRequest: true, referralCredits: 0}, success: true}
+I/flutter ( 9348): ✅ Subscription data loaded successfully
+D/EGL_emulation( 9348): app_time_stats: avg=88.81ms min=2.60ms max=737.85ms count=11
+I/flutter ( 9348): *** Response ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/plantanalyses/list?page=1&pageSize=10
+I/flutter ( 9348): statusCode: 200
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  date: Tue, 14 Oct 2025 10:45:29 GMT
+I/flutter ( 9348):  transfer-encoding: chunked
+I/flutter ( 9348):  api-supported-versions: 1.0
+I/flutter ( 9348):  content-type: application/json; charset=utf-8
+I/flutter ( 9348):  server: railway-edge
+I/flutter ( 9348):  x-railway-edge: railway/europe-west4-drams3a
+I/flutter ( 9348):  x-railway-request-id: 3E5pBKLXR2Gkwc-vrJsmnA
+I/flutter ( 9348): Response Text:
+I/flutter ( 9348): {"data":{"analyses":[],"totalCount":0,"page":1,"pageSize":10,"totalPages":0,"hasNextPage":false,"hasPreviousPage":false,"completedCount":0,"processingCount":0,"failedCount":0,"sponsoredCount":0,"paginationInfo":"Page 1 of 0 (0 total)","isEmpty":true,"isLastPage":true,"isFirstPage":true},"success":true,"message":"Found 0 plant analyses (page 1 of 0)"}
+I/flutter ( 9348):
+I/flutter ( 9348): 🚀 CLAUDE: Response data type: _Map<String, dynamic>
+I/flutter ( 9348): 🚀 CLAUDE: Response data content: {analyses: [], totalCount: 0, page: 1, pageSize: 10, totalPages: 0, hasNextPage: false, hasPreviousPage: false, completedCount: 0, processingCount: 0, failedCount: 0, sponsoredCount: 0, paginationInfo: Page 1 of 0 (0 total), isEmpty: true, isLastPage: true, isFirstPage: true}
+I/flutter ( 9348): 🚀 CLAUDE: Data is Map, extracting analyses array
+I/flutter ( 9348): 🚀 CLAUDE: Found 0 analyses, converting to AnalysisItem
+I/flutter ( 9348): *** Response ***
+I/flutter ( 9348): uri: https://ziraai-api-sit.up.railway.app/api/v1/subscriptions/usage-status
+I/flutter ( 9348): statusCode: 200
+I/flutter ( 9348): headers:
+I/flutter ( 9348):  date: Tue, 14 Oct 2025 10:45:29 GMT
+I/flutter ( 9348):  transfer-encoding: chunked
+I/flutter ( 9348):  api-supported-versions: 1.0
+I/flutter ( 9348):  content-type: application/json; charset=utf-8
+I/flutter ( 9348):  server: railway-edge
+I/flutter ( 9348):  x-railway-edge: railway/europe-west4-drams3a
+I/flutter ( 9348):  x-railway-request-id: tTJC_ShqQkumnCJew9P4nw
+I/flutter ( 9348): Response Text:
+I/flutter ( 9348): {"data":{"hasActiveSubscription":true,"subscriptionStatus":"Active","tierName":"Trial","dailyUsed":0,"dailyLimit":1,"dailyRemaining":1,"dailyUsagePercentage":0,"nextDailyReset":"2025-10-15T00:00:00+00:00","monthlyUsed":0,"monthlyLimit":30,"monthlyRemaining":30,"monthlyUsagePercentage":0,"nextMonthlyReset":"2025-11-01T00:00:00","subscriptionEndDate":"2025-11-13T10:33:05.123078+00:00","canMakeRequest":true,"referralCredits":0},"success":true}
+I/flutter ( 9348): 
+I/flutter ( 9348): 📡 API Response: 200
+I/flutter ( 9348): 📊 API Data: {data: {hasActiveSubscription: true, subscriptionStatus: Active, tierName: Trial, dailyUsed: 0, dailyLimit: 1, dailyRemaining: 1, dailyUsagePercentage: 0, nextDailyReset: 2025-10-15T00:00:00+00:00, monthlyUsed: 0, monthlyLimit: 30, monthlyRemaining: 30, monthlyUsagePercentage: 0, nextMonthlyReset: 2025-11-01T00:00:00, subscriptionEndDate: 2025-11-13T10:33:05.123078+00:00, canMakeRequest: true, referralCredits: 0}, success: true}
+I/flutter ( 9348): ✅ Subscription data loaded successfully
+I/flutter ( 9348): 🔍 Subscription data: {hasActiveSubscription: true, subscriptionStatus: Active, tierName: Trial, dailyUsed: 0, dailyLimit: 1, dailyRemaining: 1, dailyUsagePercentage: 0, nextDailyReset: 2025-10-15T00:00:00+00:00, monthlyUsed: 0, monthlyLimit: 30, monthlyRemaining: 30, monthlyUsagePercentage: 0, nextMonthlyReset: 2025-11-01T00:00:00, subscriptionEndDate: 2025-11-13T10:33:05.123078+00:00, canMakeRequest: true, referralCredits: 0}

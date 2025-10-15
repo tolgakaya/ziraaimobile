@@ -10,6 +10,8 @@ import '../../../../../core/services/signalr_service.dart';
 import '../../../../../core/services/signalr_notification_integration.dart';
 import '../../../../../core/services/auth_service.dart';
 import '../../../../dashboard/presentation/bloc/notification_bloc.dart';
+import '../../../../../core/services/sponsorship_sms_listener.dart';
+import '../../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String mobilePhone;
@@ -199,6 +201,71 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
   }
 
+  /// Check for pending sponsorship code from SMS after authentication
+  /// Returns the pending code if found (will be handled after dashboard navigation)
+  Future<String?> _checkPendingSponsorshipCode() async {
+    try {
+      print('[OTP] 🔍 Checking for pending sponsorship code...');
+
+      final pendingCode = await SponsorshipSmsListener.checkPendingCode();
+
+      if (pendingCode != null) {
+        print('[OTP] ✅ Found pending code: $pendingCode');
+        // Clear from storage
+        await SponsorshipSmsListener.clearPendingCode();
+        return pendingCode;
+      } else {
+        print('[OTP] ℹ️ No pending sponsorship code found');
+        return null;
+      }
+    } catch (e) {
+      print('[OTP] ❌ Error checking pending code: $e');
+      return null;
+    }
+  }
+
+  /// Navigate to redemption screen after dashboard is ready
+  void _navigateToRedemption(String code) {
+    // Wait for dashboard to be fully initialized
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+
+      print('[OTP] 🧭 Navigating to redemption screen with code: $code');
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SponsorshipRedemptionScreen(
+            autoFilledCode: code,
+          ),
+        ),
+      );
+
+      // Show notification
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.card_giftcard, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Sponsorluk kodu bulundu! SMS\'den kod otomatik dolduruldu.',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -209,11 +276,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             // Initialize SignalR after successful authentication
             await _initializeSignalRAfterAuth();
 
-            // Navigate to dashboard
+            // Check for pending sponsorship code from SMS
+            final pendingCode = await _checkPendingSponsorshipCode();
+
+            // Navigate to dashboard (pass pending code as parameter)
             if (mounted) {
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (_) => const FarmerDashboardPage(),
+                  builder: (_) => FarmerDashboardPage(
+                    pendingSponsorshipCode: pendingCode,
+                  ),
                 ),
                 (route) => false,
               );
