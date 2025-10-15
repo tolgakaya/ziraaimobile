@@ -10,6 +10,7 @@ import '../../../referral/presentation/screens/referral_link_generation_screen.d
 import '../../../referral/presentation/bloc/referral_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
+import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 
 class SubscriptionPlanCard extends StatefulWidget {
   final VoidCallback? onNavigateToSubscription;
@@ -57,27 +58,51 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
         return null;
       }
 
-      print('✅ Token found, making API request...');
+      print('✅ Token found, making API requests...');
       
-      // Make API request
-      final response = await networkClient.get(
-        ApiConfig.usageStatus,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
+      // Make parallel API requests
+      final results = await Future.wait([
+        // Usage status endpoint
+        networkClient.get(
+          ApiConfig.usageStatus,
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          ),
         ),
-      );
+        // My subscription endpoint (for queued subscriptions)
+        networkClient.get(
+          ApiConfig.mySubscription,
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          ),
+        ),
+      ]);
 
-      print('📡 API Response: ${response.statusCode}');
-      print('📊 API Data: ${response.data}');
+      print('📡 API Responses: ${results[0].statusCode}, ${results[1].statusCode}');
+      print('📊 Usage Status Data: ${results[0].data}');
+      print('📊 My Subscription Data: ${results[1].data}');
 
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data['data'];
-        if (data != null) {
-          print('✅ Subscription data loaded successfully');
-          return data;
+      if (results[0].statusCode == 200 && results[0].data != null) {
+        final usageData = results[0].data['data'];
+        final subscriptionData = results[1].statusCode == 200 ? results[1].data['data'] : null;
+        
+        if (usageData != null) {
+          // Merge queued subscriptions info
+          if (subscriptionData != null && subscriptionData['queuedSubscriptions'] != null) {
+            usageData['queuedSubscriptions'] = subscriptionData['queuedSubscriptions'];
+            usageData['queuedCount'] = (subscriptionData['queuedSubscriptions'] as List).length;
+          } else {
+            usageData['queuedCount'] = 0;
+          }
+          
+          print('✅ Subscription data loaded successfully with ${usageData['queuedCount']} queued');
+          return usageData;
         }
       }
       
@@ -117,6 +142,7 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
         final totalCount = subscriptionData?['dailyLimit'] ?? 50;
         final daysLeft = _calculateDaysLeft(subscriptionData?['subscriptionEndDate']) ?? 15;
         final referralCredits = subscriptionData?['referralCredits'] ?? 0;
+        final queuedCount = subscriptionData?['queuedCount'] ?? 0;
         final progress = totalCount > 0 ? (usedCount / totalCount).clamp(0.0, 1.0) : 0.1;
 
         return Container(
@@ -189,7 +215,7 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
                 padding: EdgeInsets.all(widget.isCompact ? 16 : 20),
                 child: widget.isCompact 
                   ? _buildCompactView(planName, usedCount, totalCount, progress) 
-                  : _buildFullView(planName, usedCount, totalCount, daysLeft, referralCredits, progress),
+                  : _buildFullView(planName, usedCount, totalCount, daysLeft, referralCredits, queuedCount, progress),
               ),
             ),
           ),
@@ -239,7 +265,7 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
     );
   }
 
-  Widget _buildFullView(String planName, int usedCount, int totalCount, int daysLeft, int referralCredits, double progress) {
+  Widget _buildFullView(String planName, int usedCount, int totalCount, int daysLeft, int referralCredits, int queuedCount, double progress) {
     return Column(
       children: [
         Row(
@@ -259,13 +285,55 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    planName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        planName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      if (queuedCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFFEF3C7), // amber-100
+                                Color(0xFFFDE68A), // amber-200
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFFCD34D), // amber-300
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.schedule,
+                                size: 14,
+                                color: Color(0xFFD97706), // amber-600
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '+$queuedCount',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFB45309), // amber-700
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   RichText(
@@ -306,69 +374,165 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider(
-                            create: (_) => getIt<ReferralBloc>(),
-                            child: const ReferralLinkGenerationScreen(),
-                          ),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFDCFCE7), // green-100
-                            Color(0xFFBBF7D0), // green-200
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFF86EFAC), // green-300
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.card_giftcard,
-                            size: 18,
-                            color: Color(0xFF16A34A), // green-600
-                          ),
-                          const SizedBox(width: 6),
-                          if (referralCredits > 0) ...[
-                            Text(
-                              '$referralCredits Kredi • ',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF16A34A), // green-600
+                  Row(
+                    children: [
+                      // Davet Et Kazan button
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => BlocProvider(
+                                  create: (_) => getIt<ReferralBloc>(),
+                                  child: const ReferralLinkGenerationScreen(),
+                                ),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFDCFCE7), // green-100
+                                  Color(0xFFBBF7D0), // green-200
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFF86EFAC), // green-300
+                                width: 1,
                               ),
                             ),
-                          ],
-                          const Text(
-                            'Davet Et Kazan',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF15803D), // green-700
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.card_giftcard,
+                                  size: 14,
+                                  color: Color(0xFF16A34A), // green-600
+                                ),
+                                const SizedBox(width: 4),
+                                if (referralCredits > 0) ...[
+                                  Text(
+                                    '$referralCredits • ',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF16A34A), // green-600
+                                    ),
+                                  ),
+                                ],
+                                const Text(
+                                  'Davet',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF15803D), // green-700
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 12,
-                            color: Color(0xFF16A34A), // green-600
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      // Kod Kullan button
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const SponsorshipRedemptionScreen(),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFFEF3C7), // amber-100
+                                  Color(0xFFFDE68A), // amber-200
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFFCD34D), // amber-300
+                                width: 1,
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.redeem,
+                                  size: 14,
+                                  color: Color(0xFFD97706), // amber-600
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Kod',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFB45309), // amber-700
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Yükselt button
+                      Expanded(
+                        child: InkWell(
+                          onTap: widget.onNavigateToSubscription ?? () {},
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFDDD6FE), // purple-200
+                                  Color(0xFFC4B5FD), // purple-300
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFFA78BFA), // purple-400
+                                width: 1,
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.upgrade,
+                                  size: 14,
+                                  color: Color(0xFF7C3AED), // purple-600
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Yükselt',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6D28D9), // purple-700
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -381,61 +545,6 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
               size: 64,
             ),
           ],
-        ),
-
-        const SizedBox(height: 16),
-
-        // Upgrade Button
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF6366F1), // indigo-500
-                Color(0xFF4F46E5), // indigo-600
-              ],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF6366F1).withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'Planı Yükselt',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );

@@ -4,95 +4,102 @@ import '../../../plant_analysis/presentation/pages/capture_screen.dart';
 class ActionButtons extends StatelessWidget {
   final bool hasSponsorRole;
   final VoidCallback? onSponsorButtonTap;
+  final VoidCallback? onRedeemCodeTap;
 
   const ActionButtons({
     super.key,
     this.hasSponsorRole = false,
     this.onSponsorButtonTap,
+    this.onRedeemCodeTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 220, // Fixed total height
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Left: Bitki Analizi Button (square-ish, full height)
-          Expanded(
-            flex: 1,
-            child: _ActionButton(
-              icon: Icons.camera_alt,
-              label: 'Bitki Analizi',
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF22C55E), // green-500
-                  Color(0xFF16A34A), // green-600
-                ],
+    return Column(
+      children: [
+        // Main action buttons row
+        SizedBox(
+          height: 220, // Fixed total height
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left: Bitki Analizi Button (larger, full height)
+              Expanded(
+                flex: 2,
+                child: _ActionButton(
+                  icon: Icons.camera_alt,
+                  label: 'Bitki Analizi',
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF22C55E), // green-500
+                      Color(0xFF16A34A), // green-600
+                    ],
+                  ),
+                  textColor: Colors.white,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CaptureScreen(),
+                      ),
+                    );
+                  },
+                ),
               ),
-              textColor: Colors.white,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CaptureScreen(),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Right: Two buttons stacked vertically
-          Expanded(
-            flex: 1,
-            child: Column(
-              children: [
-                // Top: Geçmiş Button
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.history,
-                    label: 'Geçmiş',
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF6B7280), // gray-500
-                        Color(0xFF4B5563), // gray-600
-                      ],
+              const SizedBox(width: 12),
+              // Right: Two buttons stacked vertically
+              Expanded(
+                flex: 1,
+                child: Column(
+                  children: [
+                    // Top: Geçmiş Button
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.history,
+                        label: 'Geçmiş',
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF6B7280), // gray-500
+                            Color(0xFF4B5563), // gray-600
+                          ],
+                        ),
+                        textColor: Colors.white,
+                        onTap: () {
+                          // Geçmiş buton işlevi - sonra eklenecek
+                        },
+                      ),
                     ),
-                    textColor: Colors.white,
-                    onTap: () {
-                      // Geçmiş buton işlevi - sonra eklenecek
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Bottom: Sponsor Paneli Button
-                Expanded(
-                  child: _ActionButton(
-                    icon: Icons.grid_view_rounded,
-                    label: 'Sponsor Paneli',
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF3B82F6), // blue-500
-                        Color(0xFF2563EB), // blue-600
-                      ],
+                    const SizedBox(height: 8),
+                    // Bottom: Ziraatçi Button
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.grid_view_rounded,
+                        label: 'Ziraatçi',
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF3B82F6), // blue-500
+                            Color(0xFF2563EB), // blue-600
+                          ],
+                        ),
+                        textColor: Colors.white,
+                        onTap: onSponsorButtonTap ?? () {
+                          // Default action if no callback provided
+                        },
+                      ),
                     ),
-                    textColor: Colors.white,
-                    onTap: onSponsorButtonTap ?? () {
-                      // Default action if no callback provided
-                    },
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -103,6 +110,7 @@ class _ActionButton extends StatefulWidget {
   final LinearGradient gradient;
   final Color textColor;
   final VoidCallback onTap;
+  final bool isHorizontalLayout;
 
   const _ActionButton({
     required this.icon,
@@ -110,6 +118,7 @@ class _ActionButton extends StatefulWidget {
     required this.gradient,
     required this.textColor,
     required this.onTap,
+    this.isHorizontalLayout = false,
   });
 
   @override
@@ -188,34 +197,56 @@ class _ActionButtonState extends State<_ActionButton>
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+              child: widget.isHorizontalLayout
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          widget.icon,
+                          size: 24,
+                          color: widget.textColor,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          widget.label,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: widget.textColor,
+                            letterSpacing: 0.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            widget.icon,
+                            size: 28,
+                            color: widget.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          widget.label,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: widget.textColor,
+                            letterSpacing: 0.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                    child: Icon(
-                      widget.icon,
-                      size: 28,
-                      color: widget.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.label,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: widget.textColor,
-                      letterSpacing: 0.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
             ),
           ),
         );
