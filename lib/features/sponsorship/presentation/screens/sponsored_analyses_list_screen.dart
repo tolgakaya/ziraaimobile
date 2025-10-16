@@ -1,0 +1,693 @@
+import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import '../../../../core/network/network_client.dart';
+import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../core/config/api_config.dart';
+import '../../data/models/sponsored_analysis_summary.dart';
+import '../../data/models/sponsored_analyses_list_response.dart';
+import '../widgets/sponsored_analysis_card.dart';
+import '../widgets/summary_statistics_card.dart';
+import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
+
+/// Sponsored Analyses List Screen
+/// Shows paginated list of plant analyses from sponsored farmers
+/// Follows farmer dashboard pattern (StatefulWidget + FutureBuilder)
+class SponsoredAnalysesListScreen extends StatefulWidget {
+  const SponsoredAnalysesListScreen({super.key});
+
+  @override
+  State<SponsoredAnalysesListScreen> createState() =>
+      _SponsoredAnalysesListScreenState();
+}
+
+class _SponsoredAnalysesListScreenState
+    extends State<SponsoredAnalysesListScreen> {
+  final ScrollController _scrollController = ScrollController();
+  
+  // Pagination state
+  int _currentPage = 1;
+  final List<SponsoredAnalysisSummary> _allAnalyses = [];
+  bool _isLoadingMore = false;
+  bool _hasMorePages = true;
+  SponsoredAnalysesListSummary? _summary;
+  
+  // Filter & sort state
+  String _sortBy = 'date';
+  String _sortOrder = 'desc';
+  DateTime? _startDate;
+  DateTime? _endDate;
+  
+  late Future<void> _initialLoadFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Removed scroll listener - using "Load More" button instead
+    _initialLoadFuture = _loadAnalyses(refresh: true);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Load analyses from API
+  Future<void> _loadAnalyses({bool refresh = false}) async {
+    try {
+      if (refresh) {
+        _currentPage = 1;
+        _allAnalyses.clear();
+        _hasMorePages = true;
+      }
+
+      if (!_hasMorePages || _isLoadingMore) return;
+
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = true;
+        });
+      }
+
+      print('📊 Loading sponsored analyses - Page: $_currentPage');
+
+      // Get network client and auth token
+      final networkClient = GetIt.instance<NetworkClient>();
+      final secureStorage = GetIt.instance<SecureStorageService>();
+      final token = await secureStorage.getToken();
+
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      // Build query parameters
+      final queryParameters = <String, dynamic>{
+        'page': _currentPage,
+        'pageSize': 2, // TODO: Change to 20 for production
+        'sortBy': _sortBy,
+        'sortOrder': _sortOrder,
+      };
+
+if (_startDate != null) {
+        queryParameters['startDate'] = _startDate!.toIso8601String();
+      }
+
+      if (_endDate != null) {
+        queryParameters['endDate'] = _endDate!.toIso8601String();
+      }
+
+      // Make API call
+      final response = await networkClient.get(
+        ApiConfig.sponsoredAnalyses,
+        queryParameters: queryParameters,
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+        }),
+      );
+
+      if (response.data['success'] == true && response.data['data'] != null) {
+        // Debug: Print raw data structure
+        print('📊 Raw response data keys: ${response.data['data'].keys}');
+        print('📊 Items count: ${response.data['data']['items']?.length ?? 0}');
+        if (response.data['data']['items'] != null && 
+            response.data['data']['items'].isNotEmpty) {
+          print('📊 First item full data: ${response.data['data']['items'][0]}');
+        print('📊 imageUrl: ${response.data['data']['items'][0]['imageUrl']}');
+        }
+        print('📊 Has summary: ${response.data['data'].containsKey('summary')}');
+        
+        final responseData = SponsoredAnalysesListResponse.fromJson(
+          response.data['data'],
+        );
+
+        if (mounted) {
+          setState(() {
+            _allAnalyses.addAll(responseData.items);
+            _hasMorePages = responseData.hasNextPage;
+            _summary = responseData.summary;
+            _isLoadingMore = false;
+            
+            if (_hasMorePages) {
+              _currentPage++;
+            }
+          });
+        }
+
+        print('✅ Loaded ${responseData.items.length} analyses, total: ${_allAnalyses.length}');
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to load analyses');
+      }
+    } catch (e) {
+      print('❌ Error loading analyses: $e');
+      
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_getErrorMessage(e)),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Get user-friendly error message
+  String _getErrorMessage(dynamic error) {
+    if (error is DioException) {
+      switch (error.response?.statusCode) {
+        case 401:
+          return 'Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.';
+        case 403:
+          return 'Bu işlem için yetkiniz bulunmamaktadır.';
+        case 404:
+          return 'Sponsor profili bulunamadı.';
+        default:
+          return 'Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.';
+      }
+    }
+    return 'Beklenmeyen bir hata oluştu.';
+  }
+
+/// Show filter dialog with date range
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.filter_list, color: Theme.of(context).primaryColor),
+            const SizedBox(width: 12),
+            const Text(
+              'Tarih Aralığı',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Start date
+            InkWell(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _startDate ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                  locale: const Locale('tr', 'TR'),
+                  helpText: 'Başlangıç Tarihi Seçin',
+                  cancelText: 'İptal',
+                  confirmText: 'Seç',
+                );
+                if (picked != null) {
+                  setState(() => _startDate = picked);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, 
+                         size: 20, 
+                         color: Colors.grey.shade600),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Başlangıç Tarihi',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _startDate != null
+                                ? DateFormat('d MMMM yyyy', 'tr_TR').format(_startDate!)
+                                : 'Seçiniz',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_startDate != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () => setState(() => _startDate = null),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // End date
+            InkWell(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _endDate ?? DateTime.now(),
+                  firstDate: _startDate ?? DateTime(2020),
+                  lastDate: DateTime.now(),
+                  locale: const Locale('tr', 'TR'),
+                  helpText: 'Bitiş Tarihi Seçin',
+                  cancelText: 'İptal',
+                  confirmText: 'Seç',
+                );
+                if (picked != null) {
+                  setState(() => _endDate = picked);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, 
+                         size: 20, 
+                         color: Colors.grey.shade600),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Bitiş Tarihi',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _endDate != null
+                                ? DateFormat('d MMMM yyyy', 'tr_TR').format(_endDate!)
+                                : 'Seçiniz',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_endDate != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () => setState(() => _endDate = null),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _initialLoadFuture = _loadAnalyses(refresh: true);
+              });
+            },
+            child: const Text('Uygula'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show sort dialog with modern UI
+  void _showSortDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.sort, color: Theme.of(context).primaryColor),
+            const SizedBox(width: 12),
+            const Text(
+              'Sıralama',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSortOption(
+              icon: Icons.access_time,
+              title: 'Tarihe Göre (Yeni → Eski)',
+              isSelected: _sortBy == 'date' && _sortOrder == 'desc',
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _sortBy = 'date';
+                  _sortOrder = 'desc';
+                  _initialLoadFuture = _loadAnalyses(refresh: true);
+                });
+              },
+            ),
+            _buildSortOption(
+              icon: Icons.history,
+              title: 'Tarihe Göre (Eski → Yeni)',
+              isSelected: _sortBy == 'date' && _sortOrder == 'asc',
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _sortBy = 'date';
+                  _sortOrder = 'asc';
+                  _initialLoadFuture = _loadAnalyses(refresh: true);
+                });
+              },
+            ),
+            const Divider(height: 1),
+            _buildSortOption(
+              icon: Icons.trending_up,
+              title: 'Sağlık Skoru (Yüksek → Düşük)',
+              isSelected: _sortBy == 'healthScore' && _sortOrder == 'desc',
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _sortBy = 'healthScore';
+                  _sortOrder = 'desc';
+                  _initialLoadFuture = _loadAnalyses(refresh: true);
+                });
+              },
+            ),
+            _buildSortOption(
+              icon: Icons.trending_down,
+              title: 'Sağlık Skoru (Düşük → Yüksek)',
+              isSelected: _sortBy == 'healthScore' && _sortOrder == 'asc',
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _sortBy = 'healthScore';
+                  _sortOrder = 'asc';
+                  _initialLoadFuture = _loadAnalyses(refresh: true);
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build sort option with icon and selection indicator
+  Widget _buildSortOption({
+    required IconData icon,
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.1) : null,
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 22,
+              color: isSelected 
+                  ? Theme.of(context).primaryColor 
+                  : Colors.grey.shade600,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected 
+                      ? Theme.of(context).primaryColor 
+                      : Colors.grey.shade800,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: Theme.of(context).primaryColor,
+                size: 22,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header with logo and actions
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Row(
+                children: [
+                  // Back button
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 12),
+                  
+                  // ZiraAI Logo
+                  Image.asset(
+                    'assets/logos/ziraai_logo.png',
+                    height: 40,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Text(
+                        'ZiraAI',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
+                        ),
+                      );
+                    },
+                  ),
+                  const Spacer(),
+                  
+                  // Filter button
+                  IconButton(
+                    icon: const Icon(Icons.filter_list),
+                    onPressed: _showFilterDialog,
+                    tooltip: 'Filtrele',
+                    color: const Color(0xFF6B7280),
+                  ),
+                  
+                  // Sort button
+                  IconButton(
+                    icon: const Icon(Icons.sort),
+                    onPressed: _showSortDialog,
+                    tooltip: 'Sırala',
+                    color: const Color(0xFF6B7280),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Body content
+            Expanded(
+              child: FutureBuilder<void>(
+        future: _initialLoadFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              _allAnalyses.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (snapshot.hasError && _allAnalyses.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Bir hata oluştu',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(_getErrorMessage(snapshot.error)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _initialLoadFuture = _loadAnalyses(refresh: true);
+                      });
+                    },
+                    child: const Text('Tekrar Dene'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (_allAnalyses.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.analytics_outlined,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Henüz sponsorlu analiz yok',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Çiftçilere kod dağıttığınızda\nanalizler burada görünecek',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => _loadAnalyses(refresh: true),
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: _allAnalyses.length + 2, // +1 summary, +1 loading
+              itemBuilder: (context, index) {
+                // Summary statistics card at top
+                if (index == 0 && _summary != null) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: SummaryStatisticsCard(summary: _summary!),
+                  );
+                }
+
+                // "Load More" button at bottom
+                if (index == _allAnalyses.length + 1) {
+                  if (!_hasMorePages) {
+                    return const Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Center(
+                        child: Text(
+                          'Tüm analizler yüklendi',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Center(
+                      child: _isLoadingMore
+                          ? const CircularProgressIndicator()
+                          : FilledButton.icon(
+                              onPressed: () => _loadAnalyses(),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Daha Fazla Yükle'),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                    ),
+                  );
+                }
+
+                // Analysis card
+                final analysisIndex = index - 1;
+                if (analysisIndex < 0 || analysisIndex >= _allAnalyses.length) {
+                  return const SizedBox.shrink();
+                }
+
+                final analysis = _allAnalyses[analysisIndex];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SponsoredAnalysisCard(
+                    analysis: analysis,
+                    onTap: () {
+                      // TODO: Navigate to analysis detail screen
+                      print('Tapped on analysis: ${analysis.analysisId}');
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+        ),
+      ],
+    ),
+  ),
+    );
+  }
+}

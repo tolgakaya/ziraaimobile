@@ -7,6 +7,7 @@ import '../../../sponsorship/data/services/sponsor_service.dart';
 import '../../../sponsorship/data/models/sponsor_dashboard_summary.dart';
 import '../../../sponsorship/presentation/screens/code_distribution_screen.dart';
 import '../../../sponsorship/presentation/screens/tier_selection_screen.dart';
+import '../../../sponsorship/presentation/screens/sponsored_analyses_list_screen.dart';
 import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
@@ -291,6 +292,20 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                                       // Refresh dashboard when returning
                                       _loadDashboardData();
                                     });
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                SponsorActionButton(
+                                  icon: Icons.analytics,
+                                  label: 'Sponsorlu Analizleri Görüntüle',
+                                  color: const Color(0xFF8B5CF6),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const SponsoredAnalysesListScreen(),
+                                      ),
+                                    );
                                   },
                                 ),
                                 const SizedBox(height: 12),
