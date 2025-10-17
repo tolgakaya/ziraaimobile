@@ -503,7 +503,7 @@ if (_startDate != null) {
                   // ZiraAI Logo
                   Image.asset(
                     'assets/logos/ziraai_logo.png',
-                    height: 40,
+                    height: 80,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return const Text(

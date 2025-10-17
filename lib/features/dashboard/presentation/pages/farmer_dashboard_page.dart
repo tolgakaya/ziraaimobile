@@ -297,7 +297,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                         alignment: Alignment.centerLeft,
                         child: Image.asset(
                           'assets/logos/ziraai_logo.png',
-                          height: 56,  // %30 küçültüldü (80 * 0.7)
+                          height: 112,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             // Fallback to text if image fails to load

@@ -257,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // ZiraAI Logo
         Image.asset(
           'assets/logos/ziraai_logo.png',
-          height: 80,
+          height: 160,
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) {
             // Fallback to text if image fails to load
