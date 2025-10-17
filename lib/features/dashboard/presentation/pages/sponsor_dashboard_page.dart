@@ -258,68 +258,88 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
 
                                 const SizedBox(height: 20),
 
-                                // Action Buttons
-                                SponsorActionButton(
-                                  icon: Icons.send,
-                                  label: 'Kod Dağıt',
-                                  color: const Color(0xFF3B82F6),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => CodeDistributionScreen(
-                                          dashboardSummary: _summary!,
-                                        ),
+                                // Action Buttons - 2x2 Grid Layout
+                                Row(
+                                  children: [
+                                    // Sol üst: Kod Dağıt (Gönder)
+                                    Expanded(
+                                      child: SponsorActionButton(
+                                        icon: Icons.send,
+                                        label: 'Gönder',
+                                        color: const Color(0xFF3B82F6),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => CodeDistributionScreen(
+                                                dashboardSummary: _summary!,
+                                              ),
+                                            ),
+                                          ).then((_) {
+                                            // Refresh dashboard when returning
+                                            _loadDashboardData();
+                                          });
+                                        },
                                       ),
-                                    ).then((_) {
-                                      // Refresh dashboard when returning
-                                      _loadDashboardData();
-                                    });
-                                  },
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Sağ üst: Paket Satın Al (Satın Al)
+                                    Expanded(
+                                      child: SponsorActionButton(
+                                        icon: Icons.shopping_cart,
+                                        label: 'Satın Al',
+                                        color: const Color(0xFF10B981),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const TierSelectionScreen(),
+                                            ),
+                                          ).then((_) {
+                                            // Refresh dashboard when returning
+                                            _loadDashboardData();
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 12),
-                                SponsorActionButton(
-                                  icon: Icons.shopping_cart,
-                                  label: 'Paket Satın Al',
-                                  color: const Color(0xFF10B981),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const TierSelectionScreen(),
+                                Row(
+                                  children: [
+                                    // Sol alt: Sponsorlu Analizleri Görüntüle (Analizler)
+                                    Expanded(
+                                      child: SponsorActionButton(
+                                        icon: Icons.analytics,
+                                        label: 'Analizler',
+                                        color: const Color(0xFF8B5CF6),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const SponsoredAnalysesListScreen(),
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    ).then((_) {
-                                      // Refresh dashboard when returning
-                                      _loadDashboardData();
-                                    });
-                                  },
-                                ),
-                                const SizedBox(height: 12),
-                                SponsorActionButton(
-                                  icon: Icons.analytics,
-                                  label: 'Sponsorlu Analizleri Görüntüle',
-                                  color: const Color(0xFF8B5CF6),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const SponsoredAnalysesListScreen(),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Sağ alt: İstatistikleri Görüntüle (İstatistik)
+                                    Expanded(
+                                      child: SponsorActionButton(
+                                        icon: Icons.bar_chart,
+                                        label: 'İstatistik',
+                                        color: const Color(0xFFF59E0B),
+                                        onPressed: () {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('İstatistikler - Yakında'),
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 12),
-                                SponsorActionButton(
-                                  icon: Icons.bar_chart,
-                                  label: 'İstatistikleri Görüntüle',
-                                  color: const Color(0xFFF59E0B),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('İstatistikler - Yakında'),
-                                      ),
-                                    );
-                                  },
+                                    ),
+                                  ],
                                 ),
 
                                 const SizedBox(height: 24),
