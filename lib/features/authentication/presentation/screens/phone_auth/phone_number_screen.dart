@@ -148,7 +148,7 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                       // ZiraAI Logo
                       Image.asset(
                         'assets/logos/ziraai_logo.png',
-                        height: 80,
+                        height: 160,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return const Text(

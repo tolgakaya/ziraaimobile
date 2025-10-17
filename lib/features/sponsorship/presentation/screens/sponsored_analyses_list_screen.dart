@@ -86,7 +86,7 @@ class _SponsoredAnalysesListScreenState
       // Build query parameters
       final queryParameters = <String, dynamic>{
         'page': _currentPage,
-        'pageSize': 2, // TODO: Change to 20 for production
+        'pageSize': 10,
         'sortBy': _sortBy,
         'sortOrder': _sortOrder,
       };
@@ -503,7 +503,7 @@ if (_startDate != null) {
                   // ZiraAI Logo
                   Image.asset(
                     'assets/logos/ziraai_logo.png',
-                    height: 40,
+                    height: 64,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return const Text(
