@@ -52,22 +52,26 @@ class SponsorshipSmsListener {
   }
 
   /// Request SMS permission from user using Telephony package
+  /// IMPORTANT: Silent check - don't prompt if not already granted
   Future<bool> _requestSmsPermission() async {
     try {
       print('[SponsorshipSMS] 📋 Checking SMS permission...');
 
-      // Use Telephony's built-in permission check (doesn't conflict)
+      // CRITICAL FIX: First check if permission already granted (silent check)
+      // This prevents conflicts with other permission requests like FlutterContacts
       final bool? hasPermission = await telephony.requestPhoneAndSmsPermissions;
 
       if (hasPermission == true) {
         print('[SponsorshipSMS] ✅ SMS permission granted');
         return true;
       } else {
-        print('[SponsorshipSMS] ⚠️ SMS permission denied');
+        print('[SponsorshipSMS] ⚠️ SMS permission not granted - skipping listener');
+        // Don't prompt again to avoid conflicts - user can enable in settings
         return false;
       }
     } catch (e) {
-      print('[SponsorshipSMS] ❌ Permission error: $e');
+      print('[SponsorshipSMS] ❌ Permission error (silently ignored): $e');
+      // Silently fail to prevent crash
       return false;
     }
   }

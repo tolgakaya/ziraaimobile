@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/network/network_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
@@ -7,6 +8,7 @@ import '../../data/models/sponsored_analysis_summary.dart';
 import '../../data/models/sponsored_analyses_list_response.dart';
 import '../widgets/sponsored_analysis_card.dart';
 import '../widgets/summary_statistics_card.dart';
+import 'sponsored_analysis_detail_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 
@@ -674,8 +676,14 @@ if (_startDate != null) {
                   child: SponsoredAnalysisCard(
                     analysis: analysis,
                     onTap: () {
-                      // TODO: Navigate to analysis detail screen
-                      print('Tapped on analysis: ${analysis.analysisId}');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SponsoredAnalysisDetailScreen(
+                            analysisId: analysis.analysisId,
+                          ),
+                        ),
+                      );
                     },
                   ),
                 );

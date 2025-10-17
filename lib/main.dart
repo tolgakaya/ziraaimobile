@@ -148,9 +148,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   /// Initialize sponsorship SMS listener
   /// This enables automatic code detection from SMS messages
+  /// DELAYED: Start after 3 seconds to avoid permission conflicts
   Future<void> _initializeSponsorshipSmsListener() async {
+    // CRITICAL FIX: Delay SMS listener to avoid permission conflicts with FlutterContacts
+    // This prevents "Reply already submitted" crash when using phone contacts picker
+    await Future.delayed(const Duration(seconds: 3));
+
     try {
-      print('🎁 Main: Initializing sponsorship SMS listener...');
+      print('🎁 Main: Initializing sponsorship SMS listener (delayed)...');
 
       final smsListener = SponsorshipSmsListener();
       await smsListener.initialize();
@@ -159,6 +164,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     } catch (e) {
       print('❌ Main: Failed to initialize sponsorship SMS listener: $e');
       // Don't block app startup if SMS listener fails
+      // Silently ignore errors to prevent crashes
     }
   }
 
