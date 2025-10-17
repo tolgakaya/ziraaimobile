@@ -1,0 +1,1668 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import '../../../../core/network/network_client.dart';
+import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../core/config/api_config.dart';
+import '../../data/models/sponsored_analysis_detail.dart';
+import '../../../plant_analysis/data/models/plant_analysis_detail_dto.dart';
+import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
+
+// Import DTO types for type annotations
+// These are already available through the sponsored_analysis_detail model
+// but need explicit import for direct type usage in method signatures
+
+/// Sponsored Analysis Detail Screen
+/// Comprehensive analysis view with tier-based visibility
+class SponsoredAnalysisDetailScreen extends StatefulWidget {
+  final int analysisId;
+
+  const SponsoredAnalysisDetailScreen({
+    super.key,
+    required this.analysisId,
+  });
+
+  @override
+  State<SponsoredAnalysisDetailScreen> createState() =>
+      _SponsoredAnalysisDetailScreenState();
+}
+
+class _SponsoredAnalysisDetailScreenState
+    extends State<SponsoredAnalysisDetailScreen> {
+  late Future<SponsoredAnalysisDetailResponse> _detailFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _detailFuture = _loadAnalysisDetail();
+  }
+
+  Future<SponsoredAnalysisDetailResponse> _loadAnalysisDetail() async {
+    try {
+      final networkClient = GetIt.instance<NetworkClient>();
+      final secureStorage = GetIt.instance<SecureStorageService>();
+      final token = await secureStorage.getToken();
+
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      print('📊 Loading sponsored analysis detail: ${widget.analysisId}');
+
+      final response = await networkClient.get(
+        '${ApiConfig.sponsoredAnalysisDetail}/${widget.analysisId}',
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+        }),
+      );
+
+      print('✅ Sponsored analysis detail loaded');
+
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return SponsoredAnalysisDetailResponse.fromJson(
+          response.data['data'],
+        );
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to load analysis');
+      }
+    } catch (e) {
+      print('❌ Error loading sponsored analysis detail: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: FutureBuilder<SponsoredAnalysisDetailResponse>(
+        future: _detailFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return _buildErrorState(snapshot.error.toString());
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: Text('Veri bulunamadı'));
+          }
+
+          return _buildContent(snapshot.data!);
+        },
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text(
+              'Bir hata oluştu',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _detailFuture = _loadAnalysisDetail();
+                });
+              },
+              child: const Text('Tekrar Dene'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(SponsoredAnalysisDetailResponse data) {
+    final analysis = data.analysis;
+    final tier = data.tierMetadata;
+
+    return CustomScrollView(
+      slivers: [
+        // App Bar with Image
+        SliverAppBar(
+          expandedHeight: analysis.imageUrl != null ? 300 : 120,
+          pinned: true,
+          flexibleSpace: FlexibleSpaceBar(
+            title: Text(
+              'Analiz Detayı #${analysis.id}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    offset: Offset(0, 1),
+                    blurRadius: 3.0,
+                    color: Color.fromARGB(128, 0, 0, 0),
+                  ),
+                ],
+              ),
+            ),
+            background: analysis.imageUrl != null
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                        analysis.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.broken_image, size: 64),
+                          );
+                        },
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.7),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.green.shade700, Colors.green.shade500],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+
+        // Content
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              // Tier Info Badge
+              _buildTierBadge(tier),
+              const SizedBox(height: 16),
+
+              // Farmer Friendly Summary (Always visible - TOP PRIORITY)
+              if (analysis.farmerFriendlySummary != null)
+                _buildFarmerFriendlySummarySection(analysis.farmerFriendlySummary!),
+
+              if (analysis.farmerFriendlySummary != null)
+                const SizedBox(height: 16),
+
+              // Basic Info (Always visible)
+              _buildBasicInfoSection(analysis),
+              const SizedBox(height: 16),
+
+              // Health Score (30% access)
+              if (tier.accessibleFields.canViewHealthScore &&
+                  analysis.overallHealthScore != null)
+                _buildHealthScoreSection(analysis),
+
+              if (tier.accessibleFields.canViewHealthScore &&
+                  analysis.overallHealthScore != null)
+                const SizedBox(height: 16),
+
+              // Plant Identification (30% access)
+              if (tier.accessibleFields.canViewBasicInfo)
+                _buildPlantIdentificationSection(analysis),
+
+              if (tier.accessibleFields.canViewBasicInfo)
+                const SizedBox(height: 16),
+
+              // Detailed Health (60% access)
+              if (tier.accessibleFields.canViewDetailedHealth)
+                _buildDetailedHealthSection(analysis),
+
+              if (tier.accessibleFields.canViewDetailedHealth)
+                const SizedBox(height: 16),
+
+              // Nutrients (60% access)
+              if (tier.accessibleFields.canViewNutrients &&
+                  analysis.nutrientStatus != null)
+                _buildNutrientsSection(analysis.nutrientStatus!),
+
+              if (tier.accessibleFields.canViewNutrients &&
+                  analysis.nutrientStatus != null)
+                const SizedBox(height: 16),
+
+              // Recommendations (60% access)
+              if (tier.accessibleFields.canViewRecommendations &&
+                  analysis.recommendations != null)
+                _buildRecommendationsSection(analysis.recommendations!),
+
+              if (tier.accessibleFields.canViewRecommendations &&
+                  analysis.recommendations != null)
+                const SizedBox(height: 16),
+
+              // Location (60% access)
+              if (tier.accessibleFields.canViewLocation &&
+                  analysis.location != null)
+                _buildLocationSection(analysis.location!),
+
+              if (tier.accessibleFields.canViewLocation &&
+                  analysis.location != null)
+                const SizedBox(height: 16),
+
+              // Environmental Stress (60% access)
+              if (tier.accessibleFields.canViewDetailedHealth &&
+                  analysis.environmentalStress != null)
+                _buildEnvironmentalStressSection(analysis),
+
+              if (tier.accessibleFields.canViewDetailedHealth &&
+                  analysis.environmentalStress != null)
+                const SizedBox(height: 16),
+
+              // Analysis Summary with prognosis (60% access)
+              if (tier.accessibleFields.canViewDetailedHealth &&
+                  analysis.summary != null)
+                _buildAnalysisSummarySection(analysis),
+
+              if (tier.accessibleFields.canViewDetailedHealth &&
+                  analysis.summary != null)
+                const SizedBox(height: 16),
+
+              // Cross Factor Insights (60% access)
+              if (tier.accessibleFields.canViewRecommendations &&
+                  analysis.crossFactorInsights != null)
+                _buildCrossFactorInsightsSection(analysis),
+
+              if (tier.accessibleFields.canViewRecommendations &&
+                  analysis.crossFactorInsights != null)
+                const SizedBox(height: 16),
+
+              // Risk Assessment (60% access)
+              if (tier.accessibleFields.canViewDetailedHealth &&
+                  analysis.riskAssessment != null)
+                _buildRiskAssessmentSection(analysis),
+
+              if (tier.accessibleFields.canViewDetailedHealth &&
+                  analysis.riskAssessment != null)
+                const SizedBox(height: 16),
+
+              // Confidence Notes (60% access)
+              if (tier.accessibleFields.canViewDetailedHealth &&
+                  analysis.confidenceNotes != null)
+                _buildConfidenceNotesSection(analysis),
+
+              if (tier.accessibleFields.canViewDetailedHealth &&
+                  analysis.confidenceNotes != null)
+                const SizedBox(height: 16),
+
+
+              // Farmer Contact (100% access)
+              if (tier.accessibleFields.canViewFarmerContact)
+                _buildFarmerContactSection(analysis, tier),
+
+              if (tier.accessibleFields.canViewFarmerContact)
+                const SizedBox(height: 16),
+
+              // Field Data (100% access)
+              if (tier.accessibleFields.canViewFieldData)
+                _buildFieldDataSection(analysis),
+
+              if (tier.accessibleFields.canViewFieldData)
+                const SizedBox(height: 16),
+
+              // Processing Data (100% access)
+              if (tier.accessibleFields.canViewProcessingData)
+                _buildProcessingDataSection(analysis),
+
+              if (tier.accessibleFields.canViewProcessingData)
+                const SizedBox(height: 16),
+
+              // Sponsor Branding
+              _buildSponsorBranding(tier.sponsorInfo),
+
+              const SizedBox(height: 24),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTierBadge(AnalysisTierMetadata tier) {
+    MaterialColor tierColor;
+    IconData tierIcon;
+
+    switch (tier.tierName) {
+      case 'XL':
+        tierColor = Colors.purple;
+        tierIcon = Icons.workspace_premium;
+        break;
+      case 'L':
+        tierColor = Colors.blue;
+        tierIcon = Icons.business_center;
+        break;
+      case 'M':
+        tierColor = Colors.orange;
+        tierIcon = Icons.business;
+        break;
+      case 'S':
+      default:
+        tierColor = Colors.green;
+        tierIcon = Icons.storefront;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [tierColor.shade700, tierColor.shade500],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: tierColor.shade700.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(tierIcon, color: Colors.white, size: 32),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${tier.tierName} Tier',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${tier.accessPercentage}% Erişim',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              tier.sponsorInfo.companyName,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoSection(SponsoredAnalysisData analysis) {
+    return _buildSectionCard(
+      '📋 Temel Bilgiler',
+      [
+        _buildDetailRow('Analiz ID', '#${analysis.id}'),
+        _buildDetailRow(
+          'Tarih',
+          DateFormat('dd.MM.yyyy HH:mm').format(analysis.analysisDate),
+        ),
+        _buildDetailRow('Durum', _getStatusText(analysis.analysisStatus)),
+        if (analysis.cropType != null)
+          _buildDetailRow('Ürün Tipi', analysis.cropType!),
+        if (analysis.farmerId != null)
+          _buildDetailRow('Çiftçi ID', analysis.farmerId!),
+      ],
+    );
+  }
+
+  Widget _buildHealthScoreSection(SponsoredAnalysisData analysis) {
+    final score = analysis.overallHealthScore!;
+    final color = _getHealthColor(score);
+
+    return _buildSectionCard(
+      '❤️ Sağlık Skoru',
+      [
+        Center(
+          child: Column(
+            children: [
+              Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      color.withOpacity(0.2),
+                      color.withOpacity(0.05),
+                    ],
+                  ),
+                  border: Border.all(color: color, width: 5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    score.toString(),
+                    style: TextStyle(
+                      fontSize: 56,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _getHealthLabel(score),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlantIdentificationSection(SponsoredAnalysisData analysis) {
+    return _buildSectionCard(
+      '🌱 Bitki Tanımlama',
+      [
+        if (analysis.plantSpecies != null)
+          _buildDetailRow('Tür', analysis.plantSpecies!),
+        if (analysis.plantVariety != null &&
+            analysis.plantVariety!.toLowerCase() != 'bilinmiyor')
+          _buildDetailRow('Çeşit', analysis.plantVariety!),
+        if (analysis.growthStage != null)
+          _buildDetailRow('Büyüme Aşaması', analysis.growthStage!),
+      ],
+    );
+  }
+
+  Widget _buildDetailedHealthSection(SponsoredAnalysisData analysis) {
+    return _buildSectionCard(
+      '🔬 Detaylı Sağlık Analizi',
+      [
+        if (analysis.vigorScore != null)
+          _buildDetailRow('Canlılık Skoru', '${analysis.vigorScore}/10'),
+        if (analysis.healthSeverity != null)
+          _buildDetailRow('Ciddiyet', _capitalizeFirst(analysis.healthSeverity!)),
+        if (analysis.primaryConcern != null)
+          _buildDetailRow('Ana Sorun', analysis.primaryConcern!),
+        if (analysis.prognosis != null)
+          _buildDetailRow('Prognoz', _capitalizeFirst(analysis.prognosis!)),
+        if (analysis.primaryDeficiency != null)
+          _buildDetailRow(
+            'Ana Eksiklik',
+            _capitalizeFirst(analysis.primaryDeficiency!),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNutrientsSection(NutrientStatusDto nutrientStatus) {
+    return _buildSectionCard(
+      '🧪 Besin Durumu',
+      [
+        _buildNutrientRow('Azot (N)', nutrientStatus.nitrogen),
+        _buildNutrientRow('Fosfor (P)', nutrientStatus.phosphorus),
+        _buildNutrientRow('Potasyum (K)', nutrientStatus.potassium),
+        _buildNutrientRow('Kalsiyum (Ca)', nutrientStatus.calcium),
+        _buildNutrientRow('Magnezyum (Mg)', nutrientStatus.magnesium),
+        _buildNutrientRow('Kükürt (S)', nutrientStatus.sulfur),
+        _buildNutrientRow('Demir (Fe)', nutrientStatus.iron),
+        _buildNutrientRow('Çinko (Zn)', nutrientStatus.zinc),
+        _buildNutrientRow('Mangan (Mn)', nutrientStatus.manganese),
+        _buildNutrientRow('Bor (B)', nutrientStatus.boron),
+        _buildNutrientRow('Bakır (Cu)', nutrientStatus.copper),
+        _buildNutrientRow('Molibden (Mo)', nutrientStatus.molybdenum),
+      ],
+    );
+  }
+
+  Widget _buildNutrientRow(String name, String status) {
+    final color = _getNutrientStatusColor(status);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(_getNutrientIcon(status), color: color, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(
+            _capitalizeFirst(status),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationsSection(RecommendationsDto recommendations) {
+    return _buildSectionCard(
+      '💡 Öneriler',
+      [
+        if (recommendations.immediate.isNotEmpty)
+          _buildRecommendationCategory(
+            'Acil Eylemler',
+            recommendations.immediate,
+            Colors.red,
+            Icons.warning,
+          ),
+        if (recommendations.shortTerm.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildRecommendationCategory(
+            'Kısa Vadeli',
+            recommendations.shortTerm,
+            Colors.orange,
+            Icons.schedule,
+          ),
+        ],
+        if (recommendations.preventive.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildRecommendationCategory(
+            'Önleyici',
+            recommendations.preventive,
+            Colors.blue,
+            Icons.shield,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRecommendationCategory(
+    String title,
+    List<RecommendationItemDto> actions,
+    Color color,
+    IconData icon,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...actions.asMap().entries.map((entry) {
+          final index = entry.key;
+          final action = entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: color.withOpacity(0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          action.action,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (action.details.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            action.details,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildLocationSection(String location) {
+    return _buildSectionCard(
+      '📍 Konum',
+      [
+        Row(
+          children: [
+            Icon(Icons.location_on, color: Colors.red.shade700),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                location,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFarmerContactSection(
+    SponsoredAnalysisData analysis,
+    AnalysisTierMetadata tier,
+  ) {
+    return _buildSectionCard(
+      '👨‍🌾 Çiftçi İletişim',
+      [
+        if (analysis.contactPhone != null)
+          _buildDetailRow('Telefon', analysis.contactPhone!),
+        if (analysis.contactEmail != null)
+          _buildDetailRow('E-posta', analysis.contactEmail!),
+        if (tier.canMessage) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // TODO: Implement messaging
+              },
+              icon: const Icon(Icons.message),
+              label: const Text('Mesaj Gönder'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFieldDataSection(SponsoredAnalysisData analysis) {
+    return _buildSectionCard(
+      '🚜 Tarla Verileri',
+      [
+        if (analysis.fieldId != null)
+          _buildDetailRow('Tarla ID', analysis.fieldId!),
+        if (analysis.plantingDate != null)
+          _buildDetailRow(
+            'Dikim Tarihi',
+            DateFormat('dd.MM.yyyy').format(analysis.plantingDate!),
+          ),
+        if (analysis.expectedHarvestDate != null)
+          _buildDetailRow(
+            'Tahmini Hasat',
+            DateFormat('dd.MM.yyyy').format(analysis.expectedHarvestDate!),
+          ),
+        if (analysis.lastFertilization != null)
+          _buildDetailRow(
+            'Son Gübreleme',
+            DateFormat('dd.MM.yyyy').format(analysis.lastFertilization!),
+          ),
+        if (analysis.lastIrrigation != null)
+          _buildDetailRow(
+            'Son Sulama',
+            DateFormat('dd.MM.yyyy').format(analysis.lastIrrigation!),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildProcessingDataSection(SponsoredAnalysisData analysis) {
+    return _buildSectionCard(
+      '⚙️ İşleme Bilgileri',
+      [
+        if (analysis.aiModel != null)
+          _buildDetailRow('AI Model', analysis.aiModel!),
+        if (analysis.totalTokens != null)
+          _buildDetailRow('Token Kullanımı', '${analysis.totalTokens}'),
+        if (analysis.totalCostUsd != null)
+          _buildDetailRow('Maliyet (USD)', '\$${analysis.totalCostUsd!.toStringAsFixed(4)}'),
+        if (analysis.totalCostTry != null)
+          _buildDetailRow('Maliyet (TRY)', '₺${analysis.totalCostTry!.toStringAsFixed(2)}'),
+      ],
+    );
+  }
+
+  Widget _buildSponsorBranding(SponsorDisplayInfo sponsor) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          const Text(
+            'Sponsorlu',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const Spacer(),
+          if (sponsor.logoUrl != null)
+            Image.network(
+              sponsor.logoUrl!,
+              height: 24,
+              errorBuilder: (context, error, stackTrace) {
+                return Text(
+                  sponsor.companyName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
+            )
+          else
+            Text(
+              sponsor.companyName,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard(String title, List<Widget> children) {
+    // Extract icon and title from the combined string
+    final iconMatch = RegExp(r'^([^\s]+)\s+(.+)$').firstMatch(title);
+    final icon = iconMatch?.group(1) ?? '📋';
+    final titleText = iconMatch?.group(2) ?? title;
+
+    return Container(
+      margin: EdgeInsets.zero,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with gradient background
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF2E7D32).withValues(alpha: 0.08),
+                    const Color(0xFF4CAF50).withValues(alpha: 0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      icon,
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      titleText,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1B5E20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getStatusText(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return 'Tamamlandı';
+      case 'processing':
+        return 'İşleniyor';
+      case 'failed':
+        return 'Başarısız';
+      default:
+        return _capitalizeFirst(status);
+    }
+  }
+
+  Color _getHealthColor(int score) {
+    if (score >= 7) return Colors.green;
+    if (score >= 5) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _getHealthLabel(int score) {
+    if (score >= 8) return 'Mükemmel';
+    if (score >= 7) return 'İyi';
+    if (score >= 5) return 'Orta';
+    if (score >= 3) return 'Zayıf';
+    return 'Kötü';
+  }
+
+  Color _getNutrientStatusColor(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('eksik') || s.contains('deficient')) return Colors.red;
+    if (s.contains('düşük') || s.contains('low')) return Colors.orange;
+    if (s.contains('normal') || s.contains('sufficient')) return Colors.green;
+    if (s.contains('yüksek') || s.contains('high')) return Colors.blue;
+    return Colors.grey;
+  }
+
+  IconData _getNutrientIcon(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('eksik') || s.contains('deficient')) {
+      return Icons.arrow_downward;
+    }
+    if (s.contains('düşük') || s.contains('low')) return Icons.trending_down;
+    if (s.contains('normal') || s.contains('sufficient')) {
+      return Icons.check_circle;
+    }
+    if (s.contains('yüksek') || s.contains('high')) return Icons.trending_up;
+    return Icons.help_outline;
+  }
+
+  String _getNutrientDisplayName(String key) {
+    const names = {
+      'nitrogen': 'Azot (N)',
+      'phosphorus': 'Fosfor (P)',
+      'potassium': 'Potasyum (K)',
+      'calcium': 'Kalsiyum (Ca)',
+      'magnesium': 'Magnezyum (Mg)',
+      'sulfur': 'Kükürt (S)',
+      'iron': 'Demir (Fe)',
+      'zinc': 'Çinko (Zn)',
+      'manganese': 'Mangan (Mn)',
+      'boron': 'Bor (B)',
+      'copper': 'Bakır (Cu)',
+      'molybdenum': 'Molibden (Mo)',
+    };
+    return names[key.toLowerCase()] ?? _capitalizeFirst(key);
+  }
+
+  String _capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
+
+  String _extractEmoji(String text) {
+    final emojiRegex = RegExp(
+      r'[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]',
+      unicode: true,
+    );
+    final match = emojiRegex.firstMatch(text);
+    return match?.group(0) ?? '';
+  }
+
+  String _removeEmoji(String text) {
+    final emojiRegex = RegExp(
+      r'[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]',
+      unicode: true,
+    );
+    return text.replaceAll(emojiRegex, '').trim();
+  }
+
+  // Get severity color for diseases and pests
+  MaterialColor _getSeverityColor(String severity) {
+    final s = severity.toLowerCase();
+    if (s.contains('yüksek') || s.contains('high') || s.contains('kritik')) {
+      return Colors.red;
+    } else if (s.contains('orta') || s.contains('medium') || s.contains('moderate')) {
+      return Colors.orange;
+    } else if (s.contains('düşük') || s.contains('low') || s.contains('hafif')) {
+      return Colors.yellow;
+    }
+    return Colors.grey;
+  }
+
+  // Format Turkish text with proper capitalization
+  String _formatTurkishText(String text) {
+    if (text.isEmpty) return text;
+
+    // Ensure first letter is uppercase
+    String formatted = text[0].toUpperCase() + text.substring(1);
+
+    // Split by sentences (. ! ?) and capitalize each
+    final sentences = formatted.split(RegExp(r'(?<=[.!?])\s+'));
+    for (int i = 0; i < sentences.length; i++) {
+      if (sentences[i].isNotEmpty) {
+        sentences[i] = sentences[i][0].toUpperCase() + sentences[i].substring(1);
+      }
+    }
+    formatted = sentences.join(' ');
+
+    // Handle numbered items (1. 2. etc) - capitalize after numbers
+    formatted = formatted.replaceAllMapped(
+      RegExp(r'(\d+[\.)])\s*([a-z])'),
+      (match) => '${match.group(1)} ${match.group(2)!.toUpperCase()}',
+    );
+
+    return formatted;
+  }
+
+  // Helper method to format summary text with numbered items on separate lines
+  Widget _buildFormattedSummaryText(String text) {
+    // First apply Turkish formatting
+    text = _formatTurkishText(text);
+
+    // Split on patterns like "1.", "1)", "2.", "2)" etc.
+    final lines = text.split(RegExp(r'(?=\d+[\.)])'));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines.where((line) => line.trim().isNotEmpty).map((line) {
+        final trimmedLine = line.trim();
+        final isNumbered = RegExp(r'^\d+[\.)]').hasMatch(trimmedLine);
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: 8.0, left: isNumbered ? 0 : 0),
+          child: Text(
+            trimmedLine,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: Colors.grey[800],
+              fontWeight: isNumbered ? FontWeight.w500 : FontWeight.normal,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // Build Farmer Friendly Summary Section
+  Widget _buildFarmerFriendlySummarySection(String farmerSummary) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.agriculture, color: Colors.white, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Çiftçi Dostu Özet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildFormattedSummaryText(farmerSummary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Environmental Stress Section
+  Widget _buildEnvironmentalStressSection(SponsoredAnalysisData analysis) {
+    final envStress = analysis.environmentalStress;
+
+    if (envStress == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.wb_cloudy, color: Color(0xFF2E7D32), size: 24),
+                const SizedBox(width: 8),
+                const Text(
+                  'Çevresel Stres Faktörleri',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (envStress.primaryStressor != null)
+              _buildDetailRow('Ana Stres Faktörü', envStress.primaryStressor!),
+            if (envStress.waterStatus != null)
+              _buildDetailRow('Su Durumu', envStress.waterStatus!),
+            if (envStress.temperatureStress != null)
+              _buildDetailRow('Sıcaklık Stresi', envStress.temperatureStress!),
+            if (envStress.lightStress != null)
+              _buildDetailRow('Işık Stresi', envStress.lightStress!),
+            if (envStress.physicalDamage != null)
+              _buildDetailRow('Fiziksel Hasar', envStress.physicalDamage!),
+            if (envStress.chemicalDamage != null)
+              _buildDetailRow('Kimyasal Hasar', envStress.chemicalDamage!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Analysis Summary Section with prognosis
+  Widget _buildAnalysisSummarySection(SponsoredAnalysisData analysis) {
+    final summaryData = analysis.summary;
+
+    if (summaryData == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.summarize, color: Color(0xFF2E7D32), size: 24),
+                const SizedBox(width: 8),
+                const Text(
+                  'Detaylı Özet',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildScoreRow('Genel Sağlık Skoru', summaryData.overallHealthScore.toString()),
+            _buildDetailRow('Ana Endişe', summaryData.primaryConcern),
+            if (summaryData.secondaryConcerns.isNotEmpty)
+              _buildListRow('İkincil Endişeler', summaryData.secondaryConcerns),
+            _buildDetailRow('Kritik Sorun Sayısı', summaryData.criticalIssuesCount.toString()),
+            _buildDetailRow('Güven Seviyesi', '${summaryData.confidenceLevel}%'),
+            _buildDetailRow('Prognoz', summaryData.prognosis),
+            _buildDetailRow('Tahmini Verim Etkisi', summaryData.estimatedYieldImpact),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Cross Factor Insights Section
+  Widget _buildCrossFactorInsightsSection(SponsoredAnalysisData analysis) {
+    final insights = analysis.crossFactorInsights;
+
+    if (insights == null || insights.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.analytics, color: Color(0xFF2E7D32), size: 24),
+                const SizedBox(width: 8),
+                const Text(
+                  'Çapraz Faktör Analizi',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...insights.map((insight) => Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              color: Colors.grey[50],
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      insight.insight,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Güven: ${insight.confidence.toStringAsFixed(0)}%',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Etki: ${insight.impactLevel}',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (insight.affectedAspects.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 4,
+                        children: insight.affectedAspects
+                            .map((aspect) => Chip(
+                                  label: Text(
+                                    aspect,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  padding: const EdgeInsets.all(4),
+                                ))
+                            .toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            )).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Risk Assessment Section
+  Widget _buildRiskAssessmentSection(SponsoredAnalysisData analysis) {
+    final risk = analysis.riskAssessment;
+
+    if (risk == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.warning_amber, color: Color(0xFFF57C00), size: 24),
+                const SizedBox(width: 8),
+                const Text(
+                  'Risk Değerlendirmesi',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildDetailRow('Verim Kaybı Olasılığı', risk.yieldLossProbability),
+            _buildDetailRow('Kötüleşme Süresi', risk.timelineToWorsen),
+            _buildDetailRow('Yayılma Potansiyeli', risk.spreadPotential),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Confidence Notes Section
+  Widget _buildConfidenceNotesSection(SponsoredAnalysisData analysis) {
+    final notes = analysis.confidenceNotes;
+
+    if (notes == null || notes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.verified, color: Color(0xFF2E7D32), size: 24),
+                const SizedBox(width: 8),
+                const Text(
+                  'Güvenilirlik Notları',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...notes.map((note) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    note.aspect,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  LinearProgressIndicator(
+                    value: note.confidence / 100,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      note.confidence >= 80 ? Colors.green :
+                      note.confidence >= 60 ? Colors.orange : Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${note.confidence.toStringAsFixed(0)}% - ${note.reason}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method for score rows
+  Widget _buildScoreRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method for list rows
+  Widget _buildListRow(String label, List<String> items) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          ...items.map((item) => Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('• ', style: TextStyle(fontSize: 16)),
+                Expanded(child: Text(item)),
+              ],
+            ),
+          )).toList(),
+        ],
+      ),
+    );
+  }
+
+  // Helper method for deficient nutrients with red styling
+  Widget _buildDeficientNutrientRow(String nutrient, String status) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$nutrient:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red.shade700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method for detail chips with color coding
+  Widget _buildDetailChip(String label, String value, MaterialColor color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: color.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: color.shade200),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Confidence note card
+  Widget _buildConfidenceNoteCard(String aspect, double confidence, String reason) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(_formatTurkishText(aspect), style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${confidence.toInt()}%',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          Text(_formatTurkishText(reason), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  // Recommendation card with priority and timeline
+  Widget _buildRecommendationCard(String action, String details, String priority, String timeline, String expectedOutcome) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_formatTurkishText(action), style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(_formatTurkishText(details), style: const TextStyle(fontSize: 12)),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              _buildTag('Öncelik: ${_formatTurkishText(priority)}', Colors.red),
+              const SizedBox(width: 8),
+              _buildTag('Zaman: ${_formatTurkishText(timeline)}', Colors.orange),
+            ],
+          ),
+          Text('Beklenen sonuç: ${_formatTurkishText(expectedOutcome)}', style: const TextStyle(fontSize: 11, color: Colors.green)),
+        ],
+      ),
+    );
+  }
+
+  // Tag widget helper
+  Widget _buildTag(String text, MaterialColor color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.shade200),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: color.shade700,
+        ),
+      ),
+    );
+  }
+
+
+
+}

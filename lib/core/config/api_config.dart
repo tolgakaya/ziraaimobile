@@ -58,6 +58,7 @@ class ApiConfig {
   static const String sponsorshipList = '/sponsorships/list';
   static const String sponsorshipRedeem = '/sponsorship/redeem';
   static const String sponsoredAnalyses = '/sponsorship/analyses';
+  static const String sponsoredAnalysisDetail = '/sponsorship/analysis'; // /{analysisId}
 
   // Sponsor Profile Endpoints
   static const String createSponsorProfile = '/sponsorship/create-profile';

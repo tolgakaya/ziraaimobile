@@ -403,9 +403,11 @@ class LocalizedRecommendationsDto {
 
 @JsonSerializable()
 class ImageInfoDto {
+  final String? imageUrl;
   final String format;
 
   ImageInfoDto({
+    this.imageUrl,
     required this.format,
   });
 
