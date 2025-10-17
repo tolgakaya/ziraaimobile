@@ -86,7 +86,7 @@ class _SponsoredAnalysesListScreenState
       // Build query parameters
       final queryParameters = <String, dynamic>{
         'page': _currentPage,
-        'pageSize': 2, // TODO: Change to 20 for production
+        'pageSize': 10,
         'sortBy': _sortBy,
         'sortOrder': _sortOrder,
       };
