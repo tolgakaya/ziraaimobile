@@ -141,7 +141,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                   // ZiraAI Logo
                   Image.asset(
                     'assets/logos/ziraai_logo.png',
-                    height: 112,
+                    height: 90,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return const Text(
