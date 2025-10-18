@@ -66,6 +66,23 @@ class SignalRNotificationIntegration {
       // Show local notification for sponsor→farmer messages
       if (messageNotification.isSponsorMessage) {
         _showMessageNotification(messageNotification);
+        
+        // CRITICAL: Also add to NotificationBloc so it appears in notification bell icon
+        // Convert MessageNotification to PlantAnalysisNotification format
+        print('📲 SignalRIntegration: Adding message notification to bloc...');
+        final plantAnalysisNotification = PlantAnalysisNotification(
+          analysisId: messageNotification.plantAnalysisId,
+          userId: messageNotification.fromUserId,
+          status: 'Message', // Custom status for message notifications
+          completedAt: messageNotification.sentDate,
+          primaryConcern: 'Yeni Sponsor Mesajı',
+          message: '${messageNotification.fromUserCompany ?? messageNotification.fromUserName}: ${messageNotification.message}',
+          sponsorId: messageNotification.fromUserId.toString(),
+          isRead: false,
+        );
+        
+        _notificationBloc.add(AddNotification(plantAnalysisNotification));
+        print('✅ SignalRIntegration: Message notification added to bloc!');
       }
     };
 
