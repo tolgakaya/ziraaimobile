@@ -20,8 +20,8 @@ abstract class PlantAnalysisApiService {
   );
 
   @GET('/plantanalyses/{id}')
-  Future<HttpResponse<Map<String, dynamic>>> getAnalysisById(
-    @Path('id') String analysisId,
+  Future<AnalysisResult> getAnalysisById(
+    @Path('id') int analysisId,
   );
 
   @GET('/plantanalyses/list')

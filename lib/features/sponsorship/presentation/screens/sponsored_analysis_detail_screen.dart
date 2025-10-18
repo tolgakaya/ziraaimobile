@@ -6,6 +6,7 @@ import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/config/api_config.dart';
 import '../../data/models/sponsored_analysis_detail.dart';
 import '../../../plant_analysis/data/models/plant_analysis_detail_dto.dart';
+import '../../../messaging/presentation/pages/message_detail_page.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 
@@ -55,11 +56,14 @@ class _SponsoredAnalysisDetailScreenState
       );
 
       print('✅ Sponsored analysis detail loaded');
+      print('🔍 RAW API RESPONSE tier data: ${response.data['data']['tierMetadata']}');
 
       if (response.data['success'] == true && response.data['data'] != null) {
-        return SponsoredAnalysisDetailResponse.fromJson(
+        final detail = SponsoredAnalysisDetailResponse.fromJson(
           response.data['data'],
         );
+        print('🔍 PARSED TIER: tierName=${detail.tierMetadata.tierName}, canMessage=${detail.tierMetadata.canMessage}');
+        return detail;
       } else {
         throw Exception(response.data['message'] ?? 'Failed to load analysis');
       }
@@ -89,6 +93,38 @@ class _SponsoredAnalysisDetailScreenState
           }
 
           return _buildContent(snapshot.data!);
+        },
+      ),
+      floatingActionButton: FutureBuilder<SponsoredAnalysisDetailResponse>(
+        future: _detailFuture,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const SizedBox.shrink();
+
+          final data = snapshot.data!;
+          final tier = data.tierMetadata;
+
+          // ⚠️ TEMPORARY: Show FAB always for testing (remove tier check)
+          // TODO: Re-enable tier check after testing
+          // if (!tier.canMessage) return const SizedBox.shrink();
+
+          return FloatingActionButton.extended(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MessageDetailPage(
+                    plantAnalysisId: data.analysis.id,
+                    farmerId: data.analysis.userId ?? 0,
+                    farmerName: 'Çiftçi',
+                    canMessage: tier.canMessage,
+                  ),
+                ),
+              );
+            },
+            label: const Text('Mesaj Gönder'),
+            icon: const Icon(Icons.message),
+            backgroundColor: Colors.blue,
+          );
         },
       ),
     );

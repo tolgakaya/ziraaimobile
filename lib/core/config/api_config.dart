@@ -72,6 +72,15 @@ class ApiConfig {
   // Package Purchase Endpoints
   static const String purchasePackage = '/sponsorship/purchase-package';
 
+  // Messaging Endpoints
+  static const String messagingSend = '/sponsorship/messages';
+  static const String messagingGetConversation = '/sponsorship/messages/conversation';
+  static const String messagingBlock = '/sponsorship/messages/block';
+  static String messagingUnblock(int sponsorId) =>
+      '/sponsorship/messages/block/$sponsorId';
+  static const String messagingGetBlocked = '/sponsorship/messages/blocked';
+  static const String messagingGetQuota = '/sponsorship/messages/remaining';
+
   // SignalR Hub Endpoint
   static String get signalRHubUrl => '$baseUrl/hubs/plantanalysis';
 
