@@ -47,7 +47,14 @@ class AnalysisDetailScreen extends StatelessWidget {
                 return const SizedBox();
               },
             ),
-            floatingActionButton: detail?.sponsorshipMetadata?.canMessage == true
+            floatingActionButton: Builder(
+              builder: (context) {
+                print('🔍 DEBUG FAB - detail: ${detail != null}');
+                print('🔍 DEBUG FAB - sponsorshipMetadata: ${detail?.sponsorshipMetadata}');
+                print('🔍 DEBUG FAB - canMessage: ${detail?.sponsorshipMetadata?.canMessage}');
+                print('🔍 DEBUG FAB - condition result: ${detail?.sponsorshipMetadata?.canMessage == true}');
+                
+                return detail?.sponsorshipMetadata?.canMessage == true
                 ? FloatingActionButton.extended(
                     onPressed: () {
                       Navigator.push(
@@ -66,7 +73,9 @@ class AnalysisDetailScreen extends StatelessWidget {
                     icon: const Icon(Icons.message),
                     backgroundColor: const Color(0xFF17CF17),
                   )
-                : null,
+                : null;
+              },
+            ),
           );
         },
       ),
