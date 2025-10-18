@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../messaging/presentation/pages/message_detail_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
@@ -21,24 +22,53 @@ class AnalysisDetailScreen extends StatelessWidget {
       create: (context) => AnalysisDetailBloc(
         repository: getIt<PlantAnalysisRepository>(),
       )..add(LoadAnalysisDetail(analysisId: analysisId)),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF9FAFB),
-        body: BlocBuilder<AnalysisDetailBloc, AnalysisDetailState>(
-          builder: (context, state) {
-            if (state is AnalysisDetailLoading) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF17CF17),
-                ),
-              );
-            } else if (state is AnalysisDetailLoaded) {
-              return _buildDetailContent(context, state.analysisDetail);
-            } else if (state is AnalysisDetailError) {
-              return _buildErrorState(context, state.message);
-            }
-            return const SizedBox();
-          },
-        ),
+      child: BlocBuilder<AnalysisDetailBloc, AnalysisDetailState>(
+        builder: (context, state) {
+          PlantAnalysisResult? detail;
+          if (state is AnalysisDetailLoaded) {
+            detail = state.analysisDetail;
+          }
+
+          return Scaffold(
+            backgroundColor: const Color(0xFFF9FAFB),
+            body: Builder(
+              builder: (context) {
+                if (state is AnalysisDetailLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF17CF17),
+                    ),
+                  );
+                } else if (state is AnalysisDetailLoaded) {
+                  return _buildDetailContent(context, state.analysisDetail);
+                } else if (state is AnalysisDetailError) {
+                  return _buildErrorState(context, state.message);
+                }
+                return const SizedBox();
+              },
+            ),
+            floatingActionButton: detail?.sponsorshipMetadata?.canReply == true
+              ? FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MessageDetailPage(
+                          plantAnalysisId: detail!.id!,
+                          farmerId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
+                          farmerName: detail.sponsorshipMetadata!.sponsorInfo.companyName,
+                          canMessage: true,
+                        ),
+                      ),
+                    );
+                  },
+                  label: const Text('Sponsora Yanıtla'),
+                  icon: const Icon(Icons.reply),
+                  backgroundColor: const Color(0xFF17CF17),
+                )
+              : null,
+          );
+        },
       ),
     );
   }
@@ -65,6 +95,10 @@ class AnalysisDetailScreen extends StatelessWidget {
                 // 10. Farmer Friendly Summary (MUST BE AT TOP - as requested)
                 _buildFarmerFriendlySummarySection(detail),
                 const SizedBox(height: 20),
+
+                // Sponsor Information (if sponsored analysis)
+                _buildSponsorInfoSection(detail),
+                if (detail.sponsorshipMetadata != null) const SizedBox(height: 20),
 
                 // 1. Plant Identification (all 6 fields including identifyingFeatures, visibleParts)
                 _buildPlantIdentificationSection(detail),
@@ -597,6 +631,235 @@ class AnalysisDetailScreen extends StatelessWidget {
   }
 
   // 1. Plant Identification (ALL 6 FIELDS)
+  Widget _buildSponsorInfoSection(PlantAnalysisResult detail) {
+    if (detail.sponsorshipMetadata == null) {
+      return const SizedBox.shrink();
+    }
+
+    final metadata = detail.sponsorshipMetadata!;
+    final sponsorInfo = metadata.sponsorInfo;
+
+    return Container(
+      margin: EdgeInsets.zero,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF17CF17),
+            Color(0xFF0FA80F),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF17CF17).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row with Logo and Company Name
+            Row(
+              children: [
+                // Logo
+                if (metadata.canViewLogo && sponsorInfo.logoUrl != null)
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        sponsorInfo.logoUrl!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.business,
+                            size: 32,
+                            color: Color(0xFF17CF17),
+                          );
+                        },
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.business,
+                      size: 32,
+                      color: Color(0xFF17CF17),
+                    ),
+                  ),
+                const SizedBox(width: 16),
+                // Company Name and Tier
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Sponsorlu Analiz',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        sponsorInfo.companyName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${metadata.tierName} Tier - ${metadata.accessPercentage}% Erişim',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white30, height: 1),
+            const SizedBox(height: 16),
+
+            // Features Row
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFeatureBadge(
+                    icon: Icons.visibility,
+                    label: 'Görüntüleme',
+                    value: '${metadata.accessPercentage}%',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildFeatureBadge(
+                    icon: metadata.canMessage ? Icons.check_circle : Icons.cancel,
+                    label: 'Mesajlaşma',
+                    value: metadata.canMessage ? 'Aktif' : 'Kapalı',
+                  ),
+                ),
+              ],
+            ),
+
+            // Reply Status Info
+            if (metadata.canMessage && !metadata.canReply) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Sponsor size bu analiz hakkında mesaj gönderebilir. Mesaj gönderdiğinde yanıt verebilirsiniz.',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureBadge({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPlantIdentificationSection(PlantAnalysisResult detail) {
     final identification = detail.plantIdentification;
     

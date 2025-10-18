@@ -1,4 +1,5 @@
 import 'plant_disease.dart';
+import 'sponsorship_metadata.dart';
 import 'plant_treatment.dart';
 import 'plant_identification.dart';
 import 'health_assessment.dart';
@@ -38,6 +39,9 @@ class PlantAnalysisResult {
   final String? modelVersion;
   final DateTime? createdDate;
   final String? plantSpecies;
+  
+  // Sponsorship metadata (null if not sponsored)
+  final SponsorshipMetadata? sponsorshipMetadata;
 
   PlantAnalysisResult({
     this.id,
@@ -67,6 +71,7 @@ class PlantAnalysisResult {
     this.modelVersion,
     this.createdDate,
     this.plantSpecies,
+    this.sponsorshipMetadata,
   });
 
   factory PlantAnalysisResult.fromJson(Map<String, dynamic> json) {
@@ -126,6 +131,9 @@ class PlantAnalysisResult {
           ? DateTime.tryParse(json['createdDate'] as String)
           : null,
       plantSpecies: json['plantSpecies'] as String?,
+      sponsorshipMetadata: json['sponsorshipMetadata'] != null
+          ? SponsorshipMetadata.fromJson(json['sponsorshipMetadata'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -158,6 +166,7 @@ class PlantAnalysisResult {
       'modelVersion': modelVersion,
       'createdDate': createdDate?.toIso8601String(),
       'plantSpecies': plantSpecies,
+      'sponsorshipMetadata': sponsorshipMetadata?.toJson(),
     };
   }
 

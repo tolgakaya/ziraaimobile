@@ -12,6 +12,7 @@ import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../bloc/auth_bloc.dart';
 import 'login_screen.dart';
 import '../../../../main.dart' as main_app;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Splash screen with automatic login check
 ///
@@ -197,9 +198,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
         // Setup SignalR notification integration
         final notificationBloc = GetIt.instance<NotificationBloc>();
+        final localNotifications = GetIt.instance<FlutterLocalNotificationsPlugin>();
         final integration = SignalRNotificationIntegration(
           signalRService: signalRService,
           notificationBloc: notificationBloc,
+          localNotifications: localNotifications,
         );
         integration.setupEventHandlers();
 

@@ -29,6 +29,7 @@ import '../../features/messaging/data/repositories/messaging_repository_impl.dar
 import '../../features/messaging/domain/repositories/messaging_repository.dart';
 import '../../features/messaging/domain/usecases/send_message_usecase.dart';
 import '../../features/messaging/domain/usecases/get_messages_usecase.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -173,6 +174,54 @@ Future<void> setupMinimalServiceLocator() async {
   );
 
   print('✅ MESSAGING: All messaging services registered successfully!');
+
+  // ✅ NOTIFICATIONS - FlutterLocalNotificationsPlugin for push notifications
+  final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  
+  // Android initialization settings
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  
+  // iOS initialization settings
+  const iosSettings = DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+  
+  // Combined initialization settings
+  const initSettings = InitializationSettings(
+    android: androidSettings,
+    iOS: iosSettings,
+  );
+  
+  // Initialize the plugin
+  await flutterLocalNotificationsPlugin.initialize(
+    initSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      print('🔔 Notification tapped: ${response.payload}');
+      // Handle notification tap - navigate to relevant screen
+      // This will be implemented later for deep linking to message detail
+    },
+  );
+  
+  // Create notification channel for Android (required for Android 8.0+)
+  const androidChannel = AndroidNotificationChannel(
+    'sponsor_messages',
+    'Sponsor Mesajları',
+    description: 'Sponsorlardan gelen mesaj bildirimleri',
+    importance: Importance.high,
+    enableVibration: true,
+    playSound: true,
+  );
+  
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(androidChannel);
+  
+  // Register as singleton
+  getIt.registerSingleton<FlutterLocalNotificationsPlugin>(flutterLocalNotificationsPlugin);
+  
+  print('✅ NOTIFICATIONS: FlutterLocalNotificationsPlugin registered and initialized successfully!');
 }
 
 /// Token interceptor for automatic authentication

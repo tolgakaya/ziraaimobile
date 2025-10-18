@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../config/api_config.dart';
 import '../models/plant_analysis_notification.dart';
+import '../models/message_notification.dart';
 
 class SignalRService {
   late HubConnection _hubConnection;
@@ -11,6 +12,7 @@ class SignalRService {
   // Event callbacks
   Function(PlantAnalysisNotification)? onAnalysisCompleted;
   Function(int analysisId, String error)? onAnalysisFailed;
+  Function(MessageNotification)? onNewMessage;
 
   // Singleton pattern
   static final SignalRService _instance = SignalRService._internal();
@@ -189,7 +191,40 @@ class SignalRService {
         print('🏓 SignalR: Pong received (no timestamp)');
       }
     });
-    
+
+    // New message event - for sponsor→farmer messaging
+    print('📝 SignalR: Registering NewMessage event...');
+    _hubConnection.on('NewMessage', (arguments) {
+      print('💬 SignalR: NewMessage event triggered!');
+      if (arguments != null && arguments.isNotEmpty) {
+        final messageData = arguments[0] as Map<String, dynamic>;
+        print('💬 SignalR: Message data: $messageData');
+
+        try {
+          final notification = MessageNotification.fromJson(messageData);
+          print('✅ SignalR: Message notification parsed successfully');
+          print('📋 SignalR: Message from ${notification.senderRole}: ${notification.fromUserName}');
+
+          // IMPORTANT: Only show notification for sponsor→farmer messages
+          // Farmer replies (farmer→sponsor) should NOT trigger notifications
+          if (notification.isSponsorMessage) {
+            print('🔔 SignalR: Sponsor message - showing notification');
+            if (onNewMessage != null) {
+              onNewMessage?.call(notification);
+              print('✅ SignalR: onNewMessage callback executed');
+            } else {
+              print('⚠️ SignalR: WARNING - onNewMessage callback is NULL!');
+            }
+          } else {
+            print('🔕 SignalR: Farmer reply - skipping notification (sponsor should not be notified)');
+          }
+        } catch (e, stackTrace) {
+          print('❌ SignalR: Error parsing message notification: $e');
+          print('❌ SignalR: Stack trace: $stackTrace');
+        }
+      }
+    });
+
     print('✅ SignalR: Event handlers registered successfully!');
   }
 
@@ -259,5 +294,6 @@ class SignalRService {
   void clearHandlers() {
     onAnalysisCompleted = null;
     onAnalysisFailed = null;
+    onNewMessage = null;
   }
 }

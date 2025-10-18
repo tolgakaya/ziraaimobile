@@ -12,6 +12,7 @@ import '../../../../../core/services/auth_service.dart';
 import '../../../../dashboard/presentation/bloc/notification_bloc.dart';
 import '../../../../../core/services/sponsorship_sms_listener.dart';
 import '../../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String mobilePhone;
@@ -188,9 +189,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         await signalRService.initialize(token);
 
         final notificationBloc = GetIt.instance<NotificationBloc>();
+        final localNotifications = GetIt.instance<FlutterLocalNotificationsPlugin>();
         final integration = SignalRNotificationIntegration(
           signalRService: signalRService,
           notificationBloc: notificationBloc,
+          localNotifications: localNotifications,
         );
         integration.setupEventHandlers();
 

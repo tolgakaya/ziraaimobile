@@ -14,6 +14,7 @@ import '../../../../core/services/signalr_service.dart';
 import '../../../../core/services/signalr_notification_integration.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/sponsorship_sms_listener.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../dashboard/presentation/bloc/notification_bloc.dart';
 import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 
@@ -111,9 +112,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
         // Setup SignalR notification integration
         final notificationBloc = GetIt.instance<NotificationBloc>();
+        final localNotifications = GetIt.instance<FlutterLocalNotificationsPlugin>();
         final integration = SignalRNotificationIntegration(
           signalRService: signalRService,
           notificationBloc: notificationBloc,
+          localNotifications: localNotifications,
         );
         integration.setupEventHandlers();
 

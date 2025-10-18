@@ -8,6 +8,7 @@ import 'pest_disease.dart';
 import 'recommendations.dart';
 import 'analysis_summary.dart';
 import 'environmental_factors.dart';
+import 'sponsorship_metadata.dart';
 
 class ApiToSimpleConverter {
   static PlantAnalysisResult convertApiResponse(Map<String, dynamic> apiData) {
@@ -148,6 +149,19 @@ class ApiToSimpleConverter {
         );
       }
 
+      // Parse sponsorshipMetadata
+      SponsorshipMetadata? sponsorshipMetadata;
+      if (apiData['sponsorshipMetadata'] != null) {
+        print('🔍 CONVERTER: Processing sponsorshipMetadata');
+        print('📊 CONVERTER: sponsorshipMetadata raw: ${apiData['sponsorshipMetadata']}');
+        sponsorshipMetadata = SponsorshipMetadata.fromJson(
+          apiData['sponsorshipMetadata'] as Map<String, dynamic>
+        );
+        print('✅ CONVERTER: sponsorshipMetadata parsed - canMessage: ${sponsorshipMetadata.canMessage}');
+      } else {
+        print('⚠️ CONVERTER: No sponsorshipMetadata in response');
+      }
+
       print('🔍 CONVERTER: Creating PlantAnalysisResult');
       print('🌾 CONVERTER: farmerFriendlySummary = ${apiData['farmerFriendlySummary']}');
 
@@ -184,6 +198,7 @@ class ApiToSimpleConverter {
             ? DateTime.tryParse(apiData['createdDate'] as String)
             : null,
         plantSpecies: apiData['plantSpecies'] as String?,
+        sponsorshipMetadata: sponsorshipMetadata,
       );
     } catch (e, stackTrace) {
       print('❌ CONVERTER ERROR: $e');
