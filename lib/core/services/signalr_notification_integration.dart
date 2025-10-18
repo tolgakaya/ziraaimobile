@@ -1,20 +1,25 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../features/dashboard/presentation/bloc/notification_bloc.dart';
 import '../../features/dashboard/presentation/bloc/notification_event.dart';
 import '../models/plant_analysis_notification.dart';
+import '../models/message_notification.dart';
 import 'signalr_service.dart';
 
 /// Integration service that connects SignalR events with NotificationBloc
 class SignalRNotificationIntegration {
   final SignalRService _signalRService;
   final NotificationBloc _notificationBloc;
+  final FlutterLocalNotificationsPlugin? _localNotifications;
   bool _isInitialized = false;
 
   SignalRNotificationIntegration({
     required SignalRService signalRService,
     required NotificationBloc notificationBloc,
+    FlutterLocalNotificationsPlugin? localNotifications,
   })  : _signalRService = signalRService,
-        _notificationBloc = notificationBloc;
+        _notificationBloc = notificationBloc,
+        _localNotifications = localNotifications;
 
   /// Setup SignalR event handlers to update NotificationBloc
   void setupEventHandlers() {
@@ -53,8 +58,63 @@ class SignalRNotificationIntegration {
       _notificationBloc.add(AddNotification(notification));
     };
 
+    // Handle new message notifications (sponsor→farmer only)
+    _signalRService.onNewMessage = (messageNotification) {
+      print('💬 SignalRIntegration: CALLBACK TRIGGERED! New message from ${messageNotification.senderRole}');
+      print('💬 SignalRIntegration: Message: ${messageNotification.message}');
+
+      // Show local notification for sponsor→farmer messages
+      if (messageNotification.isSponsorMessage) {
+        _showMessageNotification(messageNotification);
+      }
+    };
+
     _isInitialized = true;
     print('✅ SignalRIntegration: Event handlers setup complete!');
+  }
+
+  /// Show local notification for incoming sponsor message
+  void _showMessageNotification(MessageNotification messageNotification) {
+    if (_localNotifications == null) {
+      print('⚠️ SignalRIntegration: Local notifications not initialized');
+      return;
+    }
+
+    print('🔔 SignalRIntegration: Showing notification for message from ${messageNotification.fromUserCompany ?? messageNotification.fromUserName}');
+
+    const androidDetails = AndroidNotificationDetails(
+      'sponsor_messages',
+      'Sponsor Mesajları',
+      channelDescription: 'Sponsorlardan gelen mesaj bildirimleri',
+      importance: Importance.high,
+      priority: Priority.high,
+      enableVibration: true,
+      playSound: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final title = messageNotification.fromUserCompany ?? messageNotification.fromUserName;
+    final body = messageNotification.message;
+
+    _localNotifications!.show(
+      messageNotification.messageId,
+      '💬 $title',
+      body,
+      notificationDetails,
+      payload: 'message_${messageNotification.plantAnalysisId}',
+    );
+
+    print('✅ SignalRIntegration: Notification shown successfully');
   }
 
   /// Clear event handlers
