@@ -47,7 +47,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                 return const SizedBox();
               },
             ),
-            floatingActionButton: detail?.sponsorId != null
+            floatingActionButton: detail?.sponsorshipMetadata?.canMessage == true
                 ? FloatingActionButton.extended(
                     onPressed: () {
                       Navigator.push(
@@ -55,8 +55,8 @@ class AnalysisDetailScreen extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (context) => MessageDetailPage(
                             plantAnalysisId: detail!.id!,
-                            farmerId: detail.sponsorId!,
-                            farmerName: detail.sponsorName ?? 'Sponsor',
+                            farmerId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
+                            farmerName: detail.sponsorshipMetadata!.sponsorInfo.companyName,
                             canMessage: true,
                           ),
                         ),

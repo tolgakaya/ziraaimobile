@@ -1,4 +1,5 @@
 import 'plant_disease.dart';
+import 'sponsorship_metadata.dart';
 import 'plant_treatment.dart';
 import 'plant_identification.dart';
 import 'health_assessment.dart';
@@ -15,8 +16,6 @@ class PlantAnalysisResult {
   final String? analysisStatus;
   final int? userId;
   final String? farmerId;
-  final int? sponsorId;
-  final String? sponsorName;
   final String? location;
   final String? cropType;
   final List<String>? previousTreatments;
@@ -40,6 +39,9 @@ class PlantAnalysisResult {
   final String? modelVersion;
   final DateTime? createdDate;
   final String? plantSpecies;
+  
+  // Sponsorship metadata (null if not sponsored)
+  final SponsorshipMetadata? sponsorshipMetadata;
 
   PlantAnalysisResult({
     this.id,
@@ -48,8 +50,6 @@ class PlantAnalysisResult {
     this.analysisStatus,
     this.userId,
     this.farmerId,
-    this.sponsorId,
-    this.sponsorName,
     this.location,
     this.cropType,
     this.previousTreatments,
@@ -71,6 +71,7 @@ class PlantAnalysisResult {
     this.modelVersion,
     this.createdDate,
     this.plantSpecies,
+    this.sponsorshipMetadata,
   });
 
   factory PlantAnalysisResult.fromJson(Map<String, dynamic> json) {
@@ -83,8 +84,6 @@ class PlantAnalysisResult {
       analysisStatus: json['analysisStatus'] as String?,
       userId: json['userId'] as int?,
       farmerId: json['farmerId'] as String?,
-      sponsorId: json['sponsorId'] as int?,
-      sponsorName: json['sponsorName'] as String?,
       location: json['location'] as String?,
       cropType: json['cropType'] as String?,
       previousTreatments: (json['previousTreatments'] as List<dynamic>?)
@@ -132,6 +131,9 @@ class PlantAnalysisResult {
           ? DateTime.tryParse(json['createdDate'] as String)
           : null,
       plantSpecies: json['plantSpecies'] as String?,
+      sponsorshipMetadata: json['sponsorshipMetadata'] != null
+          ? SponsorshipMetadata.fromJson(json['sponsorshipMetadata'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -143,8 +145,6 @@ class PlantAnalysisResult {
       'analysisStatus': analysisStatus,
       'userId': userId,
       'farmerId': farmerId,
-      'sponsorId': sponsorId,
-      'sponsorName': sponsorName,
       'location': location,
       'cropType': cropType,
       'previousTreatments': previousTreatments,
@@ -166,6 +166,7 @@ class PlantAnalysisResult {
       'modelVersion': modelVersion,
       'createdDate': createdDate?.toIso8601String(),
       'plantSpecies': plantSpecies,
+      'sponsorshipMetadata': sponsorshipMetadata?.toJson(),
     };
   }
 
