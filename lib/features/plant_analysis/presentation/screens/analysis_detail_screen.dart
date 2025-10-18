@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../messaging/presentation/pages/message_detail_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
@@ -21,24 +22,53 @@ class AnalysisDetailScreen extends StatelessWidget {
       create: (context) => AnalysisDetailBloc(
         repository: getIt<PlantAnalysisRepository>(),
       )..add(LoadAnalysisDetail(analysisId: analysisId)),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF9FAFB),
-        body: BlocBuilder<AnalysisDetailBloc, AnalysisDetailState>(
-          builder: (context, state) {
-            if (state is AnalysisDetailLoading) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF17CF17),
-                ),
-              );
-            } else if (state is AnalysisDetailLoaded) {
-              return _buildDetailContent(context, state.analysisDetail);
-            } else if (state is AnalysisDetailError) {
-              return _buildErrorState(context, state.message);
-            }
-            return const SizedBox();
-          },
-        ),
+      child: BlocBuilder<AnalysisDetailBloc, AnalysisDetailState>(
+        builder: (context, state) {
+          PlantAnalysisResult? detail;
+          if (state is AnalysisDetailLoaded) {
+            detail = state.analysisDetail;
+          }
+
+          return Scaffold(
+            backgroundColor: const Color(0xFFF9FAFB),
+            body: Builder(
+              builder: (context) {
+                if (state is AnalysisDetailLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF17CF17),
+                    ),
+                  );
+                } else if (state is AnalysisDetailLoaded) {
+                  return _buildDetailContent(context, state.analysisDetail);
+                } else if (state is AnalysisDetailError) {
+                  return _buildErrorState(context, state.message);
+                }
+                return const SizedBox();
+              },
+            ),
+            floatingActionButton: detail?.sponsorId != null
+                ? FloatingActionButton.extended(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MessageDetailPage(
+                            plantAnalysisId: detail!.id!,
+                            farmerId: detail.sponsorId!,
+                            farmerName: detail.sponsorName ?? 'Sponsor',
+                            canMessage: true,
+                          ),
+                        ),
+                      );
+                    },
+                    label: const Text('Mesaj Gönder'),
+                    icon: const Icon(Icons.message),
+                    backgroundColor: const Color(0xFF17CF17),
+                  )
+                : null,
+          );
+        },
       ),
     );
   }
