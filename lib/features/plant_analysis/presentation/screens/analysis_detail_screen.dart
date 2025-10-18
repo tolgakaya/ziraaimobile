@@ -47,27 +47,26 @@ class AnalysisDetailScreen extends StatelessWidget {
                 return const SizedBox();
               },
             ),
-            floatingActionButton: detail?.sponsorshipMetadata?.canMessage == true
-                ? FloatingActionButton.extended(
-                    onPressed: () {
-                      print('🔍 DEBUG FAB - Navigating to messaging');
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MessageDetailPage(
-                            plantAnalysisId: detail!.id!,
-                            farmerId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
-                            farmerName: detail.sponsorshipMetadata!.sponsorInfo.companyName,
-                            canMessage: true,
-                          ),
+            floatingActionButton: detail?.sponsorshipMetadata?.canReply == true
+              ? FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MessageDetailPage(
+                          plantAnalysisId: detail!.id!,
+                          farmerId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
+                          farmerName: detail.sponsorshipMetadata!.sponsorInfo.companyName,
+                          canMessage: true,
                         ),
-                      );
-                    },
-                    label: const Text('Mesaj Gönder'),
-                    icon: const Icon(Icons.message),
-                    backgroundColor: const Color(0xFF17CF17),
-                  )
-                : null,
+                      ),
+                    );
+                  },
+                  label: const Text('Sponsora Yanıtla'),
+                  icon: const Icon(Icons.reply),
+                  backgroundColor: const Color(0xFF17CF17),
+                )
+              : null,
           );
         },
       ),
@@ -782,6 +781,42 @@ class AnalysisDetailScreen extends StatelessWidget {
                 ),
               ],
             ),
+
+            // Reply Status Info
+            if (metadata.canMessage && !metadata.canReply) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Sponsor size bu analiz hakkında mesaj gönderebilir. Mesaj gönderdiğinde yanıt verebilirsiniz.',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

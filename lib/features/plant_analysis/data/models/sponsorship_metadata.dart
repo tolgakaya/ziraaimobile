@@ -9,6 +9,7 @@ class SponsorshipMetadata {
   final String tierName;
   final int accessPercentage;
   final bool canMessage;
+  final bool canReply;
   final bool canViewLogo;
   final SponsorInfo sponsorInfo;
   final AccessibleFields accessibleFields;
@@ -17,6 +18,7 @@ class SponsorshipMetadata {
     required this.tierName,
     required this.accessPercentage,
     required this.canMessage,
+    required this.canReply,
     required this.canViewLogo,
     required this.sponsorInfo,
     required this.accessibleFields,
