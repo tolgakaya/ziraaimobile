@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
@@ -23,6 +24,11 @@ import '../../features/referral/presentation/bloc/referral_bloc.dart';
 import '../../features/sponsorship/data/services/sponsor_service.dart';
 // import '../services/install_referrer_service.dart';  // TEMPORARILY DISABLED
 import '../services/sms_referral_service.dart';
+import '../../features/messaging/data/services/messaging_api_service.dart';
+import '../../features/messaging/data/repositories/messaging_repository_impl.dart';
+import '../../features/messaging/domain/repositories/messaging_repository.dart';
+import '../../features/messaging/domain/usecases/send_message_usecase.dart';
+import '../../features/messaging/domain/usecases/get_messages_usecase.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -64,7 +70,10 @@ Future<void> setupMinimalServiceLocator() async {
       headers: ApiConfig.defaultHeaders,
     ));
     
-    // Add interceptors
+    // Add TokenInterceptor for automatic authentication
+    dio.interceptors.add(_TokenInterceptor(getIt<TokenManager>()));
+    
+    // Add LogInterceptor for debugging
     dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
@@ -145,4 +154,58 @@ Future<void> setupMinimalServiceLocator() async {
   getIt.registerLazySingleton<NotificationBloc>(
     () => NotificationBloc(),
   );
+
+  // ✅ MESSAGING SERVICES - Required for sponsor-farmer messaging
+  getIt.registerLazySingleton<MessagingApiService>(
+    () => MessagingApiService(getIt<NetworkClient>()),
+  );
+
+  getIt.registerLazySingleton<MessagingRepository>(
+    () => MessagingRepositoryImpl(getIt<MessagingApiService>()),
+  );
+
+  getIt.registerLazySingleton<SendMessageUseCase>(
+    () => SendMessageUseCase(getIt<MessagingRepository>()),
+  );
+
+  getIt.registerLazySingleton<GetMessagesUseCase>(
+    () => GetMessagesUseCase(getIt<MessagingRepository>()),
+  );
+
+  print('✅ MESSAGING: All messaging services registered successfully!');
+}
+
+/// Token interceptor for automatic authentication
+class _TokenInterceptor extends Interceptor {
+  final TokenManager _tokenManager;
+
+  _TokenInterceptor(this._tokenManager);
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    // Skip auth for login/register/refresh endpoints
+    if (_isAuthEndpoint(options.path)) {
+      handler.next(options);
+      return;
+    }
+
+    // Get valid access token
+    final token = await _tokenManager.getValidAccessToken();
+
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
+      print('🔑 TokenInterceptor: Added auth token to ${options.path}');
+      handler.next(options);
+    } else {
+      print('⚠️ TokenInterceptor: No valid token, skipping auth header for ${options.path}');
+      handler.next(options);
+    }
+  }
+
+  bool _isAuthEndpoint(String path) {
+    return path.contains('/auth/login') ||
+           path.contains('/auth/register') ||
+           path.contains('/auth/refresh-token') ||
+           path.contains('/auth/forgot-password');
+  }
 }
