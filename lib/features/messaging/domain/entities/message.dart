@@ -40,6 +40,15 @@ class Message extends Equatable {
     this.approvedDate,
   });
 
+  // ✅ Helper methods for business logic
+  bool get isSponsorMessage => senderRole == 'Sponsor';
+  bool get isFarmerMessage => senderRole == 'Farmer';
+
+  // For flutter_chat_ui compatibility
+  String get idAsString => id.toString();
+  String get text => message;
+  DateTime get createdAt => sentDate;
+
   factory Message.fromModel(MessageModel model) {
     return Message(
       id: model.id,

@@ -45,3 +45,13 @@ class RefreshMessagesEvent extends MessagingEvent {
   @override
   List<Object?> get props => [plantAnalysisId, farmerId];
 }
+
+// ✅ NEW: Event for real-time message updates from SignalR
+class NewMessageReceivedEvent extends MessagingEvent {
+  final Message message;
+
+  const NewMessageReceivedEvent(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}

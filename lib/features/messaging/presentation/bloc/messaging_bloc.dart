@@ -4,6 +4,7 @@ import 'package:injectable/injectable.dart';
 import '../../domain/entities/message.dart';
 import '../../domain/usecases/send_message_usecase.dart';
 import '../../domain/usecases/get_messages_usecase.dart';
+import '../../domain/usecases/check_can_reply_usecase.dart';
 
 part 'messaging_event.dart';
 part 'messaging_state.dart';
@@ -12,14 +13,17 @@ part 'messaging_state.dart';
 class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
   final SendMessageUseCase sendMessageUseCase;
   final GetMessagesUseCase getMessagesUseCase;
+  final CheckCanReplyUseCase checkCanReplyUseCase;
 
   MessagingBloc({
     required this.sendMessageUseCase,
     required this.getMessagesUseCase,
+    required this.checkCanReplyUseCase,
   }) : super(MessagingInitial()) {
     on<LoadMessagesEvent>(_onLoadMessages);
     on<SendMessageEvent>(_onSendMessage);
     on<RefreshMessagesEvent>(_onRefreshMessages);
+    on<NewMessageReceivedEvent>(_onNewMessageReceived);
   }
 
   Future<void> _onLoadMessages(
@@ -33,7 +37,14 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     );
     result.fold(
       (failure) => emit(MessagingError(failure.message)),
-      (messages) => emit(MessagesLoaded(messages: messages)),
+      (messages) {
+        // ✅ BUSINESS RULE: Check if farmer can reply
+        final canReply = checkCanReplyUseCase(messages);
+        emit(MessagesLoaded(
+          messages: messages,
+          canReply: canReply,
+        ));
+      },
     );
   }
 
@@ -44,6 +55,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     final currentState = state;
     if (currentState is! MessagesLoaded) return;
 
+    // Optimistic UI update
     emit(currentState.copyWith(isSending: true));
 
     final result = await sendMessageUseCase(
@@ -57,8 +69,18 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     );
 
     result.fold(
-      (failure) => emit(MessageSendError(failure.message, currentState.messages)),
-      (sentMessage) => emit(MessagesLoaded(messages: [...currentState.messages, sentMessage])),
+      (failure) {
+        emit(currentState.copyWith(isSending: false));
+        emit(MessageSendError(failure.message, currentState.messages));
+      },
+      (sentMessage) {
+        final updatedMessages = [...currentState.messages, sentMessage];
+        emit(MessagesLoaded(
+          messages: updatedMessages,
+          canReply: true, // Farmer can now reply after sending
+          isSending: false,
+        ));
+      },
     );
   }
 
@@ -72,7 +94,34 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     );
     result.fold(
       (failure) => null, // Keep current state on refresh error
-      (messages) => emit(MessagesLoaded(messages: messages)),
+      (messages) {
+        final canReply = checkCanReplyUseCase(messages);
+        emit(MessagesLoaded(
+          messages: messages,
+          canReply: canReply,
+        ));
+      },
     );
+  }
+
+  // ✅ NEW: Handle real-time messages from SignalR
+  void _onNewMessageReceived(
+    NewMessageReceivedEvent event,
+    Emitter<MessagingState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is! MessagesLoaded) return;
+
+    // Prevent duplicates
+    if (currentState.messages.any((msg) => msg.id == event.message.id)) {
+      return;
+    }
+
+    final updatedMessages = [...currentState.messages, event.message];
+
+    emit(MessagesLoaded(
+      messages: updatedMessages,
+      canReply: checkCanReplyUseCase(updatedMessages),
+    ));
   }
 }

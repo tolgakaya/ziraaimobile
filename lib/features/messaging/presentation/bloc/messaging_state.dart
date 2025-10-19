@@ -13,22 +13,26 @@ class MessagingLoading extends MessagingState {}
 
 class MessagesLoaded extends MessagingState {
   final List<Message> messages;
+  final bool canReply; // ✅ NEW: Farmer reply permission
   final bool isSending;
 
   const MessagesLoaded({
     required this.messages,
+    required this.canReply,
     this.isSending = false,
   });
 
   @override
-  List<Object?> get props => [messages, isSending];
+  List<Object?> get props => [messages, canReply, isSending];
 
   MessagesLoaded copyWith({
     List<Message>? messages,
+    bool? canReply,
     bool? isSending,
   }) {
     return MessagesLoaded(
       messages: messages ?? this.messages,
+      canReply: canReply ?? this.canReply,
       isSending: isSending ?? this.isSending,
     );
   }
