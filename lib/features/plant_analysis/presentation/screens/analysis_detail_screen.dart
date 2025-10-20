@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../messaging/presentation/pages/message_detail_page.dart';
+import '../../../messaging/presentation/pages/chat_conversation_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+import '../../../messaging/presentation/bloc/messaging_bloc.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
 import '../../data/models/plant_analysis_result.dart';
@@ -53,11 +55,13 @@ class AnalysisDetailScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => MessageDetailPage(
-                          plantAnalysisId: detail!.id!,
-                          farmerId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
-                          farmerName: detail.sponsorshipMetadata!.sponsorInfo.companyName,
-                          canMessage: true,
+                        builder: (context) => BlocProvider(
+                          create: (context) => GetIt.I<MessagingBloc>(),
+                          child: ChatConversationPage(
+                            plantAnalysisId: detail!.id!,
+                            farmerId: detail.userId!,
+                            sponsorUserId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
+                          ),
                         ),
                       ),
                     );

@@ -13,6 +13,9 @@ class SignalRService {
   Function(PlantAnalysisNotification)? onAnalysisCompleted;
   Function(int analysisId, String error)? onAnalysisFailed;
   Function(MessageNotification)? onNewMessage;
+  // ✅ NEW: Messaging enhancement callbacks
+  Function(int userId, String userName, int plantAnalysisId, bool isTyping)? onUserTyping;
+  Function(int messageId, int readByUserId, DateTime readAt)? onMessageRead;
 
   // Singleton pattern
   static final SignalRService _instance = SignalRService._internal();
@@ -225,6 +228,49 @@ class SignalRService {
       }
     });
 
+    // ✅ NEW: User typing indicator event
+    print('📝 SignalR: Registering UserTyping event...');
+    _hubConnection.on('UserTyping', (arguments) {
+      print('⌨️ SignalR: UserTyping event triggered!');
+      if (arguments != null && arguments.isNotEmpty) {
+        try {
+          final typingData = arguments[0] as Map<String, dynamic>;
+          final userId = typingData['userId'] as int;
+          final userName = typingData['userName'] as String;
+          final plantAnalysisId = typingData['plantAnalysisId'] as int;
+          final isTyping = typingData['isTyping'] as bool;
+
+          print('⌨️ SignalR: ${isTyping ? "Started" : "Stopped"} typing - User: $userName (ID: $userId), Analysis: $plantAnalysisId');
+
+          onUserTyping?.call(userId, userName, plantAnalysisId, isTyping);
+        } catch (e, stackTrace) {
+          print('❌ SignalR: Error parsing typing event: $e');
+          print('❌ SignalR: Stack trace: $stackTrace');
+        }
+      }
+    });
+
+    // ✅ NEW: Message read event
+    print('📝 SignalR: Registering MessageRead event...');
+    _hubConnection.on('MessageRead', (arguments) {
+      print('✅ SignalR: MessageRead event triggered!');
+      if (arguments != null && arguments.isNotEmpty) {
+        try {
+          final readData = arguments[0] as Map<String, dynamic>;
+          final messageId = readData['messageId'] as int;
+          final readByUserId = readData['readByUserId'] as int;
+          final readAt = DateTime.parse(readData['readAt'] as String);
+
+          print('✅ SignalR: Message $messageId read by user $readByUserId at $readAt');
+
+          onMessageRead?.call(messageId, readByUserId, readAt);
+        } catch (e, stackTrace) {
+          print('❌ SignalR: Error parsing message read event: $e');
+          print('❌ SignalR: Stack trace: $stackTrace');
+        }
+      }
+    });
+
     print('✅ SignalR: Event handlers registered successfully!');
   }
 
@@ -273,6 +319,42 @@ class SignalRService {
     }
   }
 
+  // ========================================
+  // ✅ NEW: Messaging Enhancement Methods
+  // ========================================
+
+  /// Send typing start event to other user
+  /// Backend method: StartTyping(int conversationUserId, int plantAnalysisId)
+  Future<void> sendTypingStart(int conversationUserId, int plantAnalysisId) async {
+    if (!_isConnected) {
+      print('⚠️ SignalR: Not connected, cannot send typing start');
+      return;
+    }
+
+    try {
+      await _hubConnection.invoke('StartTyping', args: [conversationUserId, plantAnalysisId]);
+      print('⌨️ SignalR: Typing start sent for analysis $plantAnalysisId');
+    } catch (e) {
+      print('❌ SignalR: Failed to send typing start: $e');
+    }
+  }
+
+  /// Send typing stop event to other user
+  /// Backend method: StopTyping(int conversationUserId, int plantAnalysisId)
+  Future<void> sendTypingStop(int conversationUserId, int plantAnalysisId) async {
+    if (!_isConnected) {
+      print('⚠️ SignalR: Not connected, cannot send typing stop');
+      return;
+    }
+
+    try {
+      await _hubConnection.invoke('StopTyping', args: [conversationUserId, plantAnalysisId]);
+      print('⌨️ SignalR: Typing stop sent for analysis $plantAnalysisId');
+    } catch (e) {
+      print('❌ SignalR: Failed to send typing stop: $e');
+    }
+  }
+
   /// Disconnect from SignalR
   Future<void> disconnect() async {
     if (!_isConnected) return;
@@ -295,5 +377,7 @@ class SignalRService {
     onAnalysisCompleted = null;
     onAnalysisFailed = null;
     onNewMessage = null;
+    onUserTyping = null;
+    onMessageRead = null;
   }
 }

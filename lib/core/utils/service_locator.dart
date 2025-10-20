@@ -20,7 +20,7 @@ import '../../features/authentication/domain/usecases/logout_user.dart';
 import '../../features/authentication/domain/usecases/get_current_user.dart';
 import '../../features/authentication/domain/usecases/reset_password.dart';
 import '../../features/authentication/domain/usecases/validate_session.dart';
-import '../../features/authentication/domain/usecases/authenticate_with_biometrics.dart';
+// import '../../features/authentication/domain/usecases/authenticate_with_biometrics.dart'; // REMOVED - biometric auth not implemented
 import '../../features/authentication/domain/repositories/auth_repository.dart';
 import '../../features/authentication/data/repositories/auth_repository_impl.dart';
 
@@ -115,7 +115,7 @@ void _initAuth() {
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
   sl.registerLazySingleton(() => ResetPassword(sl()));
   sl.registerLazySingleton(() => ValidateSession(sl()));
-  sl.registerLazySingleton(() => AuthenticateWithBiometrics(sl()));
+  // sl.registerLazySingleton(() => AuthenticateWithBiometrics(sl())); // REMOVED - biometric auth not implemented
 
   // BLoC
   sl.registerFactory(() => AuthBloc(sl()));

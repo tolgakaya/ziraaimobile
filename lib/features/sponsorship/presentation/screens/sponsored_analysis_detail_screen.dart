@@ -6,9 +6,12 @@ import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/config/api_config.dart';
 import '../../data/models/sponsored_analysis_detail.dart';
 import '../../../plant_analysis/data/models/plant_analysis_detail_dto.dart';
-import '../../../messaging/presentation/pages/message_detail_page.dart';
+import '../../../messaging/presentation/pages/chat_conversation_page.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import '../../../authentication/data/datasources/auth_local_datasource.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../messaging/presentation/bloc/messaging_bloc.dart';
 
 /// Sponsored Analysis Detail Screen
 /// EXACT COPY of farmer's analysis_detail_screen.dart design (images 1.png & 2.png)
@@ -108,15 +111,30 @@ class _SponsoredAnalysisDetailScreenState
           // if (!tier.canMessage) return const SizedBox.shrink();
 
           return FloatingActionButton.extended(
-            onPressed: () {
+            onPressed: () async {
+              // Get current sponsor ID from stored user data
+              final authDataSource = GetIt.I<AuthLocalDataSource>();
+              final user = await authDataSource.getStoredUser();
+
+              if (user == null) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Kullanıcı bilgisi bulunamadı')),
+                );
+                return;
+              }
+
+              if (!context.mounted) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => MessageDetailPage(
-                    plantAnalysisId: data.analysis.id,
-                    farmerId: data.analysis.userId ?? 0,
-                    farmerName: 'Çiftçi',
-                    canMessage: tier.canMessage,
+                  builder: (context) => BlocProvider(
+                    create: (context) => GetIt.I<MessagingBloc>(),
+                    child: ChatConversationPage(
+                      plantAnalysisId: data.analysis.id,
+                      farmerId: data.analysis.userId ?? 0,
+                      sponsorUserId: int.parse(user.id),
+                    ),
                   ),
                 ),
               );

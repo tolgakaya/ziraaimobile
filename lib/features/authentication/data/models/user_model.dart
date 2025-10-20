@@ -48,7 +48,7 @@ class UserModel {
       lastName: lastName,
       email: Email(email),
       phoneNumber: phoneNumber,
-      role: UserRole.fromString(role),
+      role: UserRole.fromString(role) ?? UserRole.farmer,
       profileImageUrl: profileImageUrl,
       createdAt: createdAt,
       lastLoginAt: lastLoginAt,

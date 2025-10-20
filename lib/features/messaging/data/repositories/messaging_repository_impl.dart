@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
@@ -5,6 +6,7 @@ import '../../../../core/error/failures.dart';
 import '../../domain/entities/message.dart';
 import '../../domain/entities/blocked_sponsor.dart';
 import '../../domain/entities/message_quota.dart';
+import '../../domain/entities/paginated_messages.dart';
 import '../../domain/repositories/messaging_repository.dart';
 import '../../domain/failures/messaging_failures.dart';
 import '../services/messaging_api_service.dart';
@@ -40,17 +42,31 @@ class MessagingRepositoryImpl implements MessagingRepository {
   }
 
   @override
-  Future<Either<Failure, List<Message>>> getMessages({
+  Future<Either<Failure, PaginatedMessages>> getMessages({
     required int plantAnalysisId,
-    required int farmerId,
+    required int otherUserId,
+    int page = 1,
+    int pageSize = 20,
   }) async {
     try {
-      final models = await _apiService.getMessages(
+      final response = await _apiService.getMessages(
         plantAnalysisId: plantAnalysisId,
-        farmerId: farmerId,
+        otherUserId: otherUserId,
+        page: page,
+        pageSize: pageSize,
       );
-      final messages = models.map((model) => Message.fromModel(model)).toList();
-      return Right(messages);
+      
+      final messages = response.data.map((model) => Message.fromModel(model)).toList();
+      
+      final paginatedMessages = PaginatedMessages(
+        messages: messages,
+        pageNumber: response.pageNumber,
+        pageSize: response.pageSize,
+        totalRecords: response.totalRecords,
+        totalPages: response.totalPages,
+      );
+      
+      return Right(paginatedMessages);
     } on DioException catch (e) {
       return Left(_handleDioException(e));
     } catch (e) {
@@ -106,6 +122,29 @@ class MessagingRepositoryImpl implements MessagingRepository {
     try {
       final model = await _apiService.getRemainingQuota(farmerId);
       return Right(MessageQuota.fromModel(model));
+    } on DioException catch (e) {
+      return Left(_handleDioException(e));
+    } catch (e) {
+      return Left(ServerFailure(message: 'Beklenmeyen bir hata oluştu: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Message>> sendMessageWithAttachments({
+    required int plantAnalysisId,
+    required int toUserId,
+    required String message,
+    required List<String> attachmentPaths,
+  }) async {
+    try {
+      final attachments = attachmentPaths.map((path) => File(path)).toList();
+      final model = await _apiService.sendMessageWithAttachments(
+        toUserId: toUserId,
+        plantAnalysisId: plantAnalysisId,
+        message: message,
+        attachments: attachments,
+      );
+      return Right(Message.fromModel(model));
     } on DioException catch (e) {
       return Left(_handleDioException(e));
     } catch (e) {

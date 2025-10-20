@@ -16,9 +16,6 @@ import '../../features/authentication/presentation/bloc/auth_bloc.dart';
 import '../../features/messaging/data/services/messaging_api_service.dart';
 import '../../features/messaging/data/repositories/messaging_repository_impl.dart';
 import '../../features/messaging/domain/repositories/messaging_repository.dart';
-import '../../features/messaging/domain/usecases/send_message_usecase.dart';
-import '../../features/messaging/domain/usecases/get_messages_usecase.dart';
-
 import 'injection.config.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -139,35 +136,4 @@ Future<void> configureDependencies() async {
 
   // Run injectable code generation - MUST be awaited
   await getIt.init();
-
-  // ✅ MESSAGING SERVICES FIX - Ensure they are registered
-  // Injectable might not register them properly, so we check and add if needed
-  if (!getIt.isRegistered<MessagingApiService>()) {
-    getIt.registerLazySingleton<MessagingApiService>(
-      () => MessagingApiService(getIt<NetworkClient>()),
-    );
-  }
-
-  if (!getIt.isRegistered<MessagingRepository>()) {
-    getIt.registerLazySingleton<MessagingRepository>(
-      () => MessagingRepositoryImpl(getIt<MessagingApiService>()),
-    );
-  }
-
-  if (!getIt.isRegistered<SendMessageUseCase>()) {
-    getIt.registerLazySingleton<SendMessageUseCase>(
-      () => SendMessageUseCase(getIt<MessagingRepository>()),
-    );
-  }
-
-  if (!getIt.isRegistered<GetMessagesUseCase>()) {
-    getIt.registerLazySingleton<GetMessagesUseCase>(
-      () => GetMessagesUseCase(getIt<MessagingRepository>()),
-    );
-  }
-
-  print('🔍 POST-INIT: MessagingApiService registered: ${getIt.isRegistered<MessagingApiService>()}');
-  print('🔍 POST-INIT: MessagingRepository registered: ${getIt.isRegistered<MessagingRepository>()}');
-  print('🔍 POST-INIT: SendMessageUseCase registered: ${getIt.isRegistered<SendMessageUseCase>()}');
-  print('🔍 POST-INIT: GetMessagesUseCase registered: ${getIt.isRegistered<GetMessagesUseCase>()}');
 }

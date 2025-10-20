@@ -13,23 +13,45 @@ class MessagingLoading extends MessagingState {}
 
 class MessagesLoaded extends MessagingState {
   final List<Message> messages;
+  final bool canReply; // ✅ Farmer reply permission
   final bool isSending;
+  final int currentPage;
+  final int totalPages;
+  final int totalRecords;
+  final bool isLoadingMore;
 
   const MessagesLoaded({
     required this.messages,
+    required this.canReply,
     this.isSending = false,
+    this.currentPage = 1,
+    this.totalPages = 1,
+    this.totalRecords = 0,
+    this.isLoadingMore = false,
   });
 
+  bool get hasMorePages => currentPage < totalPages;
+
   @override
-  List<Object?> get props => [messages, isSending];
+  List<Object?> get props => [messages, canReply, isSending, currentPage, totalPages, totalRecords, isLoadingMore];
 
   MessagesLoaded copyWith({
     List<Message>? messages,
+    bool? canReply,
     bool? isSending,
+    int? currentPage,
+    int? totalPages,
+    int? totalRecords,
+    bool? isLoadingMore,
   }) {
     return MessagesLoaded(
       messages: messages ?? this.messages,
+      canReply: canReply ?? this.canReply,
       isSending: isSending ?? this.isSending,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+      totalRecords: totalRecords ?? this.totalRecords,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 }

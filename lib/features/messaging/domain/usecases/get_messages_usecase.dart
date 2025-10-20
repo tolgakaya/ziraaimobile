@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/message.dart';
+import '../entities/paginated_messages.dart';
 import '../repositories/messaging_repository.dart';
 
 @lazySingleton
@@ -10,13 +11,17 @@ class GetMessagesUseCase {
 
   GetMessagesUseCase(this.repository);
 
-  Future<Either<Failure, List<Message>>> call({
+  Future<Either<Failure, PaginatedMessages>> call({
     required int plantAnalysisId,
-    required int farmerId,
+    required int otherUserId,
+    int page = 1,
+    int pageSize = 20,
   }) async {
     return await repository.getMessages(
       plantAnalysisId: plantAnalysisId,
-      farmerId: farmerId,
+      otherUserId: otherUserId,
+      page: page,
+      pageSize: pageSize,
     );
   }
 }
