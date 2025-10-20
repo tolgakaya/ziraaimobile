@@ -375,7 +375,7 @@ packages:
     source: hosted
     version: "9.1.1"
   flutter_chat_core:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_chat_core
       sha256: "113f9b0c2c9f8fb77a40d298084d99b28ff4876f99598ad01bea8b731f1acc20"
@@ -386,10 +386,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_chat_ui
-      sha256: "08a13577ea943d7965e3b1766d3a2119b07b56aced5336900ab7fb4c377d4ca0"
+      sha256: aafab2afe71c034ec6353a2b109cbaba73ce4be572692ebd29889e4d82227b49
       url: "https://pub.dev"
     source: hosted
-    version: "2.9.1"
+    version: "2.9.0"
   flutter_contacts:
     dependency: "direct main"
     description:

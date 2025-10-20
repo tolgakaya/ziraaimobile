@@ -4,7 +4,7 @@ import 'package:injectable/injectable.dart';
 import '../../domain/entities/message.dart';
 import '../../domain/usecases/send_message_usecase.dart';
 import '../../domain/usecases/get_messages_usecase.dart';
-import '../../domain/usecases/check_can_reply_usecase.dart';
+import '../../domain/usecases/send_message_with_attachments_usecase.dart';
 
 part 'messaging_event.dart';
 part 'messaging_state.dart';
@@ -13,17 +13,24 @@ part 'messaging_state.dart';
 class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
   final SendMessageUseCase sendMessageUseCase;
   final GetMessagesUseCase getMessagesUseCase;
-  final CheckCanReplyUseCase checkCanReplyUseCase;
+  final SendMessageWithAttachmentsUseCase sendMessageWithAttachmentsUseCase;
 
   MessagingBloc({
     required this.sendMessageUseCase,
     required this.getMessagesUseCase,
-    required this.checkCanReplyUseCase,
+    required this.sendMessageWithAttachmentsUseCase,
   }) : super(MessagingInitial()) {
     on<LoadMessagesEvent>(_onLoadMessages);
     on<SendMessageEvent>(_onSendMessage);
+    on<SendMessageWithAttachmentsEvent>(_onSendMessageWithAttachments);
     on<RefreshMessagesEvent>(_onRefreshMessages);
     on<NewMessageReceivedEvent>(_onNewMessageReceived);
+    on<LoadMoreMessagesEvent>(_onLoadMoreMessages);
+  }
+
+  /// Business rule: Farmer can reply only if sponsor has sent at least one message
+  bool _canFarmerReply(List<Message> messages) {
+    return messages.any((msg) => msg.senderRole == 'Sponsor');
   }
 
   Future<void> _onLoadMessages(
@@ -33,16 +40,21 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     emit(MessagingLoading());
     final result = await getMessagesUseCase(
       plantAnalysisId: event.plantAnalysisId,
-      farmerId: event.farmerId,
+      otherUserId: event.otherUserId,
+      page: 1,
+      pageSize: 20,
     );
     result.fold(
       (failure) => emit(MessagingError(failure.message)),
-      (messages) {
+      (paginatedMessages) {
         // ✅ BUSINESS RULE: Check if farmer can reply
-        final canReply = checkCanReplyUseCase(messages);
+        final canReply = _canFarmerReply(paginatedMessages.messages);
         emit(MessagesLoaded(
-          messages: messages,
+          messages: paginatedMessages.messages,
           canReply: canReply,
+          currentPage: paginatedMessages.pageNumber,
+          totalPages: paginatedMessages.totalPages,
+          totalRecords: paginatedMessages.totalRecords,
         ));
       },
     );
@@ -77,7 +89,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         final updatedMessages = [...currentState.messages, sentMessage];
         emit(MessagesLoaded(
           messages: updatedMessages,
-          canReply: true, // Farmer can now reply after sending
+          canReply: _canFarmerReply(updatedMessages),
           isSending: false,
         ));
       },
@@ -90,15 +102,53 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
   ) async {
     final result = await getMessagesUseCase(
       plantAnalysisId: event.plantAnalysisId,
-      farmerId: event.farmerId,
+      otherUserId: event.otherUserId,
+      page: 1,
+      pageSize: 20,
     );
     result.fold(
       (failure) => null, // Keep current state on refresh error
-      (messages) {
-        final canReply = checkCanReplyUseCase(messages);
+      (paginatedMessages) {
+        final canReply = _canFarmerReply(paginatedMessages.messages);
         emit(MessagesLoaded(
-          messages: messages,
+          messages: paginatedMessages.messages,
           canReply: canReply,
+          currentPage: paginatedMessages.pageNumber,
+          totalPages: paginatedMessages.totalPages,
+          totalRecords: paginatedMessages.totalRecords,
+        ));
+      },
+    );
+  }
+
+  Future<void> _onSendMessageWithAttachments(
+    SendMessageWithAttachmentsEvent event,
+    Emitter<MessagingState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! MessagesLoaded) return;
+
+    // Optimistic UI update - show uploading state
+    emit(currentState.copyWith(isSending: true));
+
+    final result = await sendMessageWithAttachmentsUseCase(
+      plantAnalysisId: event.plantAnalysisId,
+      toUserId: event.toUserId,
+      message: event.message,
+      attachmentPaths: event.attachmentPaths,
+    );
+
+    result.fold(
+      (failure) {
+        emit(currentState.copyWith(isSending: false));
+        emit(MessageSendError(failure.message, currentState.messages));
+      },
+      (sentMessage) {
+        final updatedMessages = [...currentState.messages, sentMessage];
+        emit(MessagesLoaded(
+          messages: updatedMessages,
+          canReply: _canFarmerReply(updatedMessages),
+          isSending: false,
         ));
       },
     );
@@ -121,7 +171,55 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
 
     emit(MessagesLoaded(
       messages: updatedMessages,
-      canReply: checkCanReplyUseCase(updatedMessages),
+      canReply: _canFarmerReply(updatedMessages),
     ));
+  }
+
+  // ✅ NEW: Handle load more messages (pagination)
+  Future<void> _onLoadMoreMessages(
+    LoadMoreMessagesEvent event,
+    Emitter<MessagingState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! MessagesLoaded) return;
+
+    // Don't load if already loading or no more pages
+    if (currentState.isLoadingMore || !currentState.hasMorePages) {
+      return;
+    }
+
+    // Set loading more state
+    emit(currentState.copyWith(isLoadingMore: true));
+
+    final nextPage = currentState.currentPage + 1;
+    final result = await getMessagesUseCase(
+      plantAnalysisId: event.plantAnalysisId,
+      otherUserId: event.otherUserId,
+      page: nextPage,
+      pageSize: 20,
+    );
+
+    result.fold(
+      (failure) {
+        // On error, revert loading state
+        emit(currentState.copyWith(isLoadingMore: false));
+      },
+      (paginatedMessages) {
+        // Append new messages to existing ones
+        final updatedMessages = [
+          ...currentState.messages,
+          ...paginatedMessages.messages,
+        ];
+
+        emit(MessagesLoaded(
+          messages: updatedMessages,
+          canReply: _canFarmerReply(updatedMessages),
+          currentPage: paginatedMessages.pageNumber,
+          totalPages: paginatedMessages.totalPages,
+          totalRecords: paginatedMessages.totalRecords,
+          isLoadingMore: false,
+        ));
+      },
+    );
   }
 }

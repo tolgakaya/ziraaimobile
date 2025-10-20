@@ -3,6 +3,7 @@ import '../../../../core/error/failures.dart';
 import '../entities/message.dart';
 import '../entities/blocked_sponsor.dart';
 import '../entities/message_quota.dart';
+import '../entities/paginated_messages.dart';
 
 abstract class MessagingRepository {
   Future<Either<Failure, Message>> sendMessage({
@@ -13,9 +14,11 @@ abstract class MessagingRepository {
     String? subject,
   });
 
-  Future<Either<Failure, List<Message>>> getMessages({
+  Future<Either<Failure, PaginatedMessages>> getMessages({
     required int plantAnalysisId,
-    required int farmerId,
+    required int otherUserId,
+    int page = 1,
+    int pageSize = 20,
   });
 
   Future<Either<Failure, Unit>> blockSponsor({
@@ -28,4 +31,13 @@ abstract class MessagingRepository {
   Future<Either<Failure, List<BlockedSponsor>>> getBlockedSponsors();
 
   Future<Either<Failure, MessageQuota>> getRemainingQuota(int farmerId);
+
+  /// Send message with image/file attachments
+  /// fromUserId is automatically extracted from JWT token by backend
+  Future<Either<Failure, Message>> sendMessageWithAttachments({
+    required int plantAnalysisId,
+    required int toUserId,
+    required String message,
+    required List<String> attachmentPaths,
+  });
 }

@@ -9,12 +9,12 @@ abstract class MessagingEvent extends Equatable {
 
 class LoadMessagesEvent extends MessagingEvent {
   final int plantAnalysisId;
-  final int farmerId;
+  final int otherUserId;
 
-  const LoadMessagesEvent(this.plantAnalysisId, this.farmerId);
+  const LoadMessagesEvent(this.plantAnalysisId, this.otherUserId);
 
   @override
-  List<Object?> get props => [plantAnalysisId, farmerId];
+  List<Object?> get props => [plantAnalysisId, otherUserId];
 }
 
 class SendMessageEvent extends MessagingEvent {
@@ -38,12 +38,12 @@ class SendMessageEvent extends MessagingEvent {
 
 class RefreshMessagesEvent extends MessagingEvent {
   final int plantAnalysisId;
-  final int farmerId;
+  final int otherUserId;
 
-  const RefreshMessagesEvent(this.plantAnalysisId, this.farmerId);
+  const RefreshMessagesEvent(this.plantAnalysisId, this.otherUserId);
 
   @override
-  List<Object?> get props => [plantAnalysisId, farmerId];
+  List<Object?> get props => [plantAnalysisId, otherUserId];
 }
 
 // ✅ NEW: Event for real-time message updates from SignalR
@@ -54,4 +54,34 @@ class NewMessageReceivedEvent extends MessagingEvent {
 
   @override
   List<Object?> get props => [message];
+}
+
+// ✅ NEW: Event for sending message with attachments
+// fromUserId is automatically extracted from JWT token by backend
+class SendMessageWithAttachmentsEvent extends MessagingEvent {
+  final int plantAnalysisId;
+  final int toUserId;
+  final String message;
+  final List<String> attachmentPaths;
+
+  const SendMessageWithAttachmentsEvent({
+    required this.plantAnalysisId,
+    required this.toUserId,
+    required this.message,
+    required this.attachmentPaths,
+  });
+
+  @override
+  List<Object?> get props => [plantAnalysisId, toUserId, message, attachmentPaths];
+}
+
+// ✅ NEW: Event for loading more messages (pagination)
+class LoadMoreMessagesEvent extends MessagingEvent {
+  final int plantAnalysisId;
+  final int otherUserId;
+
+  const LoadMoreMessagesEvent(this.plantAnalysisId, this.otherUserId);
+
+  @override
+  List<Object?> get props => [plantAnalysisId, otherUserId];
 }

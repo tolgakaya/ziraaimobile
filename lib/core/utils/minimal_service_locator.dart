@@ -29,6 +29,8 @@ import '../../features/messaging/data/repositories/messaging_repository_impl.dar
 import '../../features/messaging/domain/repositories/messaging_repository.dart';
 import '../../features/messaging/domain/usecases/send_message_usecase.dart';
 import '../../features/messaging/domain/usecases/get_messages_usecase.dart';
+import '../../features/messaging/domain/usecases/send_message_with_attachments_usecase.dart';
+import '../../features/messaging/presentation/bloc/messaging_bloc.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -171,6 +173,18 @@ Future<void> setupMinimalServiceLocator() async {
 
   getIt.registerLazySingleton<GetMessagesUseCase>(
     () => GetMessagesUseCase(getIt<MessagingRepository>()),
+  );
+
+  getIt.registerLazySingleton<SendMessageWithAttachmentsUseCase>(
+    () => SendMessageWithAttachmentsUseCase(getIt<MessagingRepository>()),
+  );
+
+  getIt.registerFactory<MessagingBloc>(
+    () => MessagingBloc(
+      sendMessageUseCase: getIt<SendMessageUseCase>(),
+      getMessagesUseCase: getIt<GetMessagesUseCase>(),
+      sendMessageWithAttachmentsUseCase: getIt<SendMessageWithAttachmentsUseCase>(),
+    ),
   );
 
   print('✅ MESSAGING: All messaging services registered successfully!');
