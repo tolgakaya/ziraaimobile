@@ -35,6 +35,7 @@ class Message extends Equatable {
   final bool hasAttachments;
   final int attachmentCount;
   final List<String>? attachmentUrls;
+  final List<String>? attachmentThumbnails;  // ✅ NEW: Thumbnail URLs
   final List<String>? attachmentTypes;
   final List<int>? attachmentSizes;
   final List<String>? attachmentNames;
@@ -80,6 +81,7 @@ class Message extends Equatable {
     this.hasAttachments = false,
     this.attachmentCount = 0,
     this.attachmentUrls,
+    this.attachmentThumbnails,  // ✅ NEW
     this.attachmentTypes,
     this.attachmentSizes,
     this.attachmentNames,
@@ -135,6 +137,7 @@ class Message extends Equatable {
       hasAttachments: model.hasAttachments,
       attachmentCount: model.attachmentCount,
       attachmentUrls: model.attachmentUrls,
+      attachmentThumbnails: model.attachmentThumbnails,  // ✅ NEW
       attachmentTypes: model.attachmentTypes,
       attachmentSizes: model.attachmentSizes,
       attachmentNames: model.attachmentNames,
@@ -176,6 +179,7 @@ class Message extends Equatable {
         hasAttachments,
         attachmentCount,
         attachmentUrls,
+        attachmentThumbnails,  // ✅ NEW
         attachmentTypes,
         attachmentSizes,
         attachmentNames,

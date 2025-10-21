@@ -39,6 +39,7 @@ class MessageModel {
   final bool hasAttachments;
   final int attachmentCount;
   final List<String>? attachmentUrls;
+  final List<String>? attachmentThumbnails;  // ✅ NEW: Thumbnail URLs
   final List<String>? attachmentTypes;
   final List<int>? attachmentSizes;
   final List<String>? attachmentNames;
@@ -84,6 +85,7 @@ class MessageModel {
     this.hasAttachments = false,
     this.attachmentCount = 0,
     this.attachmentUrls,
+    this.attachmentThumbnails,  // ✅ NEW: Thumbnail URLs
     this.attachmentTypes,
     this.attachmentSizes,
     this.attachmentNames,
@@ -130,6 +132,7 @@ class MessageModel {
       hasAttachments: json['hasAttachments'] as bool? ?? false,
       attachmentCount: json['attachmentCount'] as int? ?? 0,
       attachmentUrls: (json['attachmentUrls'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      attachmentThumbnails: (json['attachmentThumbnails'] as List<dynamic>?)?.map((e) => e as String).toList(),  // ✅ NEW
       attachmentTypes: (json['attachmentTypes'] as List<dynamic>?)?.map((e) => e as String).toList(),
       attachmentSizes: (json['attachmentSizes'] as List<dynamic>?)?.map((e) => e as int).toList(),
       attachmentNames: (json['attachmentNames'] as List<dynamic>?)?.map((e) => e as String).toList(),

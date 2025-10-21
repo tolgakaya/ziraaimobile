@@ -268,6 +268,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           'senderAvatarUrl': msg.senderAvatarUrl,
           'senderAvatarThumbnailUrl': msg.senderAvatarThumbnailUrl,
           'attachmentUrls': msg.attachmentUrls,
+          'attachmentThumbnails': msg.attachmentThumbnails,  // ✅ NEW: Thumbnail URLs
           'hasAttachments': msg.hasAttachments,
           // ✅ NEW: Voice message metadata
           'isVoiceMessage': msg.isVoiceMessage,
