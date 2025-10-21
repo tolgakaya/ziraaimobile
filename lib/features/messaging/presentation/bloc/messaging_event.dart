@@ -85,3 +85,34 @@ class LoadMoreMessagesEvent extends MessagingEvent {
   @override
   List<Object?> get props => [plantAnalysisId, otherUserId];
 }
+
+// ✅ NEW: Event for sending voice message
+class SendVoiceMessageEvent extends MessagingEvent {
+  final int plantAnalysisId;
+  final int toUserId;
+  final String voiceFilePath;
+  final int duration;
+  final List<double>? waveform;
+
+  const SendVoiceMessageEvent({
+    required this.plantAnalysisId,
+    required this.toUserId,
+    required this.voiceFilePath,
+    required this.duration,
+    this.waveform,
+  });
+
+  @override
+  List<Object?> get props => [plantAnalysisId, toUserId, voiceFilePath, duration, waveform];
+}
+
+// ✅ NEW: Event for loading messaging features (tier-based)
+// ⚠️ BREAKING CHANGE: Now requires plantAnalysisId
+class LoadMessagingFeaturesEvent extends MessagingEvent {
+  final int plantAnalysisId;
+
+  const LoadMessagingFeaturesEvent({required this.plantAnalysisId});
+
+  @override
+  List<Object?> get props => [plantAnalysisId];
+}

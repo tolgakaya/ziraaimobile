@@ -61,6 +61,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                             plantAnalysisId: detail!.id!,
                             farmerId: detail.userId!,
                             sponsorUserId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
+                            sponsorshipTier: detail.sponsorshipMetadata!.tierName,
                           ),
                         ),
                       ),
