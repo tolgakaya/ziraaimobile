@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart' as chat_ui;
 import 'package:flutter_chat_core/flutter_chat_core.dart' as chat_core;
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../injection_container.dart';
 import '../bloc/messaging_bloc.dart';
 import '../widgets/voice_recorder_widget.dart';
 import '../widgets/voice_message_player.dart';
@@ -39,10 +42,17 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   final List<XFile> _selectedImages = [];
   bool _isRecordingVoice = false;
 
+  // JWT token for secure file access
+  final AuthService _authService = getIt<AuthService>();
+  String? _jwtToken;
+
   @override
   void initState() {
     super.initState();
     _currentUserId = widget.farmerId.toString();
+
+    // Get JWT token for secure file access
+    _loadJwtToken();
 
     // Load messages - for farmer, the "other user" is the sponsor
     context.read<MessagingBloc>().add(
@@ -53,6 +63,15 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     context.read<MessagingBloc>().add(
       LoadMessagingFeaturesEvent(plantAnalysisId: widget.plantAnalysisId),
     );
+  }
+
+  Future<void> _loadJwtToken() async {
+    final token = await _authService.getToken();
+    if (mounted) {
+      setState(() {
+        _jwtToken = token;
+      });
+    }
   }
 
   @override
@@ -456,12 +475,21 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   }
 
   /// Open image gallery in full screen
+  /// ✅ SECURITY: Passes JWT token for secure file access
   void _openImageGallery(List<String> imageUrls, int initialIndex) {
+    if (_jwtToken == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Oturum gerekli. Lütfen tekrar giriş yapın.')),
+      );
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => _FullScreenImageGallery(
           imageUrls: imageUrls,
           initialIndex: initialIndex,
+          jwtToken: _jwtToken!,
         ),
       ),
     );
@@ -579,9 +607,32 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   }
 
   /// Build attachment grid for messages with images
+  /// ✅ SECURITY: Uses CachedNetworkImage with JWT authentication headers
   Widget _buildAttachmentGrid(List<String>? attachmentUrls) {
     if (attachmentUrls == null || attachmentUrls.isEmpty) {
       return const SizedBox.shrink();
+    }
+
+    // If JWT token not available, show authentication required message
+    if (_jwtToken == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.lock_outline, color: Colors.red, size: 16),
+            SizedBox(width: 8),
+            Text(
+              'Dosyaları görüntülemek için oturum gerekli',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ],
+        ),
+      );
     }
 
     return GridView.builder(
@@ -602,24 +653,23 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
             child: Stack(
               fit: StackFit.expand,
             children: [
-              Image.network(
-                url,
+              // ✅ SECURITY: CachedNetworkImage with JWT authentication
+              CachedNetworkImage(
+                imageUrl: url,
+                httpHeaders: {
+                  'Authorization': 'Bearer $_jwtToken',
+                },
                 fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                  );
-                },
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                ),
               ),
               // Show count indicator if more than 4 images
               if (index == 3 && attachmentUrls.length > 4)
@@ -651,13 +701,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     final attachmentUrls = message.metadata?['attachmentUrls'] as List<String>?;
     final hasAttachments = attachmentUrls != null && attachmentUrls.isNotEmpty;
 
-    // ✅ NEW: Voice message support
+    // ✅ Voice message support with secure API endpoints
     final isVoiceMessage = message.metadata?['isVoiceMessage'] as bool? ?? false;
-    var voiceMessageUrl = message.metadata?['voiceMessageUrl'] as String?;
-    // ⚠️ HOTFIX: Backend sometimes returns HTTP instead of HTTPS, fix it here
-    if (voiceMessageUrl != null && voiceMessageUrl.startsWith('http://')) {
-      voiceMessageUrl = voiceMessageUrl.replaceFirst('http://', 'https://');
-    }
+    final voiceMessageUrl = message.metadata?['voiceMessageUrl'] as String?;
+    // ✅ No HTTP→HTTPS hotfix needed - backend now returns secure API endpoints
     final voiceMessageDuration = message.metadata?['voiceMessageDuration'] as int? ?? 0;
     final voiceMessageWaveform = message.metadata?['voiceMessageWaveform'] as List<double>?;
 
@@ -689,13 +736,34 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ✅ NEW: Voice message player (if voice message)
-                      if (isVoiceMessage && voiceMessageUrl != null)
+                      // ✅ Voice message player with JWT authentication
+                      if (isVoiceMessage && voiceMessageUrl != null && _jwtToken != null)
                         VoiceMessagePlayer(
                           voiceUrl: voiceMessageUrl,
                           duration: voiceMessageDuration,
+                          jwtToken: _jwtToken!,
                           waveform: voiceMessageWaveform,
                           isFromCurrentUser: isSentByMe,
+                        )
+                      // Show error if voice message but no token
+                      else if (isVoiceMessage && voiceMessageUrl != null && _jwtToken == null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.error_outline, color: Colors.red, size: 16),
+                              SizedBox(width: 8),
+                              Text(
+                                'Oturum gerekli',
+                                style: TextStyle(color: Colors.red, fontSize: 12),
+                              ),
+                            ],
+                          ),
                         )
                       // Attachment grid (if present and not voice message)
                       else if (hasAttachments) ...[
@@ -877,13 +945,17 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 }
 
 /// Full-screen image gallery viewer
+/// Full-screen image gallery with secure file access
+/// ✅ SECURITY: Requires JWT authentication for viewing attachments
 class _FullScreenImageGallery extends StatefulWidget {
   final List<String> imageUrls;
   final int initialIndex;
+  final String jwtToken;
 
   const _FullScreenImageGallery({
     required this.imageUrls,
     required this.initialIndex,
+    required this.jwtToken,
   });
 
   @override
@@ -944,36 +1016,31 @@ class _FullScreenImageGalleryState extends State<_FullScreenImageGallery> {
             minScale: 0.5,
             maxScale: 4.0,
             child: Center(
-              child: Image.network(
-                widget.imageUrls[index],
+              // ✅ SECURITY: CachedNetworkImage with JWT authentication
+              child: CachedNetworkImage(
+                imageUrl: widget.imageUrls[index],
+                httpHeaders: {
+                  'Authorization': 'Bearer ${widget.jwtToken}',
+                },
                 fit: BoxFit.contain,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                      color: Colors.white,
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.broken_image, color: Colors.white, size: 64),
-                        SizedBox(height: 16),
-                        Text(
-                          'Resim yüklenemedi',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                placeholder: (context, url) => Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                  ),
+                ),
+                errorWidget: (context, url, error) => const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image, color: Colors.white, size: 64),
+                      SizedBox(height: 16),
+                      Text(
+                        'Resim yüklenemedi',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           );

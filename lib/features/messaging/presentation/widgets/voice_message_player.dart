@@ -3,16 +3,21 @@ import 'package:audioplayers/audioplayers.dart';
 
 /// Voice message player widget with playback controls
 /// Displays waveform and allows playing/pausing voice messages
+///
+/// ⚠️ SECURITY: Requires JWT authentication for secure file access
+/// Voice messages are accessed via secure API endpoints
 class VoiceMessagePlayer extends StatefulWidget {
   final String voiceUrl;
   final int duration; // in seconds
   final List<double>? waveform;
   final bool isFromCurrentUser;
+  final String jwtToken; // JWT token for secure file access
 
   const VoiceMessagePlayer({
     Key? key,
     required this.voiceUrl,
     required this.duration,
+    required this.jwtToken,
     this.waveform,
     this.isFromCurrentUser = false,
   }) : super(key: key);
@@ -87,13 +92,35 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         await _audioPlayer.pause();
       } else {
         if (_currentPosition == Duration.zero) {
-          await _audioPlayer.play(UrlSource(widget.voiceUrl));
+          setState(() => _isLoading = true);
+
+          // ✅ SECURITY: Play with JWT authentication header
+          await _audioPlayer.play(
+            UrlSource(widget.voiceUrl),
+            headers: {
+              'Authorization': 'Bearer ${widget.jwtToken}',
+            },
+          );
+
+          setState(() => _isLoading = false);
         } else {
           await _audioPlayer.resume();
         }
       }
     } catch (e) {
-      _showErrorDialog('Ses çalınamadı: ${e.toString()}');
+      setState(() => _isLoading = false);
+
+      // Enhanced error handling for different HTTP status codes
+      final errorMessage = e.toString();
+      if (errorMessage.contains('401')) {
+        _showErrorDialog('Oturum süreniz doldu. Lütfen tekrar giriş yapın.');
+      } else if (errorMessage.contains('403')) {
+        _showErrorDialog('Bu ses mesajına erişim yetkiniz yok.');
+      } else if (errorMessage.contains('404')) {
+        _showErrorDialog('Ses mesajı bulunamadı.');
+      } else {
+        _showErrorDialog('Ses çalınamadı: ${e.toString()}');
+      }
     }
   }
 
