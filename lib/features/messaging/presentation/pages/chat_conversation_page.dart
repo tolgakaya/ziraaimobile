@@ -703,7 +703,14 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
     // ✅ Voice message support with secure HTTPS API endpoints
     final isVoiceMessage = message.metadata?['isVoiceMessage'] as bool? ?? false;
-    final voiceMessageUrl = message.metadata?['voiceMessageUrl'] as String?;
+    var voiceMessageUrl = message.metadata?['voiceMessageUrl'] as String?;
+
+    // ⚠️ HOTFIX: Convert HTTP to HTTPS for backward compatibility
+    // Some old messages may still have HTTP URLs cached
+    if (voiceMessageUrl != null && voiceMessageUrl.startsWith('http://')) {
+      voiceMessageUrl = voiceMessageUrl.replaceFirst('http://', 'https://');
+    }
+
     final voiceMessageDuration = message.metadata?['voiceMessageDuration'] as int? ?? 0;
     final voiceMessageWaveform = message.metadata?['voiceMessageWaveform'] as List<double>?;
 
