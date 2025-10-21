@@ -698,41 +698,16 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   Widget _buildTextMessageWithAvatarStatus(chat_core.TextMessage message, bool isSentByMe) {
     final avatarUrl = message.metadata?['senderAvatarThumbnailUrl'] as String?;
     final messageStatus = message.metadata?['messageStatus'] as String?;
-    var attachmentUrls = message.metadata?['attachmentUrls'] as List<String>?;
-
-    // ⚠️ TEMPORARY HOTFIX: Backend returns HTTP instead of HTTPS for attachments
-    // TODO: Remove this once backend is fixed to return HTTPS URLs
-    if (attachmentUrls != null) {
-      attachmentUrls = attachmentUrls.map((url) {
-        if (url.startsWith('http://')) {
-          final httpsUrl = url.replaceFirst('http://', 'https://');
-          print('⚠️ HOTFIX: Converted attachment HTTP to HTTPS: $httpsUrl');
-          return httpsUrl;
-        }
-        return url;
-      }).toList();
-    }
-
+    final attachmentUrls = message.metadata?['attachmentUrls'] as List<String>?;
     final hasAttachments = attachmentUrls != null && attachmentUrls.isNotEmpty;
 
-    // ✅ Voice message support with secure API endpoints
+    // ✅ Voice message support with secure HTTPS API endpoints
     final isVoiceMessage = message.metadata?['isVoiceMessage'] as bool? ?? false;
-    var voiceMessageUrl = message.metadata?['voiceMessageUrl'] as String?;
-
-    // ⚠️ TEMPORARY HOTFIX: Backend returns HTTP instead of HTTPS
-    // TODO: Remove this once backend is fixed to return HTTPS URLs
-    if (voiceMessageUrl != null && voiceMessageUrl.startsWith('http://')) {
-      voiceMessageUrl = voiceMessageUrl.replaceFirst('http://', 'https://');
-      print('⚠️ HOTFIX: Converted HTTP to HTTPS: $voiceMessageUrl');
-    }
-
+    final voiceMessageUrl = message.metadata?['voiceMessageUrl'] as String?;
     final voiceMessageDuration = message.metadata?['voiceMessageDuration'] as int? ?? 0;
     final voiceMessageWaveform = message.metadata?['voiceMessageWaveform'] as List<double>?;
 
     print('🎯 _buildTextMessageWithAvatarStatus: avatarUrl=$avatarUrl, status=$messageStatus, attachments=${attachmentUrls?.length ?? 0}, isVoice=$isVoiceMessage');
-    if (isVoiceMessage) {
-      print('🎵 Voice Message URL: $voiceMessageUrl');
-    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
