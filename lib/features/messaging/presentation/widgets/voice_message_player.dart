@@ -94,6 +94,12 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         if (_currentPosition == Duration.zero) {
           setState(() => _isLoading = true);
 
+          // 🔍 DEBUG: Log the URL being played
+          print('🎵 VoiceMessagePlayer: Attempting to play URL: ${widget.voiceUrl}');
+          print('🔑 VoiceMessagePlayer: JWT token present: ${widget.jwtToken.isNotEmpty}');
+          print('🔑 VoiceMessagePlayer: JWT token (first 50 chars): ${widget.jwtToken.substring(0, widget.jwtToken.length > 50 ? 50 : widget.jwtToken.length)}...');
+          print('📋 VoiceMessagePlayer: Full headers: ${{'Authorization': 'Bearer ${widget.jwtToken}'}}');
+
           // ✅ SECURITY: Set audio source with JWT authentication header
           await _audioPlayer.setAudioSource(
             AudioSource.uri(
@@ -112,6 +118,9 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
+
+      // 🔍 DEBUG: Log the error
+      print('❌ VoiceMessagePlayer ERROR: ${e.toString()}');
 
       // Enhanced error handling for different HTTP status codes
       final errorMessage = e.toString();
