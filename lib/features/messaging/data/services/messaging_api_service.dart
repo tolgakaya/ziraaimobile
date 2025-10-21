@@ -7,7 +7,7 @@ import '../models/message_model.dart';
 import '../models/paginated_conversation_response.dart';
 import '../models/blocked_sponsor_model.dart';
 import '../models/message_quota_model.dart';
-import '../models/messaging_feature_model.dart';
+import '../models/messaging_features_model.dart';
 
 @lazySingleton
 class MessagingApiService {
@@ -154,12 +154,16 @@ class MessagingApiService {
   // ========================================
 
   /// Get user's available messaging features (tier-based)
-  /// GET /sponsorship/messaging/features
-  Future<MessagingFeaturesResponse> getAvailableFeatures() async {
-    final response = await _networkClient.get('/sponsorship/messaging/features');
+  /// GET /sponsorship/messaging/features?plantAnalysisId={analysisId}
+  /// ⚠️ BREAKING CHANGE: plantAnalysisId is now REQUIRED
+  Future<MessagingFeaturesModel> getAvailableFeatures({required int plantAnalysisId}) async {
+    final response = await _networkClient.get(
+      '/sponsorship/messaging/features',
+      queryParameters: {'plantAnalysisId': plantAnalysisId},
+    );
 
     if (response.data['success'] == true) {
-      return MessagingFeaturesResponse.fromJson(response.data['data']);
+      return MessagingFeaturesModel.fromJson(response.data['data']);
     } else {
       throw DioException(
         requestOptions: response.requestOptions,

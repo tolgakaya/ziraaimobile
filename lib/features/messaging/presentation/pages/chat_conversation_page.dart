@@ -6,12 +6,15 @@ import 'package:flutter_chat_core/flutter_chat_core.dart' as chat_core;
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../bloc/messaging_bloc.dart';
+import '../widgets/voice_recorder_widget.dart';
+import '../widgets/voice_message_player.dart';
 
 /// Chat conversation page with avatar and status enhancements
 class ChatConversationPage extends StatefulWidget {
   final int plantAnalysisId;
   final int farmerId;
   final int sponsorUserId;
+  final String sponsorshipTier; // NEW: Used sponsorship tier (S, M, L, XL)
   final String? analysisImageUrl;
   final String? analysisSummary;
 
@@ -20,6 +23,7 @@ class ChatConversationPage extends StatefulWidget {
     required this.plantAnalysisId,
     required this.farmerId,
     required this.sponsorUserId,
+    required this.sponsorshipTier,
     this.analysisImageUrl,
     this.analysisSummary,
   }) : super(key: key);
@@ -33,6 +37,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   late final String _currentUserId;
   final _imagePicker = ImagePicker();
   final List<XFile> _selectedImages = [];
+  bool _isRecordingVoice = false;
 
   @override
   void initState() {
@@ -42,6 +47,11 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     // Load messages - for farmer, the "other user" is the sponsor
     context.read<MessagingBloc>().add(
       LoadMessagesEvent(widget.plantAnalysisId, widget.sponsorUserId),
+    );
+
+    // Load messaging features (tier-based) for this specific analysis
+    context.read<MessagingBloc>().add(
+      LoadMessagingFeaturesEvent(plantAnalysisId: widget.plantAnalysisId),
     );
   }
 
@@ -176,19 +186,40 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                       onMessageSend: _sendWithAttachments,
                       builders: customBuilders,
                     ),
-                    // Attachment button positioned over input area
-                    Positioned(
-                      bottom: 16,
-                      left: 16,
-                      child: FloatingActionButton.small(
-                        onPressed: _showAttachmentOptions,
-                        backgroundColor: Colors.blue,
-                        child: const Icon(Icons.attach_file, color: Colors.white),
-                      ),
-                    ),
+                    // Attachment button positioned over input area (only if not recording)
+                    if (!_isRecordingVoice)
+                      _buildAttachmentButton(state),
+                    // Voice recording button (only if not recording and no attachments selected)
+                    if (!_isRecordingVoice && _selectedImages.isEmpty)
+                      _buildVoiceButton(state),
                   ],
                 ),
               ),
+
+              // ✅ NEW: Voice recorder overlay (when recording)
+              if (_isRecordingVoice)
+                VoiceRecorderWidget(
+                  onSendVoice: (filePath, duration, waveform) {
+                    // Send voice message
+                    context.read<MessagingBloc>().add(
+                      SendVoiceMessageEvent(
+                        plantAnalysisId: widget.plantAnalysisId,
+                        toUserId: widget.sponsorUserId,
+                        voiceFilePath: filePath,
+                        duration: duration,
+                        waveform: waveform,
+                      ),
+                    );
+                    setState(() {
+                      _isRecordingVoice = false;
+                    });
+                  },
+                  onCancel: () {
+                    setState(() {
+                      _isRecordingVoice = false;
+                    });
+                  },
+                ),
             ],
           );
         },
@@ -219,6 +250,11 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           'senderAvatarThumbnailUrl': msg.senderAvatarThumbnailUrl,
           'attachmentUrls': msg.attachmentUrls,
           'hasAttachments': msg.hasAttachments,
+          // ✅ NEW: Voice message metadata
+          'isVoiceMessage': msg.isVoiceMessage,
+          'voiceMessageUrl': msg.voiceMessageUrl,
+          'voiceMessageDuration': msg.voiceMessageDuration,
+          'voiceMessageWaveform': msg.voiceMessageWaveform,
         },
       );
       print('📝 Inserting TextMessage: id=${textMessage.id}, authorId=${textMessage.authorId}, metadata=${textMessage.metadata}');
@@ -614,7 +650,18 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     final messageStatus = message.metadata?['messageStatus'] as String?;
     final attachmentUrls = message.metadata?['attachmentUrls'] as List<String>?;
     final hasAttachments = attachmentUrls != null && attachmentUrls.isNotEmpty;
-    print('🎯 _buildTextMessageWithAvatarStatus: avatarUrl=$avatarUrl, status=$messageStatus, attachments=${attachmentUrls?.length ?? 0}');
+
+    // ✅ NEW: Voice message support
+    final isVoiceMessage = message.metadata?['isVoiceMessage'] as bool? ?? false;
+    var voiceMessageUrl = message.metadata?['voiceMessageUrl'] as String?;
+    // ⚠️ HOTFIX: Backend sometimes returns HTTP instead of HTTPS, fix it here
+    if (voiceMessageUrl != null && voiceMessageUrl.startsWith('http://')) {
+      voiceMessageUrl = voiceMessageUrl.replaceFirst('http://', 'https://');
+    }
+    final voiceMessageDuration = message.metadata?['voiceMessageDuration'] as int? ?? 0;
+    final voiceMessageWaveform = message.metadata?['voiceMessageWaveform'] as List<double>?;
+
+    print('🎯 _buildTextMessageWithAvatarStatus: avatarUrl=$avatarUrl, status=$messageStatus, attachments=${attachmentUrls?.length ?? 0}, isVoice=$isVoiceMessage');
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -642,8 +689,16 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Attachment grid (if present)
-                      if (hasAttachments) ...[
+                      // ✅ NEW: Voice message player (if voice message)
+                      if (isVoiceMessage && voiceMessageUrl != null)
+                        VoiceMessagePlayer(
+                          voiceUrl: voiceMessageUrl,
+                          duration: voiceMessageDuration,
+                          waveform: voiceMessageWaveform,
+                          isFromCurrentUser: isSentByMe,
+                        )
+                      // Attachment grid (if present and not voice message)
+                      else if (hasAttachments) ...[
                         SizedBox(
                           width: 200,
                           height: attachmentUrls.length == 1 ? 150 : 200,
@@ -651,9 +706,9 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                         ),
                         if (message.text.isNotEmpty) const SizedBox(height: 8),
                       ],
-                      
-                      // Text message
-                      if (message.text.isNotEmpty)
+
+                      // Text message (only if not voice message or has text)
+                      if (!isVoiceMessage && message.text.isNotEmpty)
                         Text(
                           message.text,
                           style: const TextStyle(fontSize: 16),
@@ -676,6 +731,145 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
           // Spacer on right (balance the avatar on sent messages)
           if (isSentByMe) const SizedBox(width: 40),
+        ],
+      ),
+    );
+  }
+
+  /// Build attachment button with feature check
+  Widget _buildAttachmentButton(MessagingState state) {
+    final features = state is MessagesLoaded ? state.features : null;
+    final imageFeature = features?.imageAttachments;
+    final fileFeature = features?.fileAttachments;
+    final videoFeature = features?.videoAttachments;
+
+    // ✅ Check if current tier meets any attachment feature requirement
+    // Note: We only check tier, not API's "available" field, because API checks user's subscription tier,
+    // but we need to check this specific analysis's sponsorship tier
+    final canUseImageAttachment = imageFeature != null && _isTierSufficient(imageFeature.requiredTier);
+    final canUseFileAttachment = fileFeature != null && _isTierSufficient(fileFeature.requiredTier);
+    final canUseVideoAttachment = videoFeature != null && _isTierSufficient(videoFeature.requiredTier);
+
+    final hasAnyAttachmentFeature = canUseImageAttachment || canUseFileAttachment || canUseVideoAttachment;
+
+    // 🔍 DEBUG
+    print('📎 ATTACHMENT DEBUG:');
+    print('   Current Tier: ${widget.sponsorshipTier}');
+    print('   Image Feature - enabled: ${imageFeature?.enabled}, requiredTier: ${imageFeature?.requiredTier}, canUse: $canUseImageAttachment');
+    print('   File Feature - enabled: ${fileFeature?.enabled}, requiredTier: ${fileFeature?.requiredTier}, canUse: $canUseFileAttachment');
+    print('   Video Feature - enabled: ${videoFeature?.enabled}, requiredTier: ${videoFeature?.requiredTier}, canUse: $canUseVideoAttachment');
+    print('   hasAnyAttachmentFeature: $hasAnyAttachmentFeature');
+
+    return Positioned(
+      bottom: 16,
+      left: 16,
+      child: FloatingActionButton.small(
+        onPressed: () {
+          if (hasAnyAttachmentFeature) {
+            _showAttachmentOptions();
+          } else {
+            _showTierUpgradeDialog(
+              featureName: 'Dosya Ekleme',
+              requiredTier: imageFeature?.requiredTier ?? 'L',
+              unavailableReason: 'Bu analiz ${widget.sponsorshipTier} tier ile yapıldı. Dosya ekleme için en az ${imageFeature?.requiredTier ?? "L"} tier gereklidir.',
+            );
+          }
+        },
+        backgroundColor: hasAnyAttachmentFeature ? Colors.blue : Colors.grey,
+        child: const Icon(Icons.attach_file, color: Colors.white),
+      ),
+    );
+  }
+
+  /// Build voice button with feature check
+  Widget _buildVoiceButton(MessagingState state) {
+    final features = state is MessagesLoaded ? state.features : null;
+    final voiceFeature = features?.voiceMessages;
+
+    // ✅ Check if current tier meets voice message requirement
+    // Note: We only check tier, not API's "available" field, because API checks user's subscription tier,
+    // but we need to check this specific analysis's sponsorship tier
+    final isAvailable = voiceFeature != null && _isTierSufficient(voiceFeature.requiredTier);
+
+    return Positioned(
+      bottom: 16,
+      right: 80,
+      child: FloatingActionButton.small(
+        onPressed: () {
+          if (isAvailable) {
+            setState(() {
+              _isRecordingVoice = true;
+            });
+          } else {
+            _showTierUpgradeDialog(
+              featureName: 'Sesli Mesaj',
+              requiredTier: voiceFeature?.requiredTier ?? 'XL',
+              unavailableReason: 'Bu analiz ${widget.sponsorshipTier} tier ile yapıldı. Sesli mesaj için en az ${voiceFeature?.requiredTier ?? "XL"} tier gereklidir.',
+            );
+          }
+        },
+        backgroundColor: isAvailable ? Colors.red : Colors.grey,
+        child: const Icon(Icons.mic, color: Colors.white, size: 24),
+      ),
+    );
+  }
+
+  /// Helper: Check if current sponsorship tier meets required tier
+  /// Tier hierarchy: S < M < L < XL
+  bool _isTierSufficient(String requiredTier) {
+    const tierHierarchy = {'S': 1, 'M': 2, 'L': 3, 'XL': 4};
+
+    final currentTierValue = tierHierarchy[widget.sponsorshipTier.toUpperCase()] ?? 0;
+    final requiredTierValue = tierHierarchy[requiredTier.toUpperCase()] ?? 0;
+
+    return currentTierValue >= requiredTierValue;
+  }
+
+  /// Show tier upgrade dialog when feature is not available
+  void _showTierUpgradeDialog({
+    required String featureName,
+    required String requiredTier,
+    String? unavailableReason,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$featureName Özelliği Kullanılamıyor'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              unavailableReason ?? '$featureName özelliği için $requiredTier tier paketi gereklidir.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Gerekli Tier: $requiredTier',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Navigate to subscription upgrade page
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Paket yükseltme sayfası yakında eklenecek'),
+                ),
+              );
+            },
+            child: const Text('Paketi Yükselt'),
+          ),
         ],
       ),
     );

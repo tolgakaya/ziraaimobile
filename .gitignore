@@ -55,3 +55,4 @@ app.*.map.json
 .env.local
 .env.production
 .env.staging
+nul

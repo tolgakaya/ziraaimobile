@@ -19,6 +19,7 @@ class MessagesLoaded extends MessagingState {
   final int totalPages;
   final int totalRecords;
   final bool isLoadingMore;
+  final MessagingFeatures? features; // ✅ Tier-based messaging features
 
   const MessagesLoaded({
     required this.messages,
@@ -28,12 +29,13 @@ class MessagesLoaded extends MessagingState {
     this.totalPages = 1,
     this.totalRecords = 0,
     this.isLoadingMore = false,
+    this.features,
   });
 
   bool get hasMorePages => currentPage < totalPages;
 
   @override
-  List<Object?> get props => [messages, canReply, isSending, currentPage, totalPages, totalRecords, isLoadingMore];
+  List<Object?> get props => [messages, canReply, isSending, currentPage, totalPages, totalRecords, isLoadingMore, features];
 
   MessagesLoaded copyWith({
     List<Message>? messages,
@@ -43,6 +45,7 @@ class MessagesLoaded extends MessagingState {
     int? totalPages,
     int? totalRecords,
     bool? isLoadingMore,
+    MessagingFeatures? features,
   }) {
     return MessagesLoaded(
       messages: messages ?? this.messages,
@@ -52,6 +55,7 @@ class MessagesLoaded extends MessagingState {
       totalPages: totalPages ?? this.totalPages,
       totalRecords: totalRecords ?? this.totalRecords,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      features: features ?? this.features,
     );
   }
 }

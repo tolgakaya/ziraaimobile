@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
 import '../../domain/entities/message.dart';
+import '../../domain/entities/messaging_features.dart';
 import '../../domain/usecases/send_message_usecase.dart';
 import '../../domain/usecases/get_messages_usecase.dart';
 import '../../domain/usecases/send_message_with_attachments_usecase.dart';
+import '../../domain/usecases/send_voice_message_usecase.dart';
+import '../../domain/usecases/get_messaging_features_usecase.dart';
 
 part 'messaging_event.dart';
 part 'messaging_state.dart';
@@ -14,11 +18,18 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
   final SendMessageUseCase sendMessageUseCase;
   final GetMessagesUseCase getMessagesUseCase;
   final SendMessageWithAttachmentsUseCase sendMessageWithAttachmentsUseCase;
+  final SendVoiceMessageUseCase sendVoiceMessageUseCase;
+  final GetMessagingFeaturesUseCase getMessagingFeaturesUseCase;
+
+  // Cache features to include in MessagesLoaded state
+  MessagingFeatures? _cachedFeatures;
 
   MessagingBloc({
     required this.sendMessageUseCase,
     required this.getMessagesUseCase,
     required this.sendMessageWithAttachmentsUseCase,
+    required this.sendVoiceMessageUseCase,
+    required this.getMessagingFeaturesUseCase,
   }) : super(MessagingInitial()) {
     on<LoadMessagesEvent>(_onLoadMessages);
     on<SendMessageEvent>(_onSendMessage);
@@ -26,6 +37,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     on<RefreshMessagesEvent>(_onRefreshMessages);
     on<NewMessageReceivedEvent>(_onNewMessageReceived);
     on<LoadMoreMessagesEvent>(_onLoadMoreMessages);
+    on<SendVoiceMessageEvent>(_onSendVoiceMessage);
+    on<LoadMessagingFeaturesEvent>(_onLoadMessagingFeatures);
   }
 
   /// Business rule: Farmer can reply only if sponsor has sent at least one message
@@ -55,6 +68,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
           currentPage: paginatedMessages.pageNumber,
           totalPages: paginatedMessages.totalPages,
           totalRecords: paginatedMessages.totalRecords,
+          features: _cachedFeatures, // Include cached features
         ));
       },
     );
@@ -91,6 +105,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
           messages: updatedMessages,
           canReply: _canFarmerReply(updatedMessages),
           isSending: false,
+          features: _cachedFeatures, // Preserve cached features
         ));
       },
     );
@@ -116,6 +131,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
           currentPage: paginatedMessages.pageNumber,
           totalPages: paginatedMessages.totalPages,
           totalRecords: paginatedMessages.totalRecords,
+          features: _cachedFeatures, // Include cached features
         ));
       },
     );
@@ -149,6 +165,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
           messages: updatedMessages,
           canReply: _canFarmerReply(updatedMessages),
           isSending: false,
+          features: _cachedFeatures, // Preserve cached features
         ));
       },
     );
@@ -172,6 +189,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     emit(MessagesLoaded(
       messages: updatedMessages,
       canReply: _canFarmerReply(updatedMessages),
+      features: _cachedFeatures, // Preserve cached features
     ));
   }
 
@@ -218,7 +236,75 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
           totalPages: paginatedMessages.totalPages,
           totalRecords: paginatedMessages.totalRecords,
           isLoadingMore: false,
+          features: _cachedFeatures, // Preserve cached features
         ));
+      },
+    );
+  }
+
+  // ✅ NEW: Handle sending voice message
+  Future<void> _onSendVoiceMessage(
+    SendVoiceMessageEvent event,
+    Emitter<MessagingState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! MessagesLoaded) return;
+
+    // Optimistic UI update - show sending state
+    emit(currentState.copyWith(isSending: true));
+
+    final result = await sendVoiceMessageUseCase(
+      SendVoiceMessageParams(
+        plantAnalysisId: event.plantAnalysisId,
+        toUserId: event.toUserId,
+        voiceFile: File(event.voiceFilePath),
+        duration: event.duration,
+        waveform: event.waveform,
+      ),
+    );
+
+    result.fold(
+      (failure) {
+        emit(currentState.copyWith(isSending: false));
+        emit(MessageSendError(failure.message, currentState.messages));
+      },
+      (sentMessage) {
+        final updatedMessages = [...currentState.messages, sentMessage];
+        emit(MessagesLoaded(
+          messages: updatedMessages,
+          canReply: _canFarmerReply(updatedMessages),
+          isSending: false,
+          features: _cachedFeatures, // Preserve cached features
+        ));
+      },
+    );
+  }
+
+  // ✅ NEW: Load messaging features (tier-based)
+  // ⚠️ BREAKING CHANGE: Now requires plantAnalysisId to get features for specific analysis
+  Future<void> _onLoadMessagingFeatures(
+    LoadMessagingFeaturesEvent event,
+    Emitter<MessagingState> emit,
+  ) async {
+    final currentState = state;
+
+    // Load features for this specific analysis
+    final result = await getMessagingFeaturesUseCase(plantAnalysisId: event.plantAnalysisId);
+
+    result.fold(
+      (failure) {
+        // Silent failure - features stay null, UI will use defaults
+        print('⚠️ Failed to load messaging features for analysis ${event.plantAnalysisId}: ${failure.message}');
+      },
+      (features) {
+        // Cache features for future state emissions
+        _cachedFeatures = features;
+        print('✅ MessagingFeatures loaded for analysis ${event.plantAnalysisId}: imageAttachments.available=${features.imageAttachments.available}, fileAttachments.available=${features.fileAttachments.available}, voiceMessages.available=${features.voiceMessages.available}');
+
+        // Update state with features if we're already in MessagesLoaded state
+        if (currentState is MessagesLoaded) {
+          emit(currentState.copyWith(features: features));
+        }
       },
     );
   }

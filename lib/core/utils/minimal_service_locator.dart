@@ -30,6 +30,8 @@ import '../../features/messaging/domain/repositories/messaging_repository.dart';
 import '../../features/messaging/domain/usecases/send_message_usecase.dart';
 import '../../features/messaging/domain/usecases/get_messages_usecase.dart';
 import '../../features/messaging/domain/usecases/send_message_with_attachments_usecase.dart';
+import '../../features/messaging/domain/usecases/send_voice_message_usecase.dart';
+import '../../features/messaging/domain/usecases/get_messaging_features_usecase.dart';
 import '../../features/messaging/presentation/bloc/messaging_bloc.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -179,11 +181,24 @@ Future<void> setupMinimalServiceLocator() async {
     () => SendMessageWithAttachmentsUseCase(getIt<MessagingRepository>()),
   );
 
+  getIt.registerLazySingleton<SendVoiceMessageUseCase>(
+    () => SendVoiceMessageUseCase(getIt<MessagingRepository>()),
+  );
+
+  getIt.registerLazySingleton<GetMessagingFeaturesUseCase>(
+    () => GetMessagingFeaturesUseCase(getIt<MessagingRepository>()),
+  );
+
+  // ⚠️ TEMPORARY: Manual registration until app restart
+  // Injectable auto-registration requires full app restart to load injection.config.dart
+  // After restart, this can be removed as @injectable annotation will handle it
   getIt.registerFactory<MessagingBloc>(
     () => MessagingBloc(
       sendMessageUseCase: getIt<SendMessageUseCase>(),
       getMessagesUseCase: getIt<GetMessagesUseCase>(),
       sendMessageWithAttachmentsUseCase: getIt<SendMessageWithAttachmentsUseCase>(),
+      sendVoiceMessageUseCase: getIt<SendVoiceMessageUseCase>(),
+      getMessagingFeaturesUseCase: getIt<GetMessagingFeaturesUseCase>(),
     ),
   );
 

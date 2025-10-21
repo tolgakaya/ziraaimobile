@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/message.dart';
 import '../entities/blocked_sponsor.dart';
 import '../entities/message_quota.dart';
 import '../entities/paginated_messages.dart';
+import '../entities/messaging_features.dart';
 
 abstract class MessagingRepository {
   Future<Either<Failure, Message>> sendMessage({
@@ -40,4 +42,17 @@ abstract class MessagingRepository {
     required String message,
     required List<String> attachmentPaths,
   });
+
+  /// Send voice message (XL tier only)
+  Future<Either<Failure, Message>> sendVoiceMessage({
+    required int toUserId,
+    required int plantAnalysisId,
+    required File voiceFile,
+    required int duration,
+    List<double>? waveform,
+  });
+
+  /// Get user's available messaging features based on tier
+  /// ⚠️ BREAKING CHANGE: Now requires plantAnalysisId to get features for specific analysis
+  Future<Either<Failure, MessagingFeatures>> getAvailableFeatures({required int plantAnalysisId});
 }

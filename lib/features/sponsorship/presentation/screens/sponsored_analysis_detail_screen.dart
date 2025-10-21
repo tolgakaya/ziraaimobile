@@ -134,6 +134,7 @@ class _SponsoredAnalysisDetailScreenState
                       plantAnalysisId: data.analysis.id,
                       farmerId: data.analysis.userId ?? 0,
                       sponsorUserId: int.parse(user.id),
+                      sponsorshipTier: data.tierMetadata.tierName,
                     ),
                   ),
                 ),

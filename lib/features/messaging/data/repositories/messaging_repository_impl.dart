@@ -7,6 +7,7 @@ import '../../domain/entities/message.dart';
 import '../../domain/entities/blocked_sponsor.dart';
 import '../../domain/entities/message_quota.dart';
 import '../../domain/entities/paginated_messages.dart';
+import '../../domain/entities/messaging_features.dart';
 import '../../domain/repositories/messaging_repository.dart';
 import '../../domain/failures/messaging_failures.dart';
 import '../services/messaging_api_service.dart';
@@ -145,6 +146,48 @@ class MessagingRepositoryImpl implements MessagingRepository {
         attachments: attachments,
       );
       return Right(Message.fromModel(model));
+    } on DioException catch (e) {
+      return Left(_handleDioException(e));
+    } catch (e) {
+      return Left(ServerFailure(message: 'Beklenmeyen bir hata oluştu: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Message>> sendVoiceMessage({
+    required int toUserId,
+    required int plantAnalysisId,
+    required File voiceFile,
+    required int duration,
+    List<double>? waveform,
+  }) async {
+    try {
+      // Convert waveform to JSON string if provided
+      String? waveformJson;
+      if (waveform != null && waveform.isNotEmpty) {
+        waveformJson = '[${waveform.join(', ')}]';
+      }
+
+      final model = await _apiService.sendVoiceMessage(
+        toUserId: toUserId,
+        plantAnalysisId: plantAnalysisId,
+        voiceFile: voiceFile,
+        duration: duration,
+        waveform: waveformJson,
+      );
+      return Right(Message.fromModel(model));
+    } on DioException catch (e) {
+      return Left(_handleDioException(e));
+    } catch (e) {
+      return Left(ServerFailure(message: 'Beklenmeyen bir hata oluştu: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, MessagingFeatures>> getAvailableFeatures({required int plantAnalysisId}) async {
+    try {
+      final model = await _apiService.getAvailableFeatures(plantAnalysisId: plantAnalysisId);
+      return Right(model.toEntity());
     } on DioException catch (e) {
       return Left(_handleDioException(e));
     } catch (e) {

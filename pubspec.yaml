@@ -76,6 +76,9 @@ dependencies:
   intl: ^0.20.2                   # Date formatting and localization
   flutter_chat_ui: 2.9.0        # Chat UI with stable API
   flutter_chat_core: ^2.8.0
+  record: ^6.1.2
+  audioplayers: ^6.5.1
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:
