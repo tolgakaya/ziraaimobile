@@ -459,7 +459,13 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     // Check file type from URL
     final lowerUrl = url.toLowerCase();
     
-    if (lowerUrl.endsWith('.jpg') || 
+    // ✅ NEW: Check for secure API endpoints (no file extension in URL)
+    // Backend's new secure file serving: /api/v1/files/attachments/{id}/{index}
+    final isSecureAttachmentEndpoint = lowerUrl.contains('/files/attachments/') || 
+                                        lowerUrl.contains('/files/attachment-thumbnails/');
+    
+    if (isSecureAttachmentEndpoint ||
+        lowerUrl.endsWith('.jpg') || 
         lowerUrl.endsWith('.jpeg') || 
         lowerUrl.endsWith('.png') || 
         lowerUrl.endsWith('.gif') ||
