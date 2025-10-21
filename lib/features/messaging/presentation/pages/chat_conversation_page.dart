@@ -698,7 +698,11 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   Widget _buildTextMessageWithAvatarStatus(chat_core.TextMessage message, bool isSentByMe) {
     final avatarUrl = message.metadata?['senderAvatarThumbnailUrl'] as String?;
     final messageStatus = message.metadata?['messageStatus'] as String?;
-    final attachmentUrls = message.metadata?['attachmentUrls'] as List<String>?;
+
+    // ✅ FIXED: Safe casting from List<dynamic> to List<String>
+    // Backend sends List<dynamic>, we need List<String>
+    final attachmentUrlsDynamic = message.metadata?['attachmentUrls'] as List?;
+    final attachmentUrls = attachmentUrlsDynamic?.cast<String>().toList();
     final hasAttachments = attachmentUrls != null && attachmentUrls.isNotEmpty;
 
     // ✅ Voice message support with secure HTTPS API endpoints
@@ -712,7 +716,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     }
 
     final voiceMessageDuration = message.metadata?['voiceMessageDuration'] as int? ?? 0;
-    final voiceMessageWaveform = message.metadata?['voiceMessageWaveform'] as List<double>?;
+
+    // ✅ FIXED: Safe casting from List<dynamic> to List<double>
+    final waveformDynamic = message.metadata?['voiceMessageWaveform'] as List?;
+    final voiceMessageWaveform = waveformDynamic?.cast<double>().toList();
 
     print('🎯 _buildTextMessageWithAvatarStatus: avatarUrl=$avatarUrl, status=$messageStatus, attachments=${attachmentUrls?.length ?? 0}, isVoice=$isVoiceMessage');
 
