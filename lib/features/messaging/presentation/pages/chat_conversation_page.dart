@@ -676,16 +676,33 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                   'Authorization': 'Bearer $_jwtToken',
                 },
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.broken_image, color: Colors.grey),
-                ),
+                placeholder: (context, url) {
+                  print('🖼️ LOADING thumbnail: $url');
+                  print('   JWT: ${_jwtToken?.substring(0, 20)}...');
+                  return Container(
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                },
+                errorWidget: (context, url, error) {
+                  print('❌ THUMBNAIL ERROR: $url');
+                  print('   Error: $error');
+                  return Container(
+                    color: Colors.grey[300],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.broken_image, color: Colors.red, size: 32),
+                        Text(
+                          'Hata',
+                          style: TextStyle(color: Colors.red, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               // Show count indicator if more than 4 images
               if (index == 3 && thumbnailUrls.length > 4)
