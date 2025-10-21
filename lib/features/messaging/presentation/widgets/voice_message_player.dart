@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 
 /// Voice message player widget with playback controls
 /// Displays waveform and allows playing/pausing voice messages
@@ -48,17 +48,17 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
 
   void _initAudioPlayer() {
     // Listen to player state changes
-    _audioPlayer.onPlayerStateChanged.listen((state) {
+    _audioPlayer.playerStateStream.listen((state) {
       if (mounted) {
         setState(() {
-          _isPlaying = state == PlayerState.playing;
-          _isLoading = state == PlayerState.paused && _currentPosition == Duration.zero;
+          _isPlaying = state.playing;
+          _isLoading = state.processingState == ProcessingState.loading;
         });
       }
     });
 
     // Listen to position changes
-    _audioPlayer.onPositionChanged.listen((position) {
+    _audioPlayer.positionStream.listen((position) {
       if (mounted) {
         setState(() {
           _currentPosition = position;
@@ -67,8 +67,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     });
 
     // Listen to duration changes
-    _audioPlayer.onDurationChanged.listen((duration) {
-      if (mounted) {
+    _audioPlayer.durationStream.listen((duration) {
+      if (mounted && duration != null) {
         setState(() {
           _totalDuration = duration;
         });
@@ -76,8 +76,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     });
 
     // Listen to completion
-    _audioPlayer.onPlayerComplete.listen((_) {
-      if (mounted) {
+    _audioPlayer.processingStateStream.listen((state) {
+      if (mounted && state == ProcessingState.completed) {
         setState(() {
           _isPlaying = false;
           _currentPosition = Duration.zero;
@@ -94,17 +94,20 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         if (_currentPosition == Duration.zero) {
           setState(() => _isLoading = true);
 
-          // ✅ SECURITY: Play with JWT authentication header
-          await _audioPlayer.play(
-            UrlSource(widget.voiceUrl),
-            headers: {
-              'Authorization': 'Bearer ${widget.jwtToken}',
-            },
+          // ✅ SECURITY: Set audio source with JWT authentication header
+          await _audioPlayer.setAudioSource(
+            AudioSource.uri(
+              Uri.parse(widget.voiceUrl),
+              headers: {
+                'Authorization': 'Bearer ${widget.jwtToken}',
+              },
+            ),
           );
 
+          await _audioPlayer.play();
           setState(() => _isLoading = false);
         } else {
-          await _audioPlayer.resume();
+          await _audioPlayer.play();
         }
       }
     } catch (e) {

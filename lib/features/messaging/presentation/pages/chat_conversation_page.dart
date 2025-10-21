@@ -7,7 +7,7 @@ import 'package:flutter_chat_core/flutter_chat_core.dart' as chat_core;
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/services/auth_service.dart';
-import '../../../../injection_container.dart';
+import '../../../../core/di/injection.dart';
 import '../bloc/messaging_bloc.dart';
 import '../widgets/voice_recorder_widget.dart';
 import '../widgets/voice_message_player.dart';
