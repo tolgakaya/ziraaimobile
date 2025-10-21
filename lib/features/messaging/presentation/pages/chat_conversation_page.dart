@@ -609,8 +609,15 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
   /// Build attachment grid for messages with images
   /// ✅ SECURITY: Uses CachedNetworkImage with JWT authentication headers
-  Widget _buildAttachmentGrid(List<String>? attachmentUrls) {
-    if (attachmentUrls == null || attachmentUrls.isEmpty) {
+  Widget _buildAttachmentGrid({
+    required List<String>? thumbnailUrls,
+    required List<String>? fullUrls,
+  }) {
+    if (thumbnailUrls == null || thumbnailUrls.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    if (fullUrls == null || fullUrls.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -644,19 +651,21 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
       ),
-      itemCount: attachmentUrls.length > 4 ? 4 : attachmentUrls.length,
+      itemCount: thumbnailUrls.length > 4 ? 4 : thumbnailUrls.length,
       itemBuilder: (context, index) {
-        final url = attachmentUrls[index];
+        final thumbnailUrl = thumbnailUrls[index];
+        final fullUrl = fullUrls[index];
         return GestureDetector(
-          onTap: () => _openAttachment(url, attachmentUrls),
+          onTap: () => _openAttachment(fullUrl, fullUrls),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Stack(
               fit: StackFit.expand,
             children: [
               // ✅ SECURITY: CachedNetworkImage with JWT authentication
+              // Display thumbnail for efficiency, click opens full image
               CachedNetworkImage(
-                imageUrl: url,
+                imageUrl: thumbnailUrl,
                 httpHeaders: {
                   'Authorization': 'Bearer $_jwtToken',
                 },
@@ -673,12 +682,12 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                 ),
               ),
               // Show count indicator if more than 4 images
-              if (index == 3 && attachmentUrls.length > 4)
+              if (index == 3 && thumbnailUrls.length > 4)
                 Container(
                   color: Colors.black54,
                   child: Center(
                     child: Text(
-                      '+${attachmentUrls.length - 4}',
+                      '+${thumbnailUrls.length - 4}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -704,6 +713,11 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     // Backend sends List<dynamic>, we need List<String>
     final attachmentUrlsDynamic = message.metadata?['attachmentUrls'] as List?;
     final attachmentUrls = attachmentUrlsDynamic?.cast<String>().toList();
+    
+    // ✅ NEW: Get thumbnail URLs (for efficient display in chat)
+    final attachmentThumbnailsDynamic = message.metadata?['attachmentThumbnails'] as List?;
+    final attachmentThumbnails = attachmentThumbnailsDynamic?.cast<String>().toList();
+    
     final hasAttachments = attachmentUrls != null && attachmentUrls.isNotEmpty;
 
     // ✅ Voice message support with secure HTTPS API endpoints
@@ -722,7 +736,15 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     final waveformDynamic = message.metadata?['voiceMessageWaveform'] as List?;
     final voiceMessageWaveform = waveformDynamic?.cast<double>().toList();
 
-    print('🎯 _buildTextMessageWithAvatarStatus: avatarUrl=$avatarUrl, status=$messageStatus, attachments=${attachmentUrls?.length ?? 0}, isVoice=$isVoiceMessage');
+    print('🎯 _buildTextMessageWithAvatarStatus: avatarUrl=$avatarUrl, status=$messageStatus');
+    print('   📎 Attachments: fullUrls=${attachmentUrls?.length ?? 0}, thumbnails=${attachmentThumbnails?.length ?? 0}');
+    print('   🎤 Voice: isVoice=$isVoiceMessage, voiceUrl=$voiceMessageUrl');
+    if (attachmentUrls != null && attachmentUrls.isNotEmpty) {
+      print('   📷 Full URLs: ${attachmentUrls.take(2).join(", ")}${attachmentUrls.length > 2 ? "..." : ""}');
+    }
+    if (attachmentThumbnails != null && attachmentThumbnails.isNotEmpty) {
+      print('   🖼️ Thumbnails: ${attachmentThumbnails.take(2).join(", ")}${attachmentThumbnails.length > 2 ? "..." : ""}');
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -784,7 +806,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                         SizedBox(
                           width: 200,
                           height: attachmentUrls.length == 1 ? 150 : 200,
-                          child: _buildAttachmentGrid(attachmentUrls),
+                          child: _buildAttachmentGrid(
+                            thumbnailUrls: attachmentThumbnails ?? attachmentUrls,
+                            fullUrls: attachmentUrls,
+                          ),
                         ),
                         if (message.text.isNotEmpty) const SizedBox(height: 8),
                       ],
