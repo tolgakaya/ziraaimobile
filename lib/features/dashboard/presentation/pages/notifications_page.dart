@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:get_it/get_it.dart';
@@ -8,6 +7,7 @@ import '../bloc/notification_bloc.dart';
 import '../bloc/notification_event.dart';
 import '../bloc/notification_state.dart';
 import '../../../plant_analysis/presentation/screens/analysis_detail_screen.dart';
+import '../../../messaging/presentation/pages/chat_conversation_page.dart'; // ✅ NEW: For message notifications
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({Key? key}) : super(key: key);
@@ -140,18 +140,37 @@ class NotificationsPage extends StatelessWidget {
     PlantAnalysisNotification notification,
   ) {
     final notificationBloc = GetIt.instance<NotificationBloc>();
-    
+
     // Mark as read
     if (!notification.isRead) {
       notificationBloc.add(MarkNotificationAsRead(notification.analysisId));
     }
 
-    // Navigate to analysis detail
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => AnalysisDetailScreen(analysisId: notification.analysisId),
-      ),
-    );
+    // ✅ SMART NAVIGATION: Route based on notification type
+    if (notification.isMessageNotification) {
+      // Message notification → Navigate to chat page
+      print('📱 Navigating to chat for message notification from ${notification.senderDisplayName}');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ChatConversationPage(
+            plantAnalysisId: notification.analysisId,
+            farmerId: notification.userId, // Current user is farmer
+            sponsorUserId: int.parse(notification.sponsorId ?? '0'), // Sender is sponsor
+            sponsorshipTier: 'L', // Default tier, will be loaded from API
+            farmerName: null,
+            sponsorName: notification.senderDisplayName,
+          ),
+        ),
+      );
+    } else {
+      // Analysis notification → Navigate to analysis detail
+      print('📊 Navigating to analysis detail for notification ${notification.analysisId}');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => AnalysisDetailScreen(analysisId: notification.analysisId),
+        ),
+      );
+    }
   }
 
   void _showClearAllDialog(BuildContext context) {
@@ -235,42 +254,8 @@ class _NotificationCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image thumbnail
-                if (notification.imageUrl != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      notification.imageUrl!,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.image, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  )
-                else
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.eco,
-                      color: Theme.of(context).primaryColor,
-                      size: 30,
-                    ),
-                  ),
+                // ✅ ENHANCED: Different icons for message vs analysis notifications
+                _buildNotificationIcon(context, notification),
                 const SizedBox(width: 16),
                 // Content
                 Expanded(
@@ -281,9 +266,7 @@ class _NotificationCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              notification.status == 'Completed'
-                                  ? 'Analiz Tamamlandı'
-                                  : notification.status,
+                              notification.displayTitle, // ✅ Use helper method
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -305,7 +288,17 @@ class _NotificationCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      if (notification.cropType != null)
+                      // ✅ ENHANCED: Show sender name for messages, crop type for analysis
+                      if (notification.isMessageNotification && notification.senderDisplayName != null)
+                        Text(
+                          notification.senderDisplayName!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.blue.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      else if (notification.cropType != null)
                         Text(
                           notification.cropType!,
                           style: TextStyle(
@@ -314,7 +307,21 @@ class _NotificationCard extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                      if (notification.primaryConcern != null)
+                      // ✅ ENHANCED: Show message content or primary concern
+                      if (notification.message != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            notification.message!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )
+                      else if (notification.primaryConcern != null)
                         Text(
                           notification.primaryConcern!,
                           style: TextStyle(
@@ -364,6 +371,77 @@ class _NotificationCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// ✅ NEW: Build notification icon based on type
+  Widget _buildNotificationIcon(BuildContext context, PlantAnalysisNotification notification) {
+    if (notification.isMessageNotification) {
+      // Message notification - Show avatar or message icon
+      if (notification.senderAvatarUrl != null) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: Image.network(
+            notification.senderAvatarUrl!,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildMessageIconFallback(context);
+            },
+          ),
+        );
+      }
+      return _buildMessageIconFallback(context);
+    }
+
+    // Analysis notification - Show image or plant icon
+    if (notification.imageUrl != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          notification.imageUrl!,
+          width: 60,
+          height: 60,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildPlantIconFallback(context);
+          },
+        ),
+      );
+    }
+    return _buildPlantIconFallback(context);
+  }
+
+  Widget _buildMessageIconFallback(BuildContext context) {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.blue.shade100,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        Icons.message_rounded,
+        color: Colors.blue.shade700,
+        size: 30,
+      ),
+    );
+  }
+
+  Widget _buildPlantIconFallback(BuildContext context) {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(
+        Icons.eco,
+        color: Theme.of(context).primaryColor,
+        size: 30,
       ),
     );
   }
