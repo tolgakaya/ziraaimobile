@@ -11,6 +11,20 @@ class MessageNotification {
   final bool isApproved;
   final bool requiresApproval;
 
+  // ✅ NEW: Avatar information from SignalR
+  final String? senderAvatarUrl;
+  final String? senderAvatarThumbnailUrl;
+
+  // ✅ NEW: Attachment information from SignalR
+  final bool hasAttachments;
+  final int attachmentCount;
+  final List<String>? attachmentUrls;
+  final List<String>? attachmentThumbnails;
+  final bool isVoiceMessage;
+  final String? voiceMessageUrl;
+  final int? voiceMessageDuration;
+  final List<int>? voiceMessageWaveform;
+
   MessageNotification({
     required this.messageId,
     required this.plantAnalysisId,
@@ -23,6 +37,16 @@ class MessageNotification {
     required this.sentDate,
     required this.isApproved,
     required this.requiresApproval,
+    this.senderAvatarUrl,
+    this.senderAvatarThumbnailUrl,
+    this.hasAttachments = false,
+    this.attachmentCount = 0,
+    this.attachmentUrls,
+    this.attachmentThumbnails,
+    this.isVoiceMessage = false,
+    this.voiceMessageUrl,
+    this.voiceMessageDuration,
+    this.voiceMessageWaveform,
   });
 
   factory MessageNotification.fromJson(Map<String, dynamic> json) {
@@ -38,6 +62,24 @@ class MessageNotification {
       sentDate: DateTime.parse(json['sentDate'] as String),
       isApproved: json['isApproved'] as bool? ?? true,
       requiresApproval: json['requiresApproval'] as bool? ?? false,
+      // ✅ NEW: Parse avatar info from SignalR
+      senderAvatarUrl: json['senderAvatarUrl'] as String?,
+      senderAvatarThumbnailUrl: json['senderAvatarThumbnailUrl'] as String?,
+      // ✅ NEW: Parse attachment info from SignalR
+      hasAttachments: json['hasAttachments'] as bool? ?? false,
+      attachmentCount: json['attachmentCount'] as int? ?? 0,
+      attachmentUrls: (json['attachmentUrls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      attachmentThumbnails: (json['attachmentThumbnails'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      isVoiceMessage: json['isVoiceMessage'] as bool? ?? false,
+      voiceMessageUrl: json['voiceMessageUrl'] as String?,
+      voiceMessageDuration: json['voiceMessageDuration'] as int?,
+      voiceMessageWaveform: (json['voiceMessageWaveform'] as List<dynamic>?)
+          ?.map((e) => e as int)
+          .toList(),
     );
   }
 
@@ -54,6 +96,16 @@ class MessageNotification {
       'sentDate': sentDate.toIso8601String(),
       'isApproved': isApproved,
       'requiresApproval': requiresApproval,
+      'senderAvatarUrl': senderAvatarUrl,
+      'senderAvatarThumbnailUrl': senderAvatarThumbnailUrl,
+      'hasAttachments': hasAttachments,
+      'attachmentCount': attachmentCount,
+      'attachmentUrls': attachmentUrls,
+      'attachmentThumbnails': attachmentThumbnails,
+      'isVoiceMessage': isVoiceMessage,
+      'voiceMessageUrl': voiceMessageUrl,
+      'voiceMessageDuration': voiceMessageDuration,
+      'voiceMessageWaveform': voiceMessageWaveform,
     };
   }
 

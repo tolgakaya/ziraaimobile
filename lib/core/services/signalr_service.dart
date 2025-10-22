@@ -9,13 +9,38 @@ class SignalRService {
   bool _isConnected = false;
   String? _currentToken;
 
-  // Event callbacks
+  // Event callbacks (CHANGED TO LISTS to support multiple listeners)
   Function(PlantAnalysisNotification)? onAnalysisCompleted;
   Function(int analysisId, String error)? onAnalysisFailed;
-  Function(MessageNotification)? onNewMessage;
+
+  // ✅ CRITICAL FIX: Support multiple listeners for real-time messaging
+  // - SignalRNotificationIntegration needs to show notifications
+  // - Chat pages need to update UI in real-time
+  final List<Function(MessageNotification)> _onNewMessageListeners = [];
+
   // ✅ NEW: Messaging enhancement callbacks
   Function(int userId, String userName, int plantAnalysisId, bool isTyping)? onUserTyping;
   Function(int messageId, int readByUserId, DateTime readAt)? onMessageRead;
+
+  // ✅ Methods to manage message listeners
+  void addNewMessageListener(Function(MessageNotification) listener) {
+    if (!_onNewMessageListeners.contains(listener)) {
+      _onNewMessageListeners.add(listener);
+      print('✅ SignalR: Added new message listener (total: ${_onNewMessageListeners.length})');
+    }
+  }
+
+  void removeNewMessageListener(Function(MessageNotification) listener) {
+    _onNewMessageListeners.remove(listener);
+    print('✅ SignalR: Removed message listener (remaining: ${_onNewMessageListeners.length})');
+  }
+
+  // Backward compatibility: Keep old setter for SignalRNotificationIntegration
+  set onNewMessage(Function(MessageNotification)? callback) {
+    if (callback != null) {
+      addNewMessageListener(callback);
+    }
+  }
 
   // Singleton pattern
   static final SignalRService _instance = SignalRService._internal();
@@ -208,18 +233,20 @@ class SignalRService {
           print('✅ SignalR: Message notification parsed successfully');
           print('📋 SignalR: Message from ${notification.senderRole}: ${notification.fromUserName}');
 
-          // IMPORTANT: Only show notification for sponsor→farmer messages
-          // Farmer replies (farmer→sponsor) should NOT trigger notifications
-          if (notification.isSponsorMessage) {
-            print('🔔 SignalR: Sponsor message - showing notification');
-            if (onNewMessage != null) {
-              onNewMessage?.call(notification);
-              print('✅ SignalR: onNewMessage callback executed');
-            } else {
-              print('⚠️ SignalR: WARNING - onNewMessage callback is NULL!');
+          // ✅ CRITICAL FIX: Notify ALL listeners (both notification system AND chat pages)
+          // Previously only called single onNewMessage callback, now calls all registered listeners
+          if (_onNewMessageListeners.isNotEmpty) {
+            print('🔔 SignalR: Notifying ${_onNewMessageListeners.length} listener(s)...');
+            for (final listener in _onNewMessageListeners) {
+              try {
+                listener(notification);
+              } catch (e) {
+                print('❌ SignalR: Error in message listener: $e');
+              }
             }
+            print('✅ SignalR: All listeners notified');
           } else {
-            print('🔕 SignalR: Farmer reply - skipping notification (sponsor should not be notified)');
+            print('⚠️ SignalR: WARNING - No message listeners registered!');
           }
         } catch (e, stackTrace) {
           print('❌ SignalR: Error parsing message notification: $e');
