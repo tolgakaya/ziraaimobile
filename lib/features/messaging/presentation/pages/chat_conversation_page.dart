@@ -7,10 +7,12 @@ import 'package:flutter_chat_core/flutter_chat_core.dart' as chat_core;
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/signalr_service.dart';
 import '../../../../core/di/injection.dart';
 import '../bloc/messaging_bloc.dart';
 import '../widgets/voice_recorder_widget.dart';
 import '../widgets/voice_message_player.dart';
+import '../../domain/entities/message.dart';
 
 /// Chat conversation page with avatar and status enhancements
 class ChatConversationPage extends StatefulWidget {
@@ -46,6 +48,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   final AuthService _authService = getIt<AuthService>();
   String? _jwtToken;
 
+  // ✅ SignalR service for real-time message updates
+  late final SignalRService _signalRService;
+  bool _signalRListenerRegistered = false;
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +69,9 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     context.read<MessagingBloc>().add(
       LoadMessagingFeaturesEvent(plantAnalysisId: widget.plantAnalysisId),
     );
+
+    // ✅ Setup SignalR listener for real-time messages
+    _setupSignalRListener();
   }
 
   Future<void> _loadJwtToken() async {
@@ -74,8 +83,81 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     }
   }
 
+  /// Setup SignalR listener for real-time message updates
+  void _setupSignalRListener() {
+    try {
+      _signalRService = getIt<SignalRService>();
+
+      if (!_signalRService.isConnected) {
+        print('⚠️ FARMER CHAT: SignalR not connected, real-time updates disabled');
+        return;
+      }
+
+      print('✅ FARMER CHAT: Setting up SignalR listener for analysis ${widget.plantAnalysisId}');
+
+      // Register callback for new messages
+      _signalRService.onNewMessage = (messageNotification) {
+        print('💬 FARMER CHAT: Real-time message received!');
+        print('   From: ${messageNotification.fromUserName} (${messageNotification.senderRole})');
+        print('   To Analysis: ${messageNotification.plantAnalysisId}');
+        print('   THIS Analysis: ${widget.plantAnalysisId}');
+
+        // CRITICAL: Only process if message is for THIS conversation
+        if (messageNotification.plantAnalysisId != widget.plantAnalysisId) {
+          print('ℹ️ FARMER CHAT: Message is for different analysis, ignoring');
+          return;
+        }
+
+        print('✅ FARMER CHAT: Message is for this conversation, updating UI...');
+
+        // Convert MessageNotification to Message entity
+        final message = Message(
+          id: messageNotification.messageId,
+          plantAnalysisId: messageNotification.plantAnalysisId,
+          fromUserId: messageNotification.fromUserId,
+          toUserId: messageNotification.toUserId,
+          message: messageNotification.message,
+          status: MessageStatus.sent,
+          sentDate: messageNotification.sentDate,
+          senderRole: messageNotification.senderRole,
+          senderName: messageNotification.fromUserName,
+          senderCompany: messageNotification.fromUserCompany ?? '',
+          senderAvatarUrl: '', // Backend should include this
+          senderAvatarThumbnailUrl: '', // Backend should include this
+          hasAttachments: false,
+          attachmentUrls: null,
+          attachmentThumbnails: null,
+          isVoiceMessage: false,
+          voiceMessageUrl: null,
+          voiceMessageDuration: null,
+          voiceMessageWaveform: null,
+        );
+
+        // Dispatch event to BLoC to update UI
+        if (mounted) {
+          context.read<MessagingBloc>().add(
+            NewMessageReceivedEvent(message),
+          );
+          print('✅ FARMER CHAT: NewMessageReceivedEvent dispatched');
+        }
+      };
+
+      _signalRListenerRegistered = true;
+      print('✅ FARMER CHAT: SignalR listener registered successfully');
+    } catch (e) {
+      print('❌ FARMER CHAT: Failed to setup SignalR listener: $e');
+    }
+  }
+
   @override
   void dispose() {
+    // ✅ Clean up SignalR listener
+    if (_signalRListenerRegistered) {
+      print('🧹 FARMER CHAT: Cleaning up SignalR listener');
+      // NOTE: We don't clear _signalRService.onNewMessage completely
+      // because other screens might be using it (SignalRNotificationIntegration)
+      // The callback already filters by plantAnalysisId, so it's safe
+    }
     _chatController.dispose();
     super.dispose();
   }
