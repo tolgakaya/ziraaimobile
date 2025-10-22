@@ -6,7 +6,7 @@ import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/config/api_config.dart';
 import '../../data/models/sponsored_analysis_detail.dart';
 import '../../../plant_analysis/data/models/plant_analysis_detail_dto.dart';
-import '../../../messaging/presentation/pages/chat_conversation_page.dart';
+import '../../../messaging/presentation/pages/sponsor_chat_conversation_page.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import '../../../authentication/data/datasources/auth_local_datasource.dart';
@@ -130,11 +130,14 @@ class _SponsoredAnalysisDetailScreenState
                 MaterialPageRoute(
                   builder: (context) => BlocProvider(
                     create: (context) => GetIt.I<MessagingBloc>(),
-                    child: ChatConversationPage(
+                    child: SponsorChatConversationPage(
                       plantAnalysisId: data.analysis.id,
-                      farmerId: data.analysis.userId ?? 0,
-                      sponsorUserId: int.parse(user.id),
+                      sponsorUserId: int.parse(user.id),  // ⬅️ CHANGED: Sponsor is current user
+                      farmerId: data.analysis.userId ?? 0,  // ⬅️ CHANGED: Farmer is other user
                       sponsorshipTier: data.tierMetadata.tierName,
+                      farmerName: data.analysis.userName,  // ✅ NEW: Pass farmer name
+                      analysisImageUrl: data.analysis.imageUrl,
+                      analysisSummary: data.analysis.farmerFriendlySummary,
                     ),
                   ),
                 ),
