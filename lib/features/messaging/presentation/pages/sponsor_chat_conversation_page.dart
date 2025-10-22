@@ -123,9 +123,7 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
         // - fromUserId: farmer (from notification)
         // - toUserId: sponsor (us = widget.sponsorUserId)
 
-        // ⚠️ IMPORTANT: SignalR notification includes hasAttachments flag BUT NOT attachment URLs
-        // If hasAttachments=true, we need to fetch full message from API to get URLs
-        // For now, show placeholder indicating attachment exists - UI will fetch on demand
+        // ✅ SignalR notification now includes FULL attachment data from backend!
         final message = Message(
           id: messageNotification.messageId,
           plantAnalysisId: messageNotification.plantAnalysisId,
@@ -141,12 +139,12 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
           senderAvatarThumbnailUrl: '', // Backend should include this
           isRead: false, // ✅ New message is unread
           hasAttachments: messageNotification.hasAttachments,
-          attachmentUrls: null, // ⚠️ Not available in SignalR notification
-          attachmentThumbnails: null, // ⚠️ Not available in SignalR notification
+          attachmentUrls: messageNotification.attachmentUrls, // ✅ Now uses actual URLs
+          attachmentThumbnails: messageNotification.attachmentThumbnails, // ✅ Now uses actual URLs
           isVoiceMessage: messageNotification.isVoiceMessage,
-          voiceMessageUrl: null, // ⚠️ Not available in SignalR notification
+          voiceMessageUrl: messageNotification.voiceMessageUrl, // ✅ Now uses actual URL
           voiceMessageDuration: messageNotification.voiceMessageDuration,
-          voiceMessageWaveform: null, // ⚠️ Not available in SignalR notification
+          voiceMessageWaveform: messageNotification.voiceMessageWaveform, // ✅ Now uses actual data
         );
 
         // Dispatch event to BLoC to update UI

@@ -14,8 +14,12 @@ class MessageNotification {
   // ✅ NEW: Attachment information from SignalR
   final bool hasAttachments;
   final int attachmentCount;
+  final List<String>? attachmentUrls;
+  final List<String>? attachmentThumbnails;
   final bool isVoiceMessage;
+  final String? voiceMessageUrl;
   final int? voiceMessageDuration;
+  final List<int>? voiceMessageWaveform;
 
   MessageNotification({
     required this.messageId,
@@ -31,8 +35,12 @@ class MessageNotification {
     required this.requiresApproval,
     this.hasAttachments = false,
     this.attachmentCount = 0,
+    this.attachmentUrls,
+    this.attachmentThumbnails,
     this.isVoiceMessage = false,
+    this.voiceMessageUrl,
     this.voiceMessageDuration,
+    this.voiceMessageWaveform,
   });
 
   factory MessageNotification.fromJson(Map<String, dynamic> json) {
@@ -51,8 +59,18 @@ class MessageNotification {
       // ✅ NEW: Parse attachment info from SignalR
       hasAttachments: json['hasAttachments'] as bool? ?? false,
       attachmentCount: json['attachmentCount'] as int? ?? 0,
+      attachmentUrls: (json['attachmentUrls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      attachmentThumbnails: (json['attachmentThumbnails'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       isVoiceMessage: json['isVoiceMessage'] as bool? ?? false,
+      voiceMessageUrl: json['voiceMessageUrl'] as String?,
       voiceMessageDuration: json['voiceMessageDuration'] as int?,
+      voiceMessageWaveform: (json['voiceMessageWaveform'] as List<dynamic>?)
+          ?.map((e) => e as int)
+          .toList(),
     );
   }
 
@@ -71,8 +89,12 @@ class MessageNotification {
       'requiresApproval': requiresApproval,
       'hasAttachments': hasAttachments,
       'attachmentCount': attachmentCount,
+      'attachmentUrls': attachmentUrls,
+      'attachmentThumbnails': attachmentThumbnails,
       'isVoiceMessage': isVoiceMessage,
+      'voiceMessageUrl': voiceMessageUrl,
       'voiceMessageDuration': voiceMessageDuration,
+      'voiceMessageWaveform': voiceMessageWaveform,
     };
   }
 
