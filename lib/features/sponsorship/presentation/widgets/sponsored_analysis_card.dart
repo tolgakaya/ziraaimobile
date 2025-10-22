@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/sponsored_analysis_summary.dart';
+import 'envelope_icon.dart';
+import 'unread_badge.dart';
 
 /// Individual analysis card with tier-based field visibility
 /// Follows farmer dashboard card pattern with conditional rendering
@@ -159,6 +161,79 @@ class SponsoredAnalysisCard extends StatelessWidget {
                 ),
               ],
 
+              // Messaging section (if messages exist)
+              if (analysis.hasMessages) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: analysis.hasUnreadMessages
+                        ? Colors.blue.withOpacity(0.05)
+                        : Colors.grey.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: analysis.hasUnreadMessages
+                          ? Colors.blue.withOpacity(0.3)
+                          : Colors.grey.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Envelope icon
+                      EnvelopeIcon(
+                        hasMessages: analysis.hasMessages,
+                        hasUnreadMessages: analysis.hasUnreadMessages,
+                        hasUnreadFromFarmer: analysis.hasUnreadFromFarmer ?? false,
+                        isActiveConversation: analysis.isActiveConversation,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      // Message preview
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (analysis.lastMessagePreview != null)
+                              Text(
+                                analysis.lastMessagePreview!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: analysis.hasUnreadMessages
+                                      ? Colors.black87
+                                      : Colors.grey[600],
+                                  fontWeight: analysis.hasUnreadMessages
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            if (analysis.lastMessageDate != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatMessageDate(analysis.lastMessageDate!),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Unread badge
+                      UnreadBadge(
+                        unreadCount: analysis.unreadMessageCount,
+                        hasUnreadFromFarmer: analysis.hasUnreadFromFarmer ?? false,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               // Sponsor branding (if logo available)
               if (analysis.canViewLogo == true &&
                   analysis.sponsorInfo?.logoUrl != null) ...[
@@ -282,6 +357,26 @@ class SponsoredAnalysisCard extends StatelessWidget {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  /// Format message date in Turkish-friendly format
+  String _formatMessageDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inMinutes < 1) {
+      return 'Şimdi';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes} dakika önce';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} saat önce';
+    } else if (difference.inDays == 1) {
+      return 'Dün';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} gün önce';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
     }
   }
 }

@@ -45,9 +45,11 @@ class PlantAnalysisData {
 @JsonSerializable()
 class PlantAnalysisListResponse {
   final List<PlantAnalysisListItem> analyses;
+  final dynamic pagination; // Optional, backend may not send
 
   PlantAnalysisListResponse({
     required this.analyses,
+    this.pagination,
   });
 
   factory PlantAnalysisListResponse.fromJson(Map<String, dynamic> json) =>
@@ -58,6 +60,7 @@ class PlantAnalysisListResponse {
 
 @JsonSerializable()
 class PlantAnalysisListItem {
+  final int? id; // Numeric ID from backend
   final String? analysisId;
   final String? plantSpecies;
   final String? status;
@@ -66,6 +69,7 @@ class PlantAnalysisListItem {
   final String? primaryConcern;
 
   PlantAnalysisListItem({
+    this.id,
     this.analysisId,
     this.plantSpecies,
     this.status,

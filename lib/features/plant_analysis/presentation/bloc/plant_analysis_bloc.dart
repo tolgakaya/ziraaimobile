@@ -102,7 +102,12 @@ class PlantAnalysisBloc extends Bloc<PlantAnalysisEvent, PlantAnalysisState> {
       )),
       (data) => emit(PlantAnalysisListLoaded(
         analyses: data.analyses,
-        pagination: data.pagination,
+        pagination: data.pagination ?? PaginationInfo(
+          page: 1,
+          totalPages: 1,
+          totalItems: data.analyses.length,
+          pageSize: data.analyses.length,
+        ),
       )),
     );
   }

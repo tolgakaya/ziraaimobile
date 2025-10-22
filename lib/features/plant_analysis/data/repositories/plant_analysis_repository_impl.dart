@@ -137,21 +137,21 @@ class PlantAnalysisRepositoryImpl implements PlantAnalysisRepository {
         // Convert PlantAnalysisListResponse to AnalysisListData
         // Convert PlantAnalysisListItem to AnalysisSummary
         final convertedAnalyses = response.data!.analyses.map<AnalysisSummary>((item) => AnalysisSummary(
-          id: item.analysisId ?? 'unknown',
+          id: item.id ?? 0, // Backend sends int id
           plantType: item.plantSpecies ?? 'Unknown',
           healthStatus: item.status ?? 'Unknown',
           date: item.createdDate ?? DateTime.now(),
           thumbnailUrl: item.thumbnailUrl ?? '',
         )).toList();
-        
+
         final analysisListData = AnalysisListData(
           analyses: convertedAnalyses,
-          pagination: PaginationInfo(
+          pagination: response.data!.pagination != null ? PaginationInfo(
             page: page,
             totalPages: 1, // Default değer - API'den gelmiyorsa
             totalItems: convertedAnalyses.length,
             pageSize: pageSize,
-          ),
+          ) : null,
         );
         return Right(analysisListData);
       } else {

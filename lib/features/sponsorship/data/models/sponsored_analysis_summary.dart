@@ -45,8 +45,20 @@ class SponsoredAnalysisSummary {
   // ==========================================
   // Sponsor Display Info (May be null if not provided by backend)
   // ==========================================
-  
+
   final SponsorDisplayInfo? sponsorInfo;
+
+  // ==========================================
+  // Messaging Fields (Flat structure - Backend v1.1)
+  // ==========================================
+
+  final int? unreadMessageCount;
+  final int? totalMessageCount;
+  final DateTime? lastMessageDate;
+  final String? lastMessagePreview;
+  final String? lastMessageSenderRole;
+  final bool? hasUnreadFromFarmer;
+  final String? conversationStatus;
 
   SponsoredAnalysisSummary({
     required this.analysisId,
@@ -66,6 +78,13 @@ class SponsoredAnalysisSummary {
     this.canMessage,
     this.canViewLogo,
     this.sponsorInfo,
+    this.unreadMessageCount,
+    this.totalMessageCount,
+    this.lastMessageDate,
+    this.lastMessagePreview,
+    this.lastMessageSenderRole,
+    this.hasUnreadFromFarmer,
+    this.conversationStatus,
   });
 
   factory SponsoredAnalysisSummary.fromJson(Map<String, dynamic> json) =>
@@ -108,6 +127,52 @@ class SponsoredAnalysisSummary {
     } else {
       return '${analysisDate.day}/${analysisDate.month}/${analysisDate.year}';
     }
+  }
+
+  // ==========================================
+  // Messaging Helper Getters
+  // ==========================================
+
+  /// Has any messages in conversation
+  bool get hasMessages => (totalMessageCount ?? 0) > 0;
+
+  /// Has unread messages from farmer
+  bool get hasUnreadMessages => (unreadMessageCount ?? 0) > 0;
+
+  /// Is active conversation (< 7 days)
+  bool get isActiveConversation => conversationStatus == 'Active';
+
+  /// Is idle conversation (>= 7 days)
+  bool get isIdleConversation => conversationStatus == 'Idle';
+
+  /// No messages yet
+  bool get hasNoMessages => conversationStatus == 'None' || conversationStatus == null;
+
+  /// Calculate urgency score for sorting
+  int get urgencyScore {
+    int score = 0;
+
+    // 1. Okunmamış mesaj EN ÖNEMLİ
+    if (hasUnreadMessages) {
+      score += 1000 + ((unreadMessageCount ?? 0) * 100);
+    }
+
+    // 2. Çiftçiden okunmamış mesaj
+    if (hasUnreadFromFarmer == true) {
+      score += 500;
+    }
+
+    // 3. Düşük sağlık skoru
+    if (overallHealthScore != null && overallHealthScore! < 50) {
+      score += 200;
+    }
+
+    // 4. Aktif konuşma
+    if (isActiveConversation) {
+      score += 100;
+    }
+
+    return score;
   }
 }
 
