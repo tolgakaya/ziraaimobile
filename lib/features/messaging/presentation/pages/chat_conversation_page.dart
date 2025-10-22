@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/signalr_service.dart';
+import '../../../../core/models/message_notification.dart'; // ✅ Import for SignalR real-time messaging
 import '../../../../core/di/injection.dart';
 import '../bloc/messaging_bloc.dart';
 import '../widgets/voice_recorder_widget.dart';
