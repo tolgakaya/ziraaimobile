@@ -124,6 +124,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           senderCompany: messageNotification.fromUserCompany ?? '',
           senderAvatarUrl: '', // Backend should include this
           senderAvatarThumbnailUrl: '', // Backend should include this
+          isRead: false, // ✅ New message is unread
           hasAttachments: false,
           attachmentUrls: null,
           attachmentThumbnails: null,

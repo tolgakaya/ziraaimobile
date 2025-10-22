@@ -127,6 +127,7 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
           senderCompany: messageNotification.fromUserCompany ?? '',
           senderAvatarUrl: '', // Backend should include this
           senderAvatarThumbnailUrl: '', // Backend should include this
+          isRead: false, // ✅ New message is unread
           hasAttachments: false,
           attachmentUrls: null,
           attachmentThumbnails: null,
