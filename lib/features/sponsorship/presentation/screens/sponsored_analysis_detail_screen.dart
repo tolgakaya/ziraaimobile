@@ -140,9 +140,9 @@ class _SponsoredAnalysisDetailScreenState
                 ),
               );
             },
-            label: const Text('Mesaj Gönder'),
-            icon: const Icon(Icons.message),
-            backgroundColor: Colors.blue,
+            label: const Text('Çiftçiye Mesaj Gönder'),
+            icon: const Icon(Icons.send),
+            backgroundColor: const Color(0xFF17CF17),
           );
         },
       ),

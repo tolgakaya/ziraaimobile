@@ -301,9 +301,21 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         _cachedFeatures = features;
         print('✅ MessagingFeatures loaded for analysis ${event.plantAnalysisId}: imageAttachments.available=${features.imageAttachments.available}, fileAttachments.available=${features.fileAttachments.available}, voiceMessages.available=${features.voiceMessages.available}');
 
-        // Update state with features if we're already in MessagesLoaded state
+        // ✅ ALWAYS emit state with features to update UI immediately
         if (currentState is MessagesLoaded) {
+          // Update existing MessagesLoaded state with features
           emit(currentState.copyWith(features: features));
+        } else {
+          // ✅ FIX: If messages not loaded yet, emit MessagesLoaded with empty list
+          // This ensures features are available immediately in UI
+          emit(MessagesLoaded(
+            messages: const [],
+            canReply: false,
+            features: features,
+            currentPage: 1,
+            totalPages: 1,
+            totalRecords: 0,
+          ));
         }
       },
     );
