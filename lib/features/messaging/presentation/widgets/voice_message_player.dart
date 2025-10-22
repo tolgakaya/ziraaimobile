@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 
 /// Voice message player widget with playback controls
 /// Displays waveform and allows playing/pausing voice messages
+///
+/// ⚠️ SECURITY: Requires JWT authentication for secure file access
+/// Voice messages are accessed via secure API endpoints
 class VoiceMessagePlayer extends StatefulWidget {
   final String voiceUrl;
   final int duration; // in seconds
   final List<double>? waveform;
   final bool isFromCurrentUser;
+  final String jwtToken; // JWT token for secure file access
 
   const VoiceMessagePlayer({
     Key? key,
     required this.voiceUrl,
     required this.duration,
+    required this.jwtToken,
     this.waveform,
     this.isFromCurrentUser = false,
   }) : super(key: key);
@@ -43,17 +48,17 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
 
   void _initAudioPlayer() {
     // Listen to player state changes
-    _audioPlayer.onPlayerStateChanged.listen((state) {
+    _audioPlayer.playerStateStream.listen((state) {
       if (mounted) {
         setState(() {
-          _isPlaying = state == PlayerState.playing;
-          _isLoading = state == PlayerState.paused && _currentPosition == Duration.zero;
+          _isPlaying = state.playing;
+          _isLoading = state.processingState == ProcessingState.loading;
         });
       }
     });
 
     // Listen to position changes
-    _audioPlayer.onPositionChanged.listen((position) {
+    _audioPlayer.positionStream.listen((position) {
       if (mounted) {
         setState(() {
           _currentPosition = position;
@@ -62,8 +67,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     });
 
     // Listen to duration changes
-    _audioPlayer.onDurationChanged.listen((duration) {
-      if (mounted) {
+    _audioPlayer.durationStream.listen((duration) {
+      if (mounted && duration != null) {
         setState(() {
           _totalDuration = duration;
         });
@@ -71,8 +76,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     });
 
     // Listen to completion
-    _audioPlayer.onPlayerComplete.listen((_) {
-      if (mounted) {
+    _audioPlayer.processingStateStream.listen((state) {
+      if (mounted && state == ProcessingState.completed) {
         setState(() {
           _isPlaying = false;
           _currentPosition = Duration.zero;
@@ -87,13 +92,47 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         await _audioPlayer.pause();
       } else {
         if (_currentPosition == Duration.zero) {
-          await _audioPlayer.play(UrlSource(widget.voiceUrl));
+          setState(() => _isLoading = true);
+
+          // 🔍 DEBUG: Log the URL being played
+          print('🎵 VoiceMessagePlayer: Attempting to play URL: ${widget.voiceUrl}');
+          print('🔑 VoiceMessagePlayer: JWT token present: ${widget.jwtToken.isNotEmpty}');
+          print('🔑 VoiceMessagePlayer: JWT token (first 50 chars): ${widget.jwtToken.substring(0, widget.jwtToken.length > 50 ? 50 : widget.jwtToken.length)}...');
+          print('📋 VoiceMessagePlayer: Full headers: ${{'Authorization': 'Bearer ${widget.jwtToken}'}}');
+
+          // ✅ SECURITY: Set audio source with JWT authentication header
+          await _audioPlayer.setAudioSource(
+            AudioSource.uri(
+              Uri.parse(widget.voiceUrl),
+              headers: {
+                'Authorization': 'Bearer ${widget.jwtToken}',
+              },
+            ),
+          );
+
+          await _audioPlayer.play();
+          setState(() => _isLoading = false);
         } else {
-          await _audioPlayer.resume();
+          await _audioPlayer.play();
         }
       }
     } catch (e) {
-      _showErrorDialog('Ses çalınamadı: ${e.toString()}');
+      setState(() => _isLoading = false);
+
+      // 🔍 DEBUG: Log the error
+      print('❌ VoiceMessagePlayer ERROR: ${e.toString()}');
+
+      // Enhanced error handling for different HTTP status codes
+      final errorMessage = e.toString();
+      if (errorMessage.contains('401')) {
+        _showErrorDialog('Oturum süreniz doldu. Lütfen tekrar giriş yapın.');
+      } else if (errorMessage.contains('403')) {
+        _showErrorDialog('Bu ses mesajına erişim yetkiniz yok.');
+      } else if (errorMessage.contains('404')) {
+        _showErrorDialog('Ses mesajı bulunamadı.');
+      } else {
+        _showErrorDialog('Ses çalınamadı: ${e.toString()}');
+      }
     }
   }
 

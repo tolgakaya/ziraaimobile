@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart' as chat_ui;
 import 'package:flutter_chat_core/flutter_chat_core.dart' as chat_core;
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/di/injection.dart';
 import '../bloc/messaging_bloc.dart';
 import '../widgets/voice_recorder_widget.dart';
 import '../widgets/voice_message_player.dart';
@@ -39,10 +42,17 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   final List<XFile> _selectedImages = [];
   bool _isRecordingVoice = false;
 
+  // JWT token for secure file access
+  final AuthService _authService = getIt<AuthService>();
+  String? _jwtToken;
+
   @override
   void initState() {
     super.initState();
     _currentUserId = widget.farmerId.toString();
+
+    // Get JWT token for secure file access
+    _loadJwtToken();
 
     // Load messages - for farmer, the "other user" is the sponsor
     context.read<MessagingBloc>().add(
@@ -53,6 +63,15 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     context.read<MessagingBloc>().add(
       LoadMessagingFeaturesEvent(plantAnalysisId: widget.plantAnalysisId),
     );
+  }
+
+  Future<void> _loadJwtToken() async {
+    final token = await _authService.getToken();
+    if (mounted) {
+      setState(() {
+        _jwtToken = token;
+      });
+    }
   }
 
   @override
@@ -249,6 +268,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           'senderAvatarUrl': msg.senderAvatarUrl,
           'senderAvatarThumbnailUrl': msg.senderAvatarThumbnailUrl,
           'attachmentUrls': msg.attachmentUrls,
+          'attachmentThumbnails': msg.attachmentThumbnails,  // ✅ NEW: Thumbnail URLs
           'hasAttachments': msg.hasAttachments,
           // ✅ NEW: Voice message metadata
           'isVoiceMessage': msg.isVoiceMessage,
@@ -439,7 +459,13 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     // Check file type from URL
     final lowerUrl = url.toLowerCase();
     
-    if (lowerUrl.endsWith('.jpg') || 
+    // ✅ NEW: Check for secure API endpoints (no file extension in URL)
+    // Backend's new secure file serving: /api/v1/files/attachments/{id}/{index}
+    final isSecureAttachmentEndpoint = lowerUrl.contains('/files/attachments/') || 
+                                        lowerUrl.contains('/files/attachment-thumbnails/');
+    
+    if (isSecureAttachmentEndpoint ||
+        lowerUrl.endsWith('.jpg') || 
         lowerUrl.endsWith('.jpeg') || 
         lowerUrl.endsWith('.png') || 
         lowerUrl.endsWith('.gif') ||
@@ -456,12 +482,21 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   }
 
   /// Open image gallery in full screen
+  /// ✅ SECURITY: Passes JWT token for secure file access
   void _openImageGallery(List<String> imageUrls, int initialIndex) {
+    if (_jwtToken == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Oturum gerekli. Lütfen tekrar giriş yapın.')),
+      );
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => _FullScreenImageGallery(
           imageUrls: imageUrls,
           initialIndex: initialIndex,
+          jwtToken: _jwtToken!,
         ),
       ),
     );
@@ -579,9 +614,39 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   }
 
   /// Build attachment grid for messages with images
-  Widget _buildAttachmentGrid(List<String>? attachmentUrls) {
-    if (attachmentUrls == null || attachmentUrls.isEmpty) {
+  /// ✅ SECURITY: Uses CachedNetworkImage with JWT authentication headers
+  Widget _buildAttachmentGrid({
+    required List<String>? thumbnailUrls,
+    required List<String>? fullUrls,
+  }) {
+    if (thumbnailUrls == null || thumbnailUrls.isEmpty) {
       return const SizedBox.shrink();
+    }
+    
+    if (fullUrls == null || fullUrls.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // If JWT token not available, show authentication required message
+    if (_jwtToken == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.lock_outline, color: Colors.red, size: 16),
+            SizedBox(width: 8),
+            Text(
+              'Dosyaları görüntülemek için oturum gerekli',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ],
+        ),
+      );
     }
 
     return GridView.builder(
@@ -592,21 +657,28 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
       ),
-      itemCount: attachmentUrls.length > 4 ? 4 : attachmentUrls.length,
+      itemCount: thumbnailUrls.length > 4 ? 4 : thumbnailUrls.length,
       itemBuilder: (context, index) {
-        final url = attachmentUrls[index];
+        final thumbnailUrl = thumbnailUrls[index];
+        final fullUrl = fullUrls[index];
         return GestureDetector(
-          onTap: () => _openAttachment(url, attachmentUrls),
+          onTap: () => _openAttachment(fullUrl, fullUrls),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Stack(
               fit: StackFit.expand,
             children: [
-              Image.network(
-                url,
+              // ✅ SECURITY: CachedNetworkImage with JWT authentication
+              // Display thumbnail for efficiency, click opens full image
+              CachedNetworkImage(
+                imageUrl: thumbnailUrl,
+                httpHeaders: {
+                  'Authorization': 'Bearer $_jwtToken',
+                },
                 fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
+                placeholder: (context, url) {
+                  print('🖼️ LOADING thumbnail: $url');
+                  print('   JWT: ${_jwtToken?.substring(0, 20)}...');
                   return Container(
                     color: Colors.grey[200],
                     child: const Center(
@@ -614,20 +686,31 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                     ),
                   );
                 },
-                errorBuilder: (context, error, stackTrace) {
+                errorWidget: (context, url, error) {
+                  print('❌ THUMBNAIL ERROR: $url');
+                  print('   Error: $error');
                   return Container(
                     color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.broken_image, color: Colors.red, size: 32),
+                        Text(
+                          'Hata',
+                          style: TextStyle(color: Colors.red, fontSize: 10),
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
               // Show count indicator if more than 4 images
-              if (index == 3 && attachmentUrls.length > 4)
+              if (index == 3 && thumbnailUrls.length > 4)
                 Container(
                   color: Colors.black54,
                   child: Center(
                     child: Text(
-                      '+${attachmentUrls.length - 4}',
+                      '+${thumbnailUrls.length - 4}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -648,20 +731,43 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   Widget _buildTextMessageWithAvatarStatus(chat_core.TextMessage message, bool isSentByMe) {
     final avatarUrl = message.metadata?['senderAvatarThumbnailUrl'] as String?;
     final messageStatus = message.metadata?['messageStatus'] as String?;
-    final attachmentUrls = message.metadata?['attachmentUrls'] as List<String>?;
+
+    // ✅ FIXED: Safe casting from List<dynamic> to List<String>
+    // Backend sends List<dynamic>, we need List<String>
+    final attachmentUrlsDynamic = message.metadata?['attachmentUrls'] as List?;
+    final attachmentUrls = attachmentUrlsDynamic?.cast<String>().toList();
+    
+    // ✅ NEW: Get thumbnail URLs (for efficient display in chat)
+    final attachmentThumbnailsDynamic = message.metadata?['attachmentThumbnails'] as List?;
+    final attachmentThumbnails = attachmentThumbnailsDynamic?.cast<String>().toList();
+    
     final hasAttachments = attachmentUrls != null && attachmentUrls.isNotEmpty;
 
-    // ✅ NEW: Voice message support
+    // ✅ Voice message support with secure HTTPS API endpoints
     final isVoiceMessage = message.metadata?['isVoiceMessage'] as bool? ?? false;
     var voiceMessageUrl = message.metadata?['voiceMessageUrl'] as String?;
-    // ⚠️ HOTFIX: Backend sometimes returns HTTP instead of HTTPS, fix it here
+
+    // ⚠️ HOTFIX: Convert HTTP to HTTPS for backward compatibility
+    // Some old messages may still have HTTP URLs cached
     if (voiceMessageUrl != null && voiceMessageUrl.startsWith('http://')) {
       voiceMessageUrl = voiceMessageUrl.replaceFirst('http://', 'https://');
     }
-    final voiceMessageDuration = message.metadata?['voiceMessageDuration'] as int? ?? 0;
-    final voiceMessageWaveform = message.metadata?['voiceMessageWaveform'] as List<double>?;
 
-    print('🎯 _buildTextMessageWithAvatarStatus: avatarUrl=$avatarUrl, status=$messageStatus, attachments=${attachmentUrls?.length ?? 0}, isVoice=$isVoiceMessage');
+    final voiceMessageDuration = message.metadata?['voiceMessageDuration'] as int? ?? 0;
+
+    // ✅ FIXED: Safe casting from List<dynamic> to List<double>
+    final waveformDynamic = message.metadata?['voiceMessageWaveform'] as List?;
+    final voiceMessageWaveform = waveformDynamic?.cast<double>().toList();
+
+    print('🎯 _buildTextMessageWithAvatarStatus: avatarUrl=$avatarUrl, status=$messageStatus');
+    print('   📎 Attachments: fullUrls=${attachmentUrls?.length ?? 0}, thumbnails=${attachmentThumbnails?.length ?? 0}');
+    print('   🎤 Voice: isVoice=$isVoiceMessage, voiceUrl=$voiceMessageUrl');
+    if (attachmentUrls != null && attachmentUrls.isNotEmpty) {
+      print('   📷 Full URLs: ${attachmentUrls.take(2).join(", ")}${attachmentUrls.length > 2 ? "..." : ""}');
+    }
+    if (attachmentThumbnails != null && attachmentThumbnails.isNotEmpty) {
+      print('   🖼️ Thumbnails: ${attachmentThumbnails.take(2).join(", ")}${attachmentThumbnails.length > 2 ? "..." : ""}');
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -689,20 +795,44 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ✅ NEW: Voice message player (if voice message)
-                      if (isVoiceMessage && voiceMessageUrl != null)
+                      // ✅ Voice message player with JWT authentication
+                      if (isVoiceMessage && voiceMessageUrl != null && _jwtToken != null)
                         VoiceMessagePlayer(
                           voiceUrl: voiceMessageUrl,
                           duration: voiceMessageDuration,
+                          jwtToken: _jwtToken!,
                           waveform: voiceMessageWaveform,
                           isFromCurrentUser: isSentByMe,
+                        )
+                      // Show error if voice message but no token
+                      else if (isVoiceMessage && voiceMessageUrl != null && _jwtToken == null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.error_outline, color: Colors.red, size: 16),
+                              SizedBox(width: 8),
+                              Text(
+                                'Oturum gerekli',
+                                style: TextStyle(color: Colors.red, fontSize: 12),
+                              ),
+                            ],
+                          ),
                         )
                       // Attachment grid (if present and not voice message)
                       else if (hasAttachments) ...[
                         SizedBox(
                           width: 200,
                           height: attachmentUrls.length == 1 ? 150 : 200,
-                          child: _buildAttachmentGrid(attachmentUrls),
+                          child: _buildAttachmentGrid(
+                            thumbnailUrls: attachmentThumbnails ?? attachmentUrls,
+                            fullUrls: attachmentUrls,
+                          ),
                         ),
                         if (message.text.isNotEmpty) const SizedBox(height: 8),
                       ],
@@ -877,13 +1007,17 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 }
 
 /// Full-screen image gallery viewer
+/// Full-screen image gallery with secure file access
+/// ✅ SECURITY: Requires JWT authentication for viewing attachments
 class _FullScreenImageGallery extends StatefulWidget {
   final List<String> imageUrls;
   final int initialIndex;
+  final String jwtToken;
 
   const _FullScreenImageGallery({
     required this.imageUrls,
     required this.initialIndex,
+    required this.jwtToken,
   });
 
   @override
@@ -944,36 +1078,31 @@ class _FullScreenImageGalleryState extends State<_FullScreenImageGallery> {
             minScale: 0.5,
             maxScale: 4.0,
             child: Center(
-              child: Image.network(
-                widget.imageUrls[index],
+              // ✅ SECURITY: CachedNetworkImage with JWT authentication
+              child: CachedNetworkImage(
+                imageUrl: widget.imageUrls[index],
+                httpHeaders: {
+                  'Authorization': 'Bearer ${widget.jwtToken}',
+                },
                 fit: BoxFit.contain,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                      color: Colors.white,
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.broken_image, color: Colors.white, size: 64),
-                        SizedBox(height: 16),
-                        Text(
-                          'Resim yüklenemedi',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                placeholder: (context, url) => Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                  ),
+                ),
+                errorWidget: (context, url, error) => const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image, color: Colors.white, size: 64),
+                      SizedBox(height: 16),
+                      Text(
+                        'Resim yüklenemedi',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           );
