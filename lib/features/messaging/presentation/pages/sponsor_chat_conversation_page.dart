@@ -114,11 +114,14 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
         print('✅ SPONSOR CHAT: Message is for this conversation, updating UI...');
 
         // Convert MessageNotification to Message entity
+        // SPONSOR CHAT: We're the sponsor, so:
+        // - fromUserId: farmer (from notification)
+        // - toUserId: sponsor (us = widget.sponsorUserId)
         final message = Message(
           id: messageNotification.messageId,
           plantAnalysisId: messageNotification.plantAnalysisId,
           fromUserId: messageNotification.fromUserId,
-          toUserId: messageNotification.toUserId,
+          toUserId: widget.sponsorUserId, // ✅ We are the sponsor (receiver)
           message: messageNotification.message,
           status: MessageStatus.sent,
           sentDate: messageNotification.sentDate,

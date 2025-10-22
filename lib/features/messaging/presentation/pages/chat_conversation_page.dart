@@ -111,11 +111,14 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
         print('✅ FARMER CHAT: Message is for this conversation, updating UI...');
 
         // Convert MessageNotification to Message entity
+        // FARMER CHAT: We're the farmer, so:
+        // - fromUserId: sponsor (from notification)
+        // - toUserId: farmer (us = widget.farmerId)
         final message = Message(
           id: messageNotification.messageId,
           plantAnalysisId: messageNotification.plantAnalysisId,
           fromUserId: messageNotification.fromUserId,
-          toUserId: messageNotification.toUserId,
+          toUserId: widget.farmerId, // ✅ We are the farmer (receiver)
           message: messageNotification.message,
           status: MessageStatus.sent,
           sentDate: messageNotification.sentDate,
