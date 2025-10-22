@@ -135,7 +135,7 @@ class _SponsoredAnalysisDetailScreenState
                       sponsorUserId: int.parse(user.id),  // ⬅️ CHANGED: Sponsor is current user
                       farmerId: data.analysis.userId ?? 0,  // ⬅️ CHANGED: Farmer is other user
                       sponsorshipTier: data.tierMetadata.tierName,
-                      farmerName: data.analysis.userName,  // ✅ NEW: Pass farmer name
+                      farmerName: data.analysis.farmerId,  // ✅ NEW: Pass farmer ID as name (backend may not have name)
                       analysisImageUrl: data.analysis.imageUrl,
                       analysisSummary: data.analysis.farmerFriendlySummary,
                     ),

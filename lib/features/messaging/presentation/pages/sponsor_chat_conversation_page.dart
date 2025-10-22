@@ -87,10 +87,21 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.farmerName != null
-          ? 'Çiftçi: ${widget.farmerName}'  // ⬅️ CHANGED: Show farmer name
-          : 'Analiz #${widget.plantAnalysisId}'),
-        subtitle: Text('Tier: ${widget.sponsorshipTier}'),  // ⬅️ NEW: Show tier
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.farmerName != null
+                ? 'Çiftçi: ${widget.farmerName}'  // ⬅️ CHANGED: Show farmer name
+                : 'Analiz #${widget.plantAnalysisId}',
+              style: const TextStyle(fontSize: 18),
+            ),
+            Text(
+              'Tier: ${widget.sponsorshipTier}',  // ⬅️ NEW: Show tier
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
       ),
       body: BlocConsumer<MessagingBloc, MessagingState>(
         listener: (context, state) {
