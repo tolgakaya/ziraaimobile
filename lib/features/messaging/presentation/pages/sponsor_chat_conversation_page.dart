@@ -831,7 +831,10 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
 
   /// Build attachment button with feature check
   Widget _buildAttachmentButton(MessagingState state) {
-    final features = state is MessagesLoaded ? state.features : null;
+    // Get features from state OR from BLoC's cached features
+    // This ensures features are available even before messages are loaded
+    final bloc = context.read<MessagingBloc>();
+    final features = (state is MessagesLoaded ? state.features : null) ?? bloc.cachedFeatures;
     final imageFeature = features?.imageAttachments;
     final fileFeature = features?.fileAttachments;
     final videoFeature = features?.videoAttachments;
@@ -865,7 +868,10 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
 
   /// Build voice button with feature check
   Widget _buildVoiceButton(MessagingState state) {
-    final features = state is MessagesLoaded ? state.features : null;
+    // Get features from state OR from BLoC's cached features
+    // This ensures features are available even before messages are loaded
+    final bloc = context.read<MessagingBloc>();
+    final features = (state is MessagesLoaded ? state.features : null) ?? bloc.cachedFeatures;
     final voiceFeature = features?.voiceMessages;
 
     final isAvailable = voiceFeature != null && _isTierSufficient(voiceFeature.requiredTier);

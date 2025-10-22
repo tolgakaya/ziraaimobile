@@ -41,6 +41,9 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     on<LoadMessagingFeaturesEvent>(_onLoadMessagingFeatures);
   }
 
+  /// Expose cached features for UI access (even when state is not MessagesLoaded yet)
+  MessagingFeatures? get cachedFeatures => _cachedFeatures;
+
   /// Business rule: Farmer can reply only if sponsor has sent at least one message
   bool _canFarmerReply(List<Message> messages) {
     return messages.any((msg) => msg.senderRole == 'Sponsor');
@@ -301,22 +304,13 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         _cachedFeatures = features;
         print('✅ MessagingFeatures loaded for analysis ${event.plantAnalysisId}: imageAttachments.available=${features.imageAttachments.available}, fileAttachments.available=${features.fileAttachments.available}, voiceMessages.available=${features.voiceMessages.available}');
 
-        // ✅ ALWAYS emit state with features to update UI immediately
+        // Update state with features ONLY if we're already in MessagesLoaded state
+        // ⚠️ DO NOT emit empty MessagesLoaded here - it will clear messages from UI!
         if (currentState is MessagesLoaded) {
-          // Update existing MessagesLoaded state with features
           emit(currentState.copyWith(features: features));
-        } else {
-          // ✅ FIX: If messages not loaded yet, emit MessagesLoaded with empty list
-          // This ensures features are available immediately in UI
-          emit(MessagesLoaded(
-            messages: const [],
-            canReply: false,
-            features: features,
-            currentPage: 1,
-            totalPages: 1,
-            totalRecords: 0,
-          ));
         }
+        // If not MessagesLoaded yet, features will be picked up from _cachedFeatures
+        // when LoadMessagesEvent completes and emits MessagesLoaded
       },
     );
   }
