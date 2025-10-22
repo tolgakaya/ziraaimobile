@@ -11,6 +11,12 @@ class MessageNotification {
   final bool isApproved;
   final bool requiresApproval;
 
+  // ✅ NEW: Attachment information from SignalR
+  final bool hasAttachments;
+  final int attachmentCount;
+  final bool isVoiceMessage;
+  final int? voiceMessageDuration;
+
   MessageNotification({
     required this.messageId,
     required this.plantAnalysisId,
@@ -23,6 +29,10 @@ class MessageNotification {
     required this.sentDate,
     required this.isApproved,
     required this.requiresApproval,
+    this.hasAttachments = false,
+    this.attachmentCount = 0,
+    this.isVoiceMessage = false,
+    this.voiceMessageDuration,
   });
 
   factory MessageNotification.fromJson(Map<String, dynamic> json) {
@@ -38,6 +48,11 @@ class MessageNotification {
       sentDate: DateTime.parse(json['sentDate'] as String),
       isApproved: json['isApproved'] as bool? ?? true,
       requiresApproval: json['requiresApproval'] as bool? ?? false,
+      // ✅ NEW: Parse attachment info from SignalR
+      hasAttachments: json['hasAttachments'] as bool? ?? false,
+      attachmentCount: json['attachmentCount'] as int? ?? 0,
+      isVoiceMessage: json['isVoiceMessage'] as bool? ?? false,
+      voiceMessageDuration: json['voiceMessageDuration'] as int?,
     );
   }
 
@@ -54,6 +69,10 @@ class MessageNotification {
       'sentDate': sentDate.toIso8601String(),
       'isApproved': isApproved,
       'requiresApproval': requiresApproval,
+      'hasAttachments': hasAttachments,
+      'attachmentCount': attachmentCount,
+      'isVoiceMessage': isVoiceMessage,
+      'voiceMessageDuration': voiceMessageDuration,
     };
   }
 
