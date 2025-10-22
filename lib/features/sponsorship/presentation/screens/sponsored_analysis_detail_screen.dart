@@ -111,20 +111,17 @@ class _SponsoredAnalysisDetailScreenState
           // if (!tier.canMessage) return const SizedBox.shrink();
 
           return FloatingActionButton.extended(
-            onPressed: () async {
-              // Get current sponsor ID from stored user data
-              final authDataSource = GetIt.I<AuthLocalDataSource>();
-              final user = await authDataSource.getStoredUser();
+            onPressed: () {
+              // Get sponsor ID directly from analysis data (no GetIt needed!)
+              final sponsorUserId = data.analysis.sponsorUserId;
 
-              if (user == null) {
-                if (!context.mounted) return;
+              if (sponsorUserId == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Kullanıcı bilgisi bulunamadı')),
+                  const SnackBar(content: Text('Sponsor bilgisi bulunamadı')),
                 );
                 return;
               }
 
-              if (!context.mounted) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -132,10 +129,10 @@ class _SponsoredAnalysisDetailScreenState
                     create: (context) => GetIt.I<MessagingBloc>(),
                     child: SponsorChatConversationPage(
                       plantAnalysisId: data.analysis.id,
-                      sponsorUserId: int.parse(user.id),  // ⬅️ CHANGED: Sponsor is current user
-                      farmerId: data.analysis.userId ?? 0,  // ⬅️ CHANGED: Farmer is other user
+                      sponsorUserId: sponsorUserId,  // ✅ From analysis data
+                      farmerId: data.analysis.userId ?? 0,  // ✅ Farmer is other user
                       sponsorshipTier: data.tierMetadata.tierName,
-                      farmerName: data.analysis.farmerId,  // ✅ NEW: Pass farmer ID as name (backend may not have name)
+                      farmerName: data.analysis.farmerId,  // ✅ Pass farmer ID as name
                       analysisImageUrl: data.analysis.imageUrl,
                       analysisSummary: data.analysis.farmerFriendlySummary,
                     ),
