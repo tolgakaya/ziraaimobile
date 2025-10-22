@@ -157,8 +157,6 @@ class NotificationsPage extends StatelessWidget {
             farmerId: notification.userId, // Current user is farmer
             sponsorUserId: int.parse(notification.sponsorId ?? '0'), // Sender is sponsor
             sponsorshipTier: 'L', // Default tier, will be loaded from API
-            farmerName: null,
-            sponsorName: notification.senderDisplayName,
           ),
         ),
       );
