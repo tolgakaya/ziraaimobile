@@ -52,6 +52,9 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   late final SignalRService _signalRService;
   bool _signalRListenerRegistered = false;
 
+  // Store listener reference for cleanup
+  late final Function(MessageNotification) _messageListener;
+
   @override
   void initState() {
     super.initState();
@@ -95,8 +98,8 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
       print('✅ FARMER CHAT: Setting up SignalR listener for analysis ${widget.plantAnalysisId}');
 
-      // Register callback for new messages
-      _signalRService.onNewMessage = (messageNotification) {
+      // ✅ CRITICAL FIX: Create listener and store reference for cleanup
+      _messageListener = (messageNotification) {
         print('💬 FARMER CHAT: Real-time message received!');
         print('   From: ${messageNotification.fromUserName} (${messageNotification.senderRole})');
         print('   To Analysis: ${messageNotification.plantAnalysisId}');
@@ -146,6 +149,8 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
         }
       };
 
+      // ✅ Add listener to SignalR service (supports multiple listeners now)
+      _signalRService.addNewMessageListener(_messageListener);
       _signalRListenerRegistered = true;
       print('✅ FARMER CHAT: SignalR listener registered successfully');
     } catch (e) {
@@ -155,12 +160,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
   @override
   void dispose() {
-    // ✅ Clean up SignalR listener
+    // ✅ CRITICAL: Remove our listener from SignalR service
     if (_signalRListenerRegistered) {
-      print('🧹 FARMER CHAT: Cleaning up SignalR listener');
-      // NOTE: We don't clear _signalRService.onNewMessage completely
-      // because other screens might be using it (SignalRNotificationIntegration)
-      // The callback already filters by plantAnalysisId, so it's safe
+      print('🧹 FARMER CHAT: Removing SignalR listener');
+      _signalRService.removeNewMessageListener(_messageListener);
     }
     _chatController.dispose();
     super.dispose();
