@@ -7,7 +7,8 @@ import '../bloc/notification_bloc.dart';
 import '../bloc/notification_event.dart';
 import '../bloc/notification_state.dart';
 import '../../../plant_analysis/presentation/screens/analysis_detail_screen.dart';
-import '../../../messaging/presentation/pages/chat_conversation_page.dart'; // ✅ NEW: For message notifications
+import '../../../messaging/presentation/pages/chat_conversation_page.dart';
+import '../../../messaging/presentation/bloc/messaging_bloc.dart'; // ✅ NEW: For BLoC provider
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({Key? key}) : super(key: key);
@@ -152,11 +153,14 @@ class NotificationsPage extends StatelessWidget {
       print('📱 Navigating to chat for message notification from ${notification.senderDisplayName}');
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => ChatConversationPage(
-            plantAnalysisId: notification.analysisId,
-            farmerId: notification.userId, // Current user is farmer
-            sponsorUserId: int.parse(notification.sponsorId ?? '0'), // Sender is sponsor
-            sponsorshipTier: 'L', // Default tier, will be loaded from API
+          builder: (context) => BlocProvider(
+            create: (context) => GetIt.instance<MessagingBloc>(),
+            child: ChatConversationPage(
+              plantAnalysisId: notification.analysisId,
+              farmerId: notification.userId, // Current user is farmer
+              sponsorUserId: int.parse(notification.sponsorId ?? '0'), // Sender is sponsor
+              sponsorshipTier: 'L', // Default tier, will be loaded from API
+            ),
           ),
         ),
       );

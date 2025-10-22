@@ -140,12 +140,16 @@ class SignalRNotificationIntegration {
       iOS: iosDetails,
     );
 
-    final title = messageNotification.fromUserCompany ?? messageNotification.fromUserName;
-    final body = messageNotification.message;
+    // ✅ Enhanced title and body with sender info and analysis ID
+    final senderName = messageNotification.fromUserCompany ?? messageNotification.fromUserName ?? 'Kullanıcı';
+    final title = messageNotification.isSponsorMessage
+        ? 'Yeni Sponsor Mesajı'
+        : 'Yeni Çiftçi Mesajı';
+    final body = '$senderName (Analiz #${messageNotification.plantAnalysisId}): ${messageNotification.message}';
 
     _localNotifications!.show(
       messageNotification.messageId,
-      '💬 $title',
+      title,
       body,
       notificationDetails,
       payload: 'message_${messageNotification.plantAnalysisId}',
