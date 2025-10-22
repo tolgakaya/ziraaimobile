@@ -12,6 +12,13 @@ class PlantAnalysisNotification {
   final String? message;
   final bool isRead;
 
+  // ✅ NEW: Message notification specific fields
+  final int? messageId;
+  final String? fromUserName;
+  final String? fromUserCompany;
+  final String? senderAvatarUrl;
+  final String? senderRole; // "Sponsor" or "Farmer"
+
   PlantAnalysisNotification({
     required this.analysisId,
     required this.userId,
@@ -25,6 +32,12 @@ class PlantAnalysisNotification {
     this.sponsorId,
     this.message,
     this.isRead = false,
+    // ✅ NEW: Message notification fields
+    this.messageId,
+    this.fromUserName,
+    this.fromUserCompany,
+    this.senderAvatarUrl,
+    this.senderRole,
   });
 
   factory PlantAnalysisNotification.fromJson(Map<String, dynamic> json) {
@@ -41,6 +54,12 @@ class PlantAnalysisNotification {
       sponsorId: json['sponsorId'] as String?,
       message: json['message'] as String?,
       isRead: json['isRead'] as bool? ?? false,
+      // ✅ NEW: Parse message notification fields
+      messageId: json['messageId'] as int?,
+      fromUserName: json['fromUserName'] as String?,
+      fromUserCompany: json['fromUserCompany'] as String?,
+      senderAvatarUrl: json['senderAvatarUrl'] as String?,
+      senderRole: json['senderRole'] as String?,
     );
   }
 
@@ -58,6 +77,12 @@ class PlantAnalysisNotification {
       'sponsorId': sponsorId,
       'message': message,
       'isRead': isRead,
+      // ✅ NEW: Include message notification fields
+      'messageId': messageId,
+      'fromUserName': fromUserName,
+      'fromUserCompany': fromUserCompany,
+      'senderAvatarUrl': senderAvatarUrl,
+      'senderRole': senderRole,
     };
   }
 
@@ -74,6 +99,12 @@ class PlantAnalysisNotification {
     String? sponsorId,
     String? message,
     bool? isRead,
+    // ✅ NEW: Message notification fields
+    int? messageId,
+    String? fromUserName,
+    String? fromUserCompany,
+    String? senderAvatarUrl,
+    String? senderRole,
   }) {
     return PlantAnalysisNotification(
       analysisId: analysisId ?? this.analysisId,
@@ -88,6 +119,33 @@ class PlantAnalysisNotification {
       sponsorId: sponsorId ?? this.sponsorId,
       message: message ?? this.message,
       isRead: isRead ?? this.isRead,
+      // ✅ NEW: Copy message notification fields
+      messageId: messageId ?? this.messageId,
+      fromUserName: fromUserName ?? this.fromUserName,
+      fromUserCompany: fromUserCompany ?? this.fromUserCompany,
+      senderAvatarUrl: senderAvatarUrl ?? this.senderAvatarUrl,
+      senderRole: senderRole ?? this.senderRole,
     );
+  }
+
+  // ✅ NEW: Helper methods for notification type detection
+  /// Check if this is a message notification
+  bool get isMessageNotification => status == 'Message';
+
+  /// Check if this is an analysis notification (completed/failed)
+  bool get isAnalysisNotification => !isMessageNotification;
+
+  /// Get display title for notification
+  String get displayTitle {
+    if (isMessageNotification) {
+      return 'Yeni Mesaj';
+    }
+    return status == 'Completed' ? 'Analiz Tamamlandı' : status;
+  }
+
+  /// Get sender display name (for messages)
+  String? get senderDisplayName {
+    if (!isMessageNotification) return null;
+    return fromUserCompany ?? fromUserName;
   }
 }

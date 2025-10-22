@@ -58,39 +58,52 @@ class SignalRNotificationIntegration {
       _notificationBloc.add(AddNotification(notification));
     };
 
-    // Handle new message notifications (sponsor→farmer only)
+    // Handle new message notifications (ALL incoming messages)
     _signalRService.onNewMessage = (messageNotification) {
       print('💬 SignalRIntegration: CALLBACK TRIGGERED! New message from ${messageNotification.senderRole}');
       print('💬 SignalRIntegration: Message: ${messageNotification.message}');
+      print('💬 SignalRIntegration: From user: ${messageNotification.fromUserName} (ID: ${messageNotification.fromUserId})');
 
-      // Show local notification for sponsor→farmer messages
-      if (messageNotification.isSponsorMessage) {
-        _showMessageNotification(messageNotification);
-        
-        // CRITICAL: Also add to NotificationBloc so it appears in notification bell icon
-        // Convert MessageNotification to PlantAnalysisNotification format
-        print('📲 SignalRIntegration: Adding message notification to bloc...');
-        final plantAnalysisNotification = PlantAnalysisNotification(
-          analysisId: messageNotification.plantAnalysisId,
-          userId: messageNotification.fromUserId,
-          status: 'Message', // Custom status for message notifications
-          completedAt: messageNotification.sentDate,
-          primaryConcern: 'Yeni Sponsor Mesajı',
-          message: '${messageNotification.fromUserCompany ?? messageNotification.fromUserName}: ${messageNotification.message}',
-          sponsorId: messageNotification.fromUserId.toString(),
-          isRead: false,
-        );
-        
-        _notificationBloc.add(AddNotification(plantAnalysisNotification));
-        print('✅ SignalRIntegration: Message notification added to bloc!');
-      }
+      // ✅ CRITICAL: Show notifications for ALL incoming messages
+      // - If sponsor sent → show to farmer
+      // - If farmer sent → show to sponsor
+      // Note: SignalR only sends to the OTHER party, not to the sender
+      _showMessageNotification(messageNotification);
+
+      // CRITICAL: Also add to NotificationBloc so it appears in notification bell icon
+      // Convert MessageNotification to PlantAnalysisNotification format with full message details
+      print('📲 SignalRIntegration: Adding message notification to bloc with full details...');
+
+      final notificationTitle = messageNotification.isSponsorMessage
+          ? 'Yeni Sponsor Mesajı'
+          : 'Yeni Çiftçi Mesajı';
+
+      final plantAnalysisNotification = PlantAnalysisNotification(
+        analysisId: messageNotification.plantAnalysisId,
+        userId: messageNotification.fromUserId,
+        status: 'Message', // Custom status for message notifications
+        completedAt: messageNotification.sentDate,
+        primaryConcern: notificationTitle,
+        message: messageNotification.message,
+        sponsorId: messageNotification.fromUserId.toString(),
+        isRead: false,
+        // ✅ NEW: Pass message-specific details
+        messageId: messageNotification.messageId,
+        fromUserName: messageNotification.fromUserName,
+        fromUserCompany: messageNotification.fromUserCompany,
+        senderAvatarUrl: messageNotification.senderAvatarUrl,
+        senderRole: messageNotification.senderRole,
+      );
+
+      _notificationBloc.add(AddNotification(plantAnalysisNotification));
+      print('✅ SignalRIntegration: Message notification added to bloc with sender: ${messageNotification.fromUserName} (${messageNotification.senderRole})!');
     };
 
     _isInitialized = true;
     print('✅ SignalRIntegration: Event handlers setup complete!');
   }
 
-  /// Show local notification for incoming sponsor message
+  /// Show local notification for incoming message (sponsor or farmer)
   void _showMessageNotification(MessageNotification messageNotification) {
     if (_localNotifications == null) {
       print('⚠️ SignalRIntegration: Local notifications not initialized');
@@ -99,10 +112,17 @@ class SignalRNotificationIntegration {
 
     print('🔔 SignalRIntegration: Showing notification for message from ${messageNotification.fromUserCompany ?? messageNotification.fromUserName}');
 
-    const androidDetails = AndroidNotificationDetails(
-      'sponsor_messages',
-      'Sponsor Mesajları',
-      channelDescription: 'Sponsorlardan gelen mesaj bildirimleri',
+    // ✅ Different channels for sponsor vs farmer messages
+    final channelId = messageNotification.isSponsorMessage ? 'sponsor_messages' : 'farmer_messages';
+    final channelName = messageNotification.isSponsorMessage ? 'Sponsor Mesajları' : 'Çiftçi Mesajları';
+    final channelDescription = messageNotification.isSponsorMessage
+        ? 'Sponsorlardan gelen mesaj bildirimleri'
+        : 'Çiftçilerden gelen mesaj bildirimleri';
+
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: channelDescription,
       importance: Importance.high,
       priority: Priority.high,
       enableVibration: true,
@@ -115,17 +135,21 @@ class SignalRNotificationIntegration {
       presentSound: true,
     );
 
-    const notificationDetails = NotificationDetails(
+    final notificationDetails = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
 
-    final title = messageNotification.fromUserCompany ?? messageNotification.fromUserName;
-    final body = messageNotification.message;
+    // ✅ Enhanced title and body with sender info and analysis ID
+    final senderName = messageNotification.fromUserCompany ?? messageNotification.fromUserName ?? 'Kullanıcı';
+    final title = messageNotification.isSponsorMessage
+        ? 'Yeni Sponsor Mesajı'
+        : 'Yeni Çiftçi Mesajı';
+    final body = '$senderName (Analiz #${messageNotification.plantAnalysisId}): ${messageNotification.message}';
 
     _localNotifications!.show(
       messageNotification.messageId,
-      '💬 $title',
+      title,
       body,
       notificationDetails,
       payload: 'message_${messageNotification.plantAnalysisId}',
