@@ -141,7 +141,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           isVoiceMessage: messageNotification.isVoiceMessage,
           voiceMessageUrl: messageNotification.voiceMessageUrl,
           voiceMessageDuration: messageNotification.voiceMessageDuration,
-          voiceMessageWaveform: messageNotification.voiceMessageWaveform,
+          voiceMessageWaveform: messageNotification.voiceMessageWaveform?.map((e) => e.toDouble()).toList(),
         );
 
         // Dispatch event to BLoC to update UI

@@ -144,7 +144,7 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
           isVoiceMessage: messageNotification.isVoiceMessage,
           voiceMessageUrl: messageNotification.voiceMessageUrl, // ✅ Now uses actual URL
           voiceMessageDuration: messageNotification.voiceMessageDuration,
-          voiceMessageWaveform: messageNotification.voiceMessageWaveform, // ✅ Now uses actual data
+          voiceMessageWaveform: messageNotification.voiceMessageWaveform?.map((e) => e.toDouble()).toList(),
         );
 
         // Dispatch event to BLoC to update UI
