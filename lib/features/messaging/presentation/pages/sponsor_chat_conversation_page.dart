@@ -93,7 +93,8 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
   /// Setup SignalR listener for real-time message updates
   void _setupSignalRListener() {
     try {
-      _signalRService = getIt<SignalRService>();
+      // ✅ SignalRService is a singleton, NOT registered in GetIt
+      _signalRService = SignalRService();
 
       if (!_signalRService.isConnected) {
         print('⚠️ SPONSOR CHAT: SignalR not connected, real-time updates disabled');

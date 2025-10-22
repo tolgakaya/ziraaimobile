@@ -90,7 +90,8 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   /// Setup SignalR listener for real-time message updates
   void _setupSignalRListener() {
     try {
-      _signalRService = getIt<SignalRService>();
+      // ✅ SignalRService is a singleton, NOT registered in GetIt
+      _signalRService = SignalRService();
 
       if (!_signalRService.isConnected) {
         print('⚠️ FARMER CHAT: SignalR not connected, real-time updates disabled');
