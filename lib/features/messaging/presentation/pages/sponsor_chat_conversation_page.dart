@@ -135,8 +135,8 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
           senderRole: messageNotification.senderRole,
           senderName: messageNotification.fromUserName,
           senderCompany: messageNotification.fromUserCompany ?? '',
-          senderAvatarUrl: '', // Backend should include this
-          senderAvatarThumbnailUrl: '', // Backend should include this
+          senderAvatarUrl: messageNotification.senderAvatarUrl, // ✅ Now uses actual avatar URL
+          senderAvatarThumbnailUrl: messageNotification.senderAvatarThumbnailUrl, // ✅ Now uses actual thumbnail URL
           isRead: false, // ✅ New message is unread
           hasAttachments: messageNotification.hasAttachments,
           attachmentUrls: messageNotification.attachmentUrls, // ✅ Now uses actual URLs

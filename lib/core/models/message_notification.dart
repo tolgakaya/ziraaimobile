@@ -11,6 +11,10 @@ class MessageNotification {
   final bool isApproved;
   final bool requiresApproval;
 
+  // ✅ NEW: Avatar information from SignalR
+  final String? senderAvatarUrl;
+  final String? senderAvatarThumbnailUrl;
+
   // ✅ NEW: Attachment information from SignalR
   final bool hasAttachments;
   final int attachmentCount;
@@ -33,6 +37,8 @@ class MessageNotification {
     required this.sentDate,
     required this.isApproved,
     required this.requiresApproval,
+    this.senderAvatarUrl,
+    this.senderAvatarThumbnailUrl,
     this.hasAttachments = false,
     this.attachmentCount = 0,
     this.attachmentUrls,
@@ -56,6 +62,9 @@ class MessageNotification {
       sentDate: DateTime.parse(json['sentDate'] as String),
       isApproved: json['isApproved'] as bool? ?? true,
       requiresApproval: json['requiresApproval'] as bool? ?? false,
+      // ✅ NEW: Parse avatar info from SignalR
+      senderAvatarUrl: json['senderAvatarUrl'] as String?,
+      senderAvatarThumbnailUrl: json['senderAvatarThumbnailUrl'] as String?,
       // ✅ NEW: Parse attachment info from SignalR
       hasAttachments: json['hasAttachments'] as bool? ?? false,
       attachmentCount: json['attachmentCount'] as int? ?? 0,
@@ -87,6 +96,8 @@ class MessageNotification {
       'sentDate': sentDate.toIso8601String(),
       'isApproved': isApproved,
       'requiresApproval': requiresApproval,
+      'senderAvatarUrl': senderAvatarUrl,
+      'senderAvatarThumbnailUrl': senderAvatarThumbnailUrl,
       'hasAttachments': hasAttachments,
       'attachmentCount': attachmentCount,
       'attachmentUrls': attachmentUrls,
