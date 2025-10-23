@@ -75,6 +75,24 @@ class SummaryStatisticsCard extends StatelessWidget {
                 ),
               ],
             ),
+
+            // Third row: Messaging statistics (if available)
+            if (summary.analysesWithUnread != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatisticItem(
+                      icon: Icons.mail,
+                      label: 'Okunmamış Mesajlı',
+                      value: summary.analysesWithUnread.toString(),
+                      color: Colors.red,
+                    ),
+                  ),
+                  const Expanded(child: SizedBox.shrink()),
+                ],
+              ),
+            ],
           ],
         ),
       ),

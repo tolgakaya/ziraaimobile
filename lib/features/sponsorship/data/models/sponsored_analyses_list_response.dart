@@ -40,12 +40,14 @@ class SponsoredAnalysesListSummary {
   final double averageHealthScore;
   final List<String> topCropTypes;
   final int analysesThisMonth;
+  final int? analysesWithUnread;
 
   SponsoredAnalysesListSummary({
     required this.totalAnalyses,
     required this.averageHealthScore,
     required this.topCropTypes,
     required this.analysesThisMonth,
+    this.analysesWithUnread,
   });
 
   factory SponsoredAnalysesListSummary.fromJson(Map<String, dynamic> json) =>

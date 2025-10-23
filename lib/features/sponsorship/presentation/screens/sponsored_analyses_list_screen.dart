@@ -126,10 +126,15 @@ if (_startDate != null) {
         if (mounted) {
           setState(() {
             _allAnalyses.addAll(responseData.items);
+
+            // Smart sorting: Sort by urgency score (unread messages priority)
+            // This puts analyses with unread messages from farmers at the top
+            _allAnalyses.sort((a, b) => b.urgencyScore.compareTo(a.urgencyScore));
+
             _hasMorePages = responseData.hasNextPage;
             _summary = responseData.summary;
             _isLoadingMore = false;
-            
+
             if (_hasMorePages) {
               _currentPage++;
             }
@@ -373,6 +378,20 @@ if (_startDate != null) {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _buildSortOption(
+              icon: Icons.priority_high,
+              title: 'Önceliğe Göre (Okunmamış Mesajlar Üstte)',
+              isSelected: _sortBy == 'urgency',
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  _sortBy = 'urgency';
+                  _sortOrder = 'desc';
+                  _initialLoadFuture = _loadAnalyses(refresh: true);
+                });
+              },
+            ),
+            const Divider(height: 1),
             _buildSortOption(
               icon: Icons.access_time,
               title: 'Tarihe Göre (Yeni → Eski)',
