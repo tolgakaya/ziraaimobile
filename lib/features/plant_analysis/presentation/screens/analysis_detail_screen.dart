@@ -52,8 +52,11 @@ class AnalysisDetailScreen extends StatelessWidget {
             floatingActionButton: detail?.sponsorshipMetadata?.canReply == true
               ? FloatingActionButton.extended(
                   onPressed: () async {
-                    // Store references before async gap
+                    // Store all required values before async gap
                     final currentAnalysisId = detail!.id!;
+                    final currentFarmerId = detail!.userId!;
+                    final currentSponsorId = detail!.sponsorshipMetadata!.sponsorInfo.sponsorId;
+                    final currentTier = detail!.sponsorshipMetadata!.tierName;
                     final currentContext = context;
                     
                     // ✅ Navigate to chat
@@ -64,9 +67,9 @@ class AnalysisDetailScreen extends StatelessWidget {
                           create: (context) => GetIt.I<MessagingBloc>(),
                           child: ChatConversationPage(
                             plantAnalysisId: currentAnalysisId,
-                            farmerId: detail.userId!,
-                            sponsorUserId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
-                            sponsorshipTier: detail.sponsorshipMetadata!.tierName,
+                            farmerId: currentFarmerId,
+                            sponsorUserId: currentSponsorId,
+                            sponsorshipTier: currentTier,
                           ),
                         ),
                       ),
