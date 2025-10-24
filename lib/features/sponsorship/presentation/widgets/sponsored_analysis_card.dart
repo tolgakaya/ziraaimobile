@@ -78,202 +78,390 @@ class SponsoredAnalysisCard extends StatelessWidget {
               ),
             ),
 
-            // Plant Info Section
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Plant name, health score, and date
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          analysis.cropType ?? 'Bilinmeyen Bitki',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1F2937),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (analysis.hasBasicAccess && analysis.overallHealthScore != null)
-                        _buildHealthScoreBadge(context),
-                    ],
-                  ),
-
-                  // Date
-                  const SizedBox(height: 2),
-                  Text(
-                    analysis.analysisDateFormatted,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF9CA3AF),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-
-                  // Plant species and variety
-                  if (analysis.hasBasicAccess && analysis.plantSpecies != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      '${analysis.plantSpecies}${analysis.plantVariety != null ? ' - ${analysis.plantVariety}' : ''}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF4B5563),
-                        height: 1.3,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+            // Plant Info Section with Enhanced Visual Design
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white,
+                    const Color(0xFFFAFAFA),
                   ],
-
-                  // Growth stage
-                  if (analysis.hasBasicAccess && analysis.growthStage != null) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(Icons.spa, size: 14, color: Color(0xFF10B981)),
-                        const SizedBox(width: 4),
-                        Text(
-                          analysis.growthStage!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-
-                  // Primary Concern (replaces species detail if available)
-                  if (analysis.hasDetailedAccess && analysis.primaryConcern != null) ...[
-                    const SizedBox(height: 10),
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(12),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Plant name with gradient background
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFF0FDF4), // green-50
+                            const Color(0xFFDCFCE7), // green-100
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.3),
+                          color: const Color(0xFF86EFAC).withOpacity(0.3), // green-300
                           width: 1,
                         ),
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            _getSeverityIcon(analysis.healthSeverity),
-                            size: 16,
-                            color: _getSeverityColor(analysis.healthSeverity),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              analysis.primaryConcern!,
-                              style: TextStyle(
-                                color: _getSeverityColor(analysis.healthSeverity),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                          // Plant icon
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.eco,
+                              size: 20,
+                              color: Color(0xFF10B981),
                             ),
                           ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  analysis.cropType ?? 'Bilinmeyen Bitki',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF065F46), // green-800
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  analysis.analysisDateFormatted,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF059669), // green-600
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (analysis.hasBasicAccess && analysis.overallHealthScore != null)
+                            _buildHealthScoreBadge(context),
                         ],
                       ),
                     ),
-                  ],
 
-                  // Message Preview Section
-                  if (analysis.hasMessages && analysis.lastMessagePreview != null) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: analysis.hasUnreadMessages
-                            ? Colors.blue.withOpacity(0.05)
-                            : Colors.grey.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: analysis.hasUnreadMessages
-                              ? Colors.blue.withOpacity(0.2)
-                              : Colors.grey.withOpacity(0.2),
-                          width: 1,
+                    // Plant species and variety with subtle background
+                    if (analysis.hasBasicAccess && analysis.plantSpecies != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB), // gray-50
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFFE5E7EB), // gray-200
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 14,
-                            color: analysis.hasUnreadMessages ? Colors.blue : Colors.grey[600],
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              analysis.lastMessagePreview!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: analysis.hasUnreadMessages ? Colors.black87 : Colors.grey[600],
-                                fontWeight: analysis.hasUnreadMessages ? FontWeight.w500 : FontWeight.normal,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.grass,
+                              size: 16,
+                              color: Colors.grey[600],
                             ),
-                          ),
-                          if (analysis.lastMessageDate != null) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatMessageDate(analysis.lastMessageDate!),
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[500],
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${analysis.plantSpecies}${analysis.plantVariety != null ? ' - ${analysis.plantVariety}' : ''}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF374151), // gray-700
+                                  height: 1.3,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
 
-                  // Sponsor Branding
-                  if (analysis.canViewLogo == true && analysis.sponsorInfo?.logoUrl != null) ...[
-                    const SizedBox(height: 10),
-                    const Divider(height: 1, color: Color(0xFFE5E7EB)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Text(
-                          'Sponsorlu',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF9CA3AF),
-                            fontWeight: FontWeight.w500,
+                    // Growth stage with icon
+                    if (analysis.hasBasicAccess && analysis.growthStage != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F9FF), // sky-50
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.spa, size: 14, color: Color(0xFF0EA5E9)), // sky-500
+                            const SizedBox(width: 6),
+                            Text(
+                              analysis.growthStage!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF075985), // sky-800
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Primary Concern with enhanced visual design
+                    if (analysis.hasDetailedAccess && analysis.primaryConcern != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _getSeverityColor(analysis.healthSeverity).withOpacity(0.08),
+                              _getSeverityColor(analysis.healthSeverity).withOpacity(0.15),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.4),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getSeverityIcon(analysis.healthSeverity),
+                                size: 20,
+                                color: _getSeverityColor(analysis.healthSeverity),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Ana Sorun',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.7),
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    analysis.primaryConcern!,
+                                    style: TextStyle(
+                                      color: _getSeverityColor(analysis.healthSeverity),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.3,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Message Preview Section with enhanced design
+                    if (analysis.hasMessages && analysis.lastMessagePreview != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: analysis.hasUnreadMessages
+                                ? [
+                                    const Color(0xFFDCEEFE), // blue-100
+                                    const Color(0xFFBFDBFE), // blue-200
+                                  ]
+                                : [
+                                    const Color(0xFFF9FAFB), // gray-50
+                                    const Color(0xFFF3F4F6), // gray-100
+                                  ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: analysis.hasUnreadMessages
+                                ? const Color(0xFF60A5FA).withOpacity(0.4) // blue-400
+                                : const Color(0xFFD1D5DB), // gray-300
+                            width: 1,
                           ),
                         ),
-                        const Spacer(),
-                        Image.network(
-                          analysis.sponsorInfo?.logoUrl ?? '',
-                          height: 20,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Text(
-                              analysis.sponsorInfo?.companyName ?? 'Sponsor',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF6B7280),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: analysis.hasUnreadMessages
+                                    ? Colors.blue.withOpacity(0.2)
+                                    : Colors.grey.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                            );
-                          },
+                              child: Icon(
+                                Icons.chat_bubble_outline,
+                                size: 16,
+                                color: analysis.hasUnreadMessages ? Colors.blue[700] : Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Son Mesaj',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: analysis.hasUnreadMessages
+                                          ? Colors.blue[700]
+                                          : Colors.grey[600],
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    analysis.lastMessagePreview!,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: analysis.hasUnreadMessages ? Colors.black87 : Colors.grey[700],
+                                      fontWeight: analysis.hasUnreadMessages ? FontWeight.w600 : FontWeight.normal,
+                                      height: 1.3,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (analysis.lastMessageDate != null) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: analysis.hasUnreadMessages
+                                      ? Colors.blue.withOpacity(0.2)
+                                      : Colors.grey.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _formatMessageDate(analysis.lastMessageDate!),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: analysis.hasUnreadMessages ? Colors.blue[700] : Colors.grey[600],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+
+                    // Sponsor Branding with elegant design
+                    if (analysis.canViewLogo == true && analysis.sponsorInfo?.logoUrl != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFFAF5FF), // purple-50
+                              Color(0xFFF3E8FF), // purple-100
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFFE9D5FF).withOpacity(0.5), // purple-200
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFA855F7).withOpacity(0.1), // purple-500
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.workspace_premium,
+                                size: 16,
+                                color: Color(0xFFA855F7), // purple-500
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Sponsorlu Analiz',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF7E22CE), // purple-700
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            Image.network(
+                              analysis.sponsorInfo?.logoUrl ?? '',
+                              height: 20,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Text(
+                                  analysis.sponsorInfo?.companyName ?? 'Sponsor',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7E22CE), // purple-700
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],
