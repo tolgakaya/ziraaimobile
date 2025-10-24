@@ -3,8 +3,8 @@ import '../../data/models/sponsored_analysis_summary.dart';
 import 'envelope_icon.dart';
 import 'unread_badge.dart';
 
-/// Individual analysis card with tier-based field visibility
-/// Follows farmer dashboard card pattern with conditional rendering
+/// Individual analysis card for sponsor with farmer card design pattern
+/// Image-first layout with message badge overlay in top-left corner
 class SponsoredAnalysisCard extends StatelessWidget {
   final SponsoredAnalysisSummary analysis;
   final VoidCallback onTap;
@@ -17,366 +17,327 @@ class SponsoredAnalysisCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Date and tier badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    analysis.analysisDateFormatted,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                  ),
-                  _buildTierBadge(context),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Crop type and health score (always visible)
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      analysis.cropType ?? 'Bilinmiyor',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ),
-                  if (analysis.hasBasicAccess &&
-                      analysis.overallHealthScore != null)
-                    _buildHealthScoreBadge(context),
-                ],
-              ),
-
-              // Plant species and variety (30% access - S/M tier)
-              if (analysis.hasBasicAccess && analysis.plantSpecies != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  '${analysis.plantSpecies}${analysis.plantVariety != null ? ' - ${analysis.plantVariety}' : ''}',
-                  style: Theme.of(context).textTheme.bodyMedium,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Section with Status Badge
+            Container(
+              height: 200,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(12),
                 ),
-              ],
-
-              // Growth stage (30% access)
-              if (analysis.hasBasicAccess && analysis.growthStage != null) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.spa, size: 16, color: Colors.green),
-                    const SizedBox(width: 4),
-                    Text(
-                      analysis.growthStage!,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ],
-
-              // Plant image (30% access)
-              if (analysis.hasBasicAccess &&
-                  analysis.imageUrl != null) ...[
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    analysis.imageUrl!,
-                    height: 150,
+                color: Color(0xFFF3F4F6),
+              ),
+              child: Stack(
+                children: [
+                  // Plant Image
+                  Container(
                     width: double.infinity,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: 150,
-                        color: Colors.grey[200],
-                        child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 150,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.local_florist,
-                          size: 48,
-                          color: Colors.grey,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-
-              // Primary concern (60% access - L tier)
-              if (analysis.hasDetailedAccess &&
-                  analysis.primaryConcern != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _getSeverityColor(analysis.healthSeverity)
-                        .withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _getSeverityColor(analysis.healthSeverity),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 20,
-                        color: _getSeverityColor(analysis.healthSeverity),
+                    height: double.infinity,
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(12),
                       ),
-                      const SizedBox(width: 8),
+                    ),
+                    child: _buildPlantImage(analysis.imageUrl),
+                  ),
+                  // Health Status Badge (bottom-right)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: _buildHealthBadge(context),
+                  ),
+                  // Message Badge Overlay (top-left corner)
+                  if (analysis.hasMessages)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _buildMessageBadge(),
+                    ),
+                ],
+              ),
+            ),
+
+            // Plant Info
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Plant name and date
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                       Expanded(
                         child: Text(
-                          analysis.primaryConcern!,
-                          style: TextStyle(
-                            color: _getSeverityColor(analysis.healthSeverity),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              // Messaging section (if messages exist)
-              if (analysis.hasMessages) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: analysis.hasUnreadMessages
-                        ? Colors.blue.withOpacity(0.05)
-                        : Colors.grey.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: analysis.hasUnreadMessages
-                          ? Colors.blue.withOpacity(0.3)
-                          : Colors.grey.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      // Envelope icon
-                      EnvelopeIcon(
-                        hasMessages: analysis.hasMessages,
-                        hasUnreadMessages: analysis.hasUnreadMessages,
-                        hasUnreadFromFarmer: analysis.hasUnreadFromFarmer ?? false,
-                        isActiveConversation: analysis.isActiveConversation,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      // Message preview
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (analysis.lastMessagePreview != null)
-                              Text(
-                                analysis.lastMessagePreview!,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: analysis.hasUnreadMessages
-                                      ? Colors.black87
-                                      : Colors.grey[600],
-                                  fontWeight: analysis.hasUnreadMessages
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            if (analysis.lastMessageDate != null) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                _formatMessageDate(analysis.lastMessageDate!),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Unread badge
-                      UnreadBadge(
-                        unreadCount: analysis.unreadMessageCount,
-                        hasUnreadFromFarmer: analysis.hasUnreadFromFarmer ?? false,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              // Sponsor branding (if logo available)
-              if (analysis.canViewLogo == true &&
-                  analysis.sponsorInfo?.logoUrl != null) ...[
-                const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Text(
-                      'Sponsorlu',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const Spacer(),
-                    Image.network(
-                      analysis.sponsorInfo?.logoUrl ?? '',
-                      height: 24,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Text(
-                          analysis.sponsorInfo?.companyName ?? 'Sponsor',
+                          analysis.cropType ?? 'Bilinmeyen Bitki',
                           style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1F2937),
                           ),
-                        );
-                      },
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        analysis.analysisDateFormatted,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF9CA3AF),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Plant species and variety
+                  if (analysis.hasBasicAccess && analysis.plantSpecies != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '${analysis.plantSpecies}${analysis.plantVariety != null ? ' - ${analysis.plantVariety}' : ''}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF4B5563),
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                ),
-              ],
-            ],
-          ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// Build tier badge (S/M: blue, L: orange, XL: purple)
-  Widget _buildTierBadge(BuildContext context) {
+  /// Build compact message badge for image overlay
+  Widget _buildMessageBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _getTierColor(analysis.tierName ?? 'S').withOpacity(0.1),
+        color: analysis.hasUnreadMessages
+            ? Colors.blue.withOpacity(0.95)
+            : Colors.black.withOpacity(0.7),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _getTierColor(analysis.tierName ?? 'S'),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        analysis.tierName ?? 'N/A',
-        style: TextStyle(
-          color: _getTierColor(analysis.tierName ?? 'S'),
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  /// Build health score badge with color coding
-  Widget _buildHealthScoreBadge(BuildContext context) {
-    final score = analysis.overallHealthScore ?? 0;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: _getHealthScoreColor(score).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.favorite,
-            size: 16,
-            color: _getHealthScoreColor(score),
+          // Envelope icon
+          EnvelopeIcon(
+            hasMessages: analysis.hasMessages,
+            hasUnreadMessages: analysis.hasUnreadMessages,
+            hasUnreadFromFarmer: analysis.hasUnreadFromFarmer ?? false,
+            isActiveConversation: analysis.isActiveConversation,
+            size: 14,
           ),
           const SizedBox(width: 4),
-          Text(
-            analysis.healthScoreText,
-            style: TextStyle(
-              color: _getHealthScoreColor(score),
-              fontWeight: FontWeight.bold,
+          // Unread count badge
+          if ((analysis.unreadMessageCount ?? 0) > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${analysis.unreadMessageCount}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  /// Get tier color (S/M: blue, L: orange, XL: purple)
-  Color _getTierColor(String tierName) {
-    if (tierName.contains('S') || tierName.contains('M')) {
-      return Colors.blue;
-    } else if (tierName == 'L') {
-      return Colors.orange;
-    } else if (tierName == 'XL') {
-      return Colors.purple;
+  /// Build plant image widget with network loading and fallback
+  Widget _buildPlantImage(String? imageUrl) {
+    if (imageUrl != null &&
+        (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(12),
+        ),
+        child: Image.network(
+          imageUrl,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFFF3F4F6),
+                    const Color(0xFFE5E7EB),
+                  ],
+                ),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return _buildFallbackImage();
+          },
+        ),
+      );
     }
-    return Colors.grey;
+    return _buildFallbackImage();
   }
 
-  /// Get health score color (green: 80+, orange: 60-79, red: 0-59)
-  Color _getHealthScoreColor(double score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
-    return Colors.red;
+  /// Build fallback placeholder image
+  Widget _buildFallbackImage() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(12),
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFF3F4F6),
+            const Color(0xFFE5E7EB),
+          ],
+        ),
+      ),
+      child: const Icon(
+        Icons.local_florist,
+        size: 48,
+        color: Color(0xFF9CA3AF),
+      ),
+    );
   }
 
-  /// Get severity color (Healthy: green, Moderate: orange, Critical: red)
-  Color _getSeverityColor(String? severity) {
-    switch (severity?.toLowerCase()) {
-      case 'healthy':
-        return Colors.green;
-      case 'moderate':
-        return Colors.orange;
-      case 'critical':
-        return Colors.red;
-      default:
-        return Colors.grey;
+  /// Build health status badge (bottom-right corner)
+  Widget _buildHealthBadge(BuildContext context) {
+    final status = _getHealthStatus();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: status.backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: status.textColor,
+        ),
+      ),
+    );
+  }
+
+  /// Get health status configuration based on score and severity
+  _HealthStatus _getHealthStatus() {
+    final score = analysis.overallHealthScore ?? 0;
+    final severity = analysis.healthSeverity?.toLowerCase() ?? '';
+    final primaryConcern = analysis.primaryConcern?.toLowerCase() ?? '';
+
+    // Priority 1: Check severity
+    if (severity.contains('critical') ||
+        primaryConcern.contains('hastalık') ||
+        primaryConcern.contains('disease')) {
+      return _HealthStatus(
+        label: 'Hastalık',
+        backgroundColor: const Color(0xFFFEE2E2), // red-100
+        textColor: const Color(0xFF991B1B), // red-800
+      );
+    } else if (severity.contains('moderate') ||
+               primaryConcern.contains('dikkat') ||
+               primaryConcern.contains('warning')) {
+      return _HealthStatus(
+        label: 'Dikkat',
+        backgroundColor: const Color(0xFFFEF3C7), // yellow-100
+        textColor: const Color(0xFF92400E), // yellow-800
+      );
     }
-  }
 
-  /// Format message date in Turkish-friendly format
-  String _formatMessageDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inMinutes < 1) {
-      return 'Şimdi';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes} dakika önce';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} saat önce';
-    } else if (difference.inDays == 1) {
-      return 'Dün';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün önce';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
+    // Priority 2: Check health score
+    if (score >= 80) {
+      return _HealthStatus(
+        label: 'Sağlıklı',
+        backgroundColor: const Color(0xFFDCFCE7), // green-100
+        textColor: const Color(0xFF166534), // green-800
+      );
+    } else if (score >= 60) {
+      return _HealthStatus(
+        label: 'Dikkat',
+        backgroundColor: const Color(0xFFFEF3C7), // yellow-100
+        textColor: const Color(0xFF92400E), // yellow-800
+      );
+    } else if (score > 0) {
+      return _HealthStatus(
+        label: 'Hastalık',
+        backgroundColor: const Color(0xFFFEE2E2), // red-100
+        textColor: const Color(0xFF991B1B), // red-800
+      );
     }
+
+    // Default: Analysis completed
+    return _HealthStatus(
+      label: 'Analiz Edildi',
+      backgroundColor: const Color(0xFFE0E7FF), // blue-100
+      textColor: const Color(0xFF1E40AF), // blue-800
+    );
   }
+}
+
+class _HealthStatus {
+  final String label;
+  final Color backgroundColor;
+  final Color textColor;
+
+  _HealthStatus({
+    required this.label,
+    required this.backgroundColor,
+    required this.textColor,
+  });
 }
