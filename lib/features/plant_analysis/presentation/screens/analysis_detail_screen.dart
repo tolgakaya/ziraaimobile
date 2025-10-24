@@ -52,8 +52,9 @@ class AnalysisDetailScreen extends StatelessWidget {
             floatingActionButton: detail?.sponsorshipMetadata?.canReply == true
               ? FloatingActionButton.extended(
                   onPressed: () async {
-                    // Store analysis ID before navigation
+                    // Store references before async gap
                     final currentAnalysisId = detail!.id!;
+                    final currentContext = context;
                     
                     // ✅ Navigate to chat
                     await Navigator.push(
@@ -72,7 +73,8 @@ class AnalysisDetailScreen extends StatelessWidget {
                     );
                     
                     // ✅ Refresh detail after returning from chat (updates unread count)
-                    context.read<AnalysisDetailBloc>().add(
+                    // ignore: use_build_context_synchronously
+                    currentContext.read<AnalysisDetailBloc>().add(
                       LoadAnalysisDetail(analysisId: currentAnalysisId),
                     );
                   },
