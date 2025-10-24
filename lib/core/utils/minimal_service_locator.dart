@@ -75,8 +75,9 @@ Future<void> setupMinimalServiceLocator() async {
       headers: ApiConfig.defaultHeaders,
     ));
     
-    // Add TokenInterceptor for automatic authentication
-    dio.interceptors.add(_TokenInterceptor(getIt<TokenManager>()));
+    // Add TokenInterceptor for automatic authentication and token refresh
+    // Pass dio instance for token refresh API calls
+    dio.interceptors.add(_TokenInterceptor(getIt<TokenManager>(), dio));
     
     // Add LogInterceptor for debugging
     dio.interceptors.add(LogInterceptor(
@@ -253,11 +254,14 @@ Future<void> setupMinimalServiceLocator() async {
   print('✅ NOTIFICATIONS: FlutterLocalNotificationsPlugin registered and initialized successfully!');
 }
 
-/// Token interceptor for automatic authentication
+/// Token interceptor for automatic authentication and token refresh
 class _TokenInterceptor extends Interceptor {
   final TokenManager _tokenManager;
+  final Dio _dio;
+  bool _isRefreshing = false;
+  final List<_RequestRetry> _retryQueue = [];
 
-  _TokenInterceptor(this._tokenManager);
+  _TokenInterceptor(this._tokenManager, this._dio);
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
@@ -280,10 +284,144 @@ class _TokenInterceptor extends Interceptor {
     }
   }
 
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // Check if error is 401 Unauthorized
+    if (err.response?.statusCode == 401) {
+      print('🔑 TokenInterceptor: 401 Unauthorized - attempting token refresh');
+
+      // Don't retry auth endpoints
+      if (_isAuthEndpoint(err.requestOptions.path)) {
+        print('⚠️ TokenInterceptor: Auth endpoint failed, not retrying');
+        handler.next(err);
+        return;
+      }
+
+      // If already refreshing, queue this request
+      if (_isRefreshing) {
+        print('🔄 TokenInterceptor: Token refresh in progress, queueing request');
+        _retryQueue.add(_RequestRetry(
+          requestOptions: err.requestOptions,
+          handler: handler,
+        ));
+        return;
+      }
+
+      // Start token refresh
+      _isRefreshing = true;
+
+      try {
+        // Get refresh token
+        final refreshToken = await _tokenManager.getRefreshToken();
+        
+        if (refreshToken == null) {
+          print('❌ TokenInterceptor: No refresh token available');
+          _isRefreshing = false;
+          _clearRetryQueue(err);
+          handler.next(err);
+          return;
+        }
+
+        print('🔄 TokenInterceptor: Refreshing token...');
+
+        // Call refresh token endpoint
+        final response = await _dio.post(
+          ApiConfig.refreshToken,
+          data: {'refreshToken': refreshToken},
+          options: Options(headers: {'Content-Type': 'application/json'}),
+        );
+
+        if (response.statusCode == 200 && response.data['success'] == true) {
+          final newAccessToken = response.data['data']['accessToken'];
+          final newRefreshToken = response.data['data']['refreshToken'];
+
+          // Save new tokens
+          await _tokenManager.saveToken(newAccessToken);
+          await _tokenManager.saveRefreshToken(newRefreshToken);
+
+          print('✅ TokenInterceptor: Token refreshed successfully');
+
+          // Retry the original request with new token
+          err.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+          
+          final retryResponse = await _dio.fetch(err.requestOptions);
+          
+          _isRefreshing = false;
+          
+          // Process retry queue
+          _processRetryQueue(newAccessToken);
+          
+          handler.resolve(retryResponse);
+        } else {
+          print('❌ TokenInterceptor: Token refresh failed');
+          _isRefreshing = false;
+          _clearRetryQueue(err);
+          handler.next(err);
+        }
+      } catch (refreshError) {
+        print('❌ TokenInterceptor: Token refresh error: $refreshError');
+        _isRefreshing = false;
+        _clearRetryQueue(err);
+        
+        // Clear tokens on refresh failure (user needs to login again)
+        await _tokenManager.clearTokens();
+        
+        handler.next(err);
+      }
+    } else {
+      // Not a 401 error, pass through
+      handler.next(err);
+    }
+  }
+
+  /// Process queued requests after successful token refresh
+  void _processRetryQueue(String newAccessToken) async {
+    print('🔄 TokenInterceptor: Processing ${_retryQueue.length} queued requests');
+    
+    for (final retry in _retryQueue) {
+      try {
+        retry.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+        final response = await _dio.fetch(retry.requestOptions);
+        retry.handler.resolve(response);
+      } catch (e) {
+        retry.handler.reject(
+          DioException(
+            requestOptions: retry.requestOptions,
+            error: e,
+          ),
+        );
+      }
+    }
+    
+    _retryQueue.clear();
+  }
+
+  /// Clear retry queue on refresh failure
+  void _clearRetryQueue(DioException error) {
+    print('❌ TokenInterceptor: Clearing ${_retryQueue.length} queued requests');
+    
+    for (final retry in _retryQueue) {
+      retry.handler.reject(error);
+    }
+    
+    _retryQueue.clear();
+  }
+
   bool _isAuthEndpoint(String path) {
     return path.contains('/auth/login') ||
            path.contains('/auth/register') ||
            path.contains('/auth/refresh-token') ||
            path.contains('/auth/forgot-password');
   }
+}
+
+/// Helper class to store retry request info
+class _RequestRetry {
+  final RequestOptions requestOptions;
+  final ErrorInterceptorHandler handler;
+
+  _RequestRetry({
+    required this.requestOptions,
+    required this.handler,
+  });
 }

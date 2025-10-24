@@ -5,6 +5,7 @@ import '../widgets/recent_analyses_grid.dart';
 import '../widgets/bottom_navigation.dart';
 import '../widgets/notification_bell_icon.dart';
 import '../../../plant_analysis/presentation/pages/capture_screen.dart';
+import '../../../plant_analysis/presentation/pages/analysis_history_screen.dart';
 import '../../../subscription/presentation/screens/subscription_status_screen.dart';
 import '../../../referral/presentation/screens/referral_dashboard_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -195,21 +196,39 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
     // Navigate to screens based on tab
-    if (index == 3) {
-      // Analysis tab
+    if (index == 0) {
+      // Ana Sayfa - Already on dashboard, do nothing or refresh
+      setState(() {
+        _selectedIndex = 0;
+      });
+    } else if (index == 1) {
+      // Analizler - Navigate to Analysis History
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AnalysisHistoryScreen(),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
+    } else if (index == 3) {
+      // Analiz - Camera/Capture
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => const CaptureScreen(),
         ),
-      );
+      ).then((_) {
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
     } else if (index == 4) {
-      // Referral tab - provide ReferralBloc
+      // Davet - Referral
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -218,7 +237,11 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
             child: const ReferralDashboardScreen(),
           ),
         ),
-      );
+      ).then((_) {
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
     }
   }
 

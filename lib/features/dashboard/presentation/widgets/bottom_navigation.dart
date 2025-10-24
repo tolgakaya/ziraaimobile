@@ -38,7 +38,7 @@ class DashboardBottomNavigation extends StatelessWidget {
               _NavigationItem(
                 icon: Icons.history,
                 iconSelected: Icons.history,
-                label: 'Geçmiş',
+                label: 'Analizler',
                 isSelected: currentIndex == 1,
                 onTap: () => onTap(1),
               ),

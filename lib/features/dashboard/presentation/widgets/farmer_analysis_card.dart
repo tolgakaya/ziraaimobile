@@ -62,6 +62,13 @@ class FarmerAnalysisCard extends StatelessWidget {
                     right: 8,
                     child: _buildHealthBadge(context),
                   ),
+                  // Message Badge Overlay (top-left corner)
+                  if (analysis.hasMessages)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _buildMessageBadge(),
+                    ),
                 ],
               ),
             ),
@@ -112,71 +119,62 @@ class FarmerAnalysisCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-
-                  // Messaging section (if messages exist)
-                  if (analysis.hasMessages) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: analysis.hasUnreadMessages
-                            ? Colors.blue.withOpacity(0.05)
-                            : Colors.grey.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: analysis.hasUnreadMessages
-                              ? Colors.blue.withOpacity(0.3)
-                              : Colors.grey.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          // Envelope icon
-                          EnvelopeIcon(
-                            hasMessages: analysis.hasMessages,
-                            hasUnreadMessages: analysis.hasUnreadMessages,
-                            hasUnreadFromFarmer: analysis.hasUnreadFromSponsor ?? false, // FARMER: Check from sponsor
-                            isActiveConversation: analysis.isActiveConversation,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          // Message preview
-                          Expanded(
-                            child: Text(
-                              analysis.lastMessagePreview ?? 'Mesaj var',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: analysis.hasUnreadMessages
-                                    ? Colors.black87
-                                    : Colors.grey[600],
-                                fontWeight: analysis.hasUnreadMessages
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          // Unread badge
-                          UnreadBadge(
-                            unreadCount: analysis.unreadMessageCount,
-                            hasUnreadFromFarmer: analysis.hasUnreadFromSponsor ?? false, // FARMER: Check from sponsor
-                            size: 16,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Build compact message badge for image overlay
+  Widget _buildMessageBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: analysis.hasUnreadMessages
+            ? Colors.blue.withOpacity(0.95)
+            : Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Envelope icon
+          EnvelopeIcon(
+            hasMessages: analysis.hasMessages,
+            hasUnreadMessages: analysis.hasUnreadMessages,
+            hasUnreadFromFarmer: analysis.hasUnreadFromSponsor ?? false,
+            isActiveConversation: analysis.isActiveConversation,
+            size: 14,
+          ),
+          const SizedBox(width: 4),
+          // Unread count badge
+          if ((analysis.unreadMessageCount ?? 0) > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${analysis.unreadMessageCount}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
