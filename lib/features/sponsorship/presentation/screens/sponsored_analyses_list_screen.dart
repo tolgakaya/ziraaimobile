@@ -551,25 +551,16 @@ class _SponsoredAnalysesListScreenState
       body: SafeArea(
         child: Column(
           children: [
-            // Header with logo and actions
+            // Header with ZiraAI Logo (matches dashboard)
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.white,
               child: Row(
                 children: [
-                  // Back button
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 12),
-                  
                   // ZiraAI Logo
                   Image.asset(
                     'assets/logos/ziraai_logo.png',
-                    height: 64,
+                    height: 90,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return const Text(
@@ -583,27 +574,20 @@ class _SponsoredAnalysesListScreenState
                     },
                   ),
                   const Spacer(),
-                  
-                  // Filter button
+                  // Back to Dashboard button
                   IconButton(
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: _showFilterDialog,
-                    tooltip: 'Filtrele',
-                    color: const Color(0xFF6B7280),
-                  ),
-                  
-                  // Sort button
-                  IconButton(
-                    icon: const Icon(Icons.sort),
-                    onPressed: _showSortDialog,
-                    tooltip: 'Sırala',
-                    color: const Color(0xFF6B7280),
+                    icon: const Icon(
+                      Icons.dashboard,
+                      color: Color(0xFF10B981),
+                    ),
+                    tooltip: 'Dashboard',
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
             
-            // Filter chips section
+            // Filter chips and actions section
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: Colors.white,
@@ -620,6 +604,21 @@ class _SponsoredAnalysesListScreenState
                         ],
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Date range filter button
+                  IconButton(
+                    icon: const Icon(Icons.date_range),
+                    onPressed: _showFilterDialog,
+                    tooltip: 'Tarih Aralığı',
+                    color: const Color(0xFF6B7280),
+                  ),
+                  // Sort button
+                  IconButton(
+                    icon: const Icon(Icons.sort),
+                    onPressed: _showSortDialog,
+                    tooltip: 'Sırala',
+                    color: const Color(0xFF6B7280),
                   ),
                 ],
               ),
