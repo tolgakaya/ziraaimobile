@@ -195,6 +195,41 @@ class MessagingRepositoryImpl implements MessagingRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, Unit>> markMessageAsRead(int messageId) async {
+    try {
+      await _apiService.markMessageAsRead(messageId);
+      return const Right(unit);
+    } on DioException catch (e) {
+      // ✅ Silent fail - don't block user experience if mark as read fails
+      print('⚠️ Failed to mark message as read: ${e.message}');
+      return Left(_handleDioException(e));
+    } catch (e) {
+      print('⚠️ Unexpected error marking message as read: $e');
+      return Left(ServerFailure(message: 'Mesaj okundu işaretlenemedi'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, int>> markMessagesAsRead(List<int> messageIds) async {
+    if (messageIds.isEmpty) {
+      return const Right(0);
+    }
+
+    try {
+      final count = await _apiService.markMessagesAsRead(messageIds);
+      print('✅ Marked $count messages as read');
+      return Right(count);
+    } on DioException catch (e) {
+      // ✅ Silent fail - don't block user experience if mark as read fails
+      print('⚠️ Failed to mark messages as read: ${e.message}');
+      return Left(_handleDioException(e));
+    } catch (e) {
+      print('⚠️ Unexpected error marking messages as read: $e');
+      return Left(ServerFailure(message: 'Mesajlar okundu işaretlenemedi'));
+    }
+  }
+
   /// Helper method to translate DioException to Failure with Turkish messages
   Failure _handleDioException(DioException e) {
     switch (e.type) {

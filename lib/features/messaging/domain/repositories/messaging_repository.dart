@@ -55,4 +55,13 @@ abstract class MessagingRepository {
   /// Get user's available messaging features based on tier
   /// ⚠️ BREAKING CHANGE: Now requires plantAnalysisId to get features for specific analysis
   Future<Either<Failure, MessagingFeatures>> getAvailableFeatures({required int plantAnalysisId});
+
+  /// Mark a single message as read
+  /// Only the recipient (toUserId) can mark messages as read
+  Future<Either<Failure, Unit>> markMessageAsRead(int messageId);
+
+  /// Mark multiple messages as read (bulk operation)
+  /// Returns the number of messages successfully marked as read
+  /// Only the recipient (toUserId) can mark messages as read
+  Future<Either<Failure, int>> markMessagesAsRead(List<int> messageIds);
 }

@@ -9,6 +9,8 @@ import '../../domain/usecases/get_messages_usecase.dart';
 import '../../domain/usecases/send_message_with_attachments_usecase.dart';
 import '../../domain/usecases/send_voice_message_usecase.dart';
 import '../../domain/usecases/get_messaging_features_usecase.dart';
+import '../../domain/usecases/mark_message_as_read_usecase.dart';
+import '../../domain/usecases/mark_messages_as_read_usecase.dart';
 
 part 'messaging_event.dart';
 part 'messaging_state.dart';
@@ -20,6 +22,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
   final SendMessageWithAttachmentsUseCase sendMessageWithAttachmentsUseCase;
   final SendVoiceMessageUseCase sendVoiceMessageUseCase;
   final GetMessagingFeaturesUseCase getMessagingFeaturesUseCase;
+  final MarkMessageAsReadUseCase markMessageAsReadUseCase;
+  final MarkMessagesAsReadUseCase markMessagesAsReadUseCase;
 
   // Cache features to include in MessagesLoaded state
   MessagingFeatures? _cachedFeatures;
@@ -30,6 +34,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     required this.sendMessageWithAttachmentsUseCase,
     required this.sendVoiceMessageUseCase,
     required this.getMessagingFeaturesUseCase,
+    required this.markMessageAsReadUseCase,
+    required this.markMessagesAsReadUseCase,
   }) : super(MessagingInitial()) {
     on<LoadMessagesEvent>(_onLoadMessages);
     on<SendMessageEvent>(_onSendMessage);
@@ -39,6 +45,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     on<LoadMoreMessagesEvent>(_onLoadMoreMessages);
     on<SendVoiceMessageEvent>(_onSendVoiceMessage);
     on<LoadMessagingFeaturesEvent>(_onLoadMessagingFeatures);
+    on<MarkMessageAsReadEvent>(_onMarkMessageAsRead);
+    on<MarkMessagesAsReadEvent>(_onMarkMessagesAsRead);
   }
 
   /// Expose cached features for UI access (even when state is not MessagesLoaded yet)
@@ -311,6 +319,81 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         }
         // If not MessagesLoaded yet, features will be picked up from _cachedFeatures
         // when LoadMessagesEvent completes and emits MessagesLoaded
+      },
+    );
+  }
+
+  /// Mark a single message as read
+  /// Optimistic update: Update UI immediately, then call API
+  Future<void> _onMarkMessageAsRead(
+    MarkMessageAsReadEvent event,
+    Emitter<MessagingState> emit,
+  ) async {
+    final currentState = state;
+    
+    // Only process if we have messages loaded
+    if (currentState is! MessagesLoaded) return;
+
+    // ✅ Optimistic update: Mark message as read in local state
+    final updatedMessages = currentState.messages.map((msg) {
+      if (msg.id == event.messageId) {
+        return msg.copyWith(isRead: true, readDate: DateTime.now());
+      }
+      return msg;
+    }).toList();
+
+    // Emit updated state immediately (optimistic)
+    emit(currentState.copyWith(messages: updatedMessages));
+
+    // Call API in background (silent fail - don't revert on error)
+    final result = await markMessageAsReadUseCase(event.messageId);
+    
+    result.fold(
+      (failure) {
+        print('⚠️ Failed to mark message as read: ${failure.message}');
+        // Don't revert optimistic update - UX should not be blocked
+      },
+      (_) {
+        print('✅ Message ${event.messageId} marked as read');
+      },
+    );
+  }
+
+  /// Mark multiple messages as read (bulk)
+  /// Optimistic update: Update UI immediately, then call API
+  Future<void> _onMarkMessagesAsRead(
+    MarkMessagesAsReadEvent event,
+    Emitter<MessagingState> emit,
+  ) async {
+    if (event.messageIds.isEmpty) return;
+
+    final currentState = state;
+    
+    // Only process if we have messages loaded
+    if (currentState is! MessagesLoaded) return;
+
+    // ✅ Optimistic update: Mark all messages as read in local state
+    final messageIdSet = Set<int>.from(event.messageIds);
+    final updatedMessages = currentState.messages.map((msg) {
+      if (messageIdSet.contains(msg.id)) {
+        return msg.copyWith(isRead: true, readDate: DateTime.now());
+      }
+      return msg;
+    }).toList();
+
+    // Emit updated state immediately (optimistic)
+    emit(currentState.copyWith(messages: updatedMessages));
+
+    // Call API in background (silent fail - don't revert on error)
+    final result = await markMessagesAsReadUseCase(event.messageIds);
+    
+    result.fold(
+      (failure) {
+        print('⚠️ Failed to mark messages as read: ${failure.message}');
+        // Don't revert optimistic update - UX should not be blocked
+      },
+      (count) {
+        print('✅ $count messages marked as read');
       },
     );
   }
