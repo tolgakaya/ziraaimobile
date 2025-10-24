@@ -163,11 +163,6 @@ class SponsoredAnalysisCard extends StatelessWidget {
                       ),
                     ),
 
-
-                        ),
-                      ),
-                    ],
-
                     // Primary Concern - simplified design
                     if (analysis.hasDetailedAccess && analysis.primaryConcern != null) ...[
                       const SizedBox(height: 10),
