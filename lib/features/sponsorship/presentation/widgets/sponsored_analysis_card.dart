@@ -163,37 +163,42 @@ class SponsoredAnalysisCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Plant species and variety with subtle background
-                    if (analysis.hasBasicAccess && analysis.plantSpecies != null) ...[
+
+                        ),
+                      ),
+                    ],
+
+                    // Primary Concern - simplified design
+                    if (analysis.hasDetailedAccess && analysis.primaryConcern != null) ...[
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF9FAFB), // gray-50
+                          color: Colors.grey[50],
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: const Color(0xFFE5E7EB), // gray-200
+                            color: Colors.grey[200]!,
                             width: 1,
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
-                              Icons.grass,
-                              size: 16,
-                              color: Colors.grey[600],
+                              _getSeverityIcon(analysis.healthSeverity),
+                              size: 20,
+                              color: _getSeverityColor(analysis.healthSeverity),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                '${analysis.plantSpecies}${analysis.plantVariety != null ? ' - ${analysis.plantVariety}' : ''}',
+                                analysis.primaryConcern!,
                                 style: const TextStyle(
-                                  fontSize: 13,
                                   color: Color(0xFF374151), // gray-700
-                                  height: 1.3,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w500,
+                                  height: 1.3,
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -202,159 +207,41 @@ class SponsoredAnalysisCard extends StatelessWidget {
                       ),
                     ],
 
-                    // Growth stage with icon
-                    if (analysis.hasBasicAccess && analysis.growthStage != null) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0F9FF), // sky-50
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.spa, size: 14, color: Color(0xFF0EA5E9)), // sky-500
-                            const SizedBox(width: 6),
-                            Text(
-                              analysis.growthStage!,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF075985), // sky-800
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // Primary Concern with enhanced visual design
-                    if (analysis.hasDetailedAccess && analysis.primaryConcern != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              _getSeverityColor(analysis.healthSeverity).withOpacity(0.08),
-                              _getSeverityColor(analysis.healthSeverity).withOpacity(0.15),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.4),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                _getSeverityIcon(analysis.healthSeverity),
-                                size: 20,
-                                color: _getSeverityColor(analysis.healthSeverity),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Ana Sorun',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.7),
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    analysis.primaryConcern!,
-                                    style: TextStyle(
-                                      color: _getSeverityColor(analysis.healthSeverity),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      height: 1.3,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // Sponsor Branding with elegant design
+                    // Sponsor Branding - minimal design
                     if (analysis.canViewLogo == true && analysis.sponsorInfo?.logoUrl != null) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFFAF5FF), // purple-50
-                              Color(0xFFF3E8FF), // purple-100
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color(0xFFE9D5FF).withOpacity(0.5), // purple-200
-                            width: 1,
-                          ),
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFA855F7).withOpacity(0.1), // purple-500
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.workspace_premium,
-                                size: 16,
-                                color: Color(0xFFA855F7), // purple-500
-                              ),
+                            const Icon(
+                              Icons.workspace_premium,
+                              size: 14,
+                              color: Colors.grey,
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 6),
                             const Text(
-                              'Sponsorlu Analiz',
+                              'Sponsorlu',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF7E22CE), // purple-700
-                                fontWeight: FontWeight.w600,
+                                color: Colors.grey,
                               ),
                             ),
                             const Spacer(),
                             Image.network(
                               analysis.sponsorInfo?.logoUrl ?? '',
-                              height: 20,
+                              height: 16,
                               fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) {
                                 return Text(
-                                  analysis.sponsorInfo?.companyName ?? 'Sponsor',
+                                  analysis.sponsorInfo?.companyName ?? '',
                                   style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF7E22CE), // purple-700
+                                    fontSize: 10,
+                                    color: Colors.grey,
                                   ),
                                 );
                               },
