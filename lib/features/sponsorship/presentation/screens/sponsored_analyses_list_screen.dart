@@ -39,6 +39,7 @@ class _SponsoredAnalysesListScreenState
   String _sortOrder = 'desc';
   DateTime? _startDate;
   DateTime? _endDate;
+  String _selectedFilter = 'all'; // all, unread
   
   late Future<void> _initialLoadFuture;
 
@@ -91,7 +92,20 @@ class _SponsoredAnalysesListScreenState
         'sortOrder': _sortOrder,
       };
 
-if (_startDate != null) {
+      // Add message status filter
+      switch (_selectedFilter) {
+        case 'unread':
+          // Backend now supports hasUnreadForCurrentUser
+          // For sponsor: shows analyses where farmer sent unread messages
+          queryParameters['hasUnreadForCurrentUser'] = true;
+          break;
+        case 'all':
+        default:
+          // No filter - show all
+          break;
+      }
+
+      if (_startDate != null) {
         queryParameters['startDate'] = _startDate!.toIso8601String();
       }
 
@@ -497,6 +511,39 @@ if (_startDate != null) {
     );
   }
 
+  /// Build filter chip widget
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _selectedFilter == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = value;
+        });
+        setState(() {
+          _initialLoadFuture = _loadAnalyses(refresh: true);
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF10B981) : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF10B981) : const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF6B7280),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -551,6 +598,28 @@ if (_startDate != null) {
                     onPressed: _showSortDialog,
                     tooltip: 'Sırala',
                     color: const Color(0xFF6B7280),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Filter chips section
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.white,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterChip('Tümü', 'all'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('Okunmamış Mesajlar', 'unread'),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
