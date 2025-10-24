@@ -52,14 +52,17 @@ class AnalysisDetailScreen extends StatelessWidget {
             floatingActionButton: detail?.sponsorshipMetadata?.canReply == true
               ? FloatingActionButton.extended(
                   onPressed: () async {
-                    // ✅ Navigate to chat and refresh when returning
+                    // Store analysis ID before navigation
+                    final currentAnalysisId = detail!.id!;
+                    
+                    // ✅ Navigate to chat
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => BlocProvider(
                           create: (context) => GetIt.I<MessagingBloc>(),
                           child: ChatConversationPage(
-                            plantAnalysisId: detail!.id!,
+                            plantAnalysisId: currentAnalysisId,
                             farmerId: detail.userId!,
                             sponsorUserId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
                             sponsorshipTier: detail.sponsorshipMetadata!.tierName,
@@ -69,11 +72,9 @@ class AnalysisDetailScreen extends StatelessWidget {
                     );
                     
                     // ✅ Refresh detail after returning from chat (updates unread count)
-                    if (mounted) {
-                      setState(() {
-                        // Trigger rebuild to refresh detail
-                      });
-                    }
+                    context.read<AnalysisDetailBloc>().add(
+                      LoadAnalysisDetail(analysisId: currentAnalysisId),
+                    );
                   },
                   label: const Text('Sponsora Yanıtla'),
                   icon: const Icon(Icons.reply),
