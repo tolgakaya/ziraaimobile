@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/utils/minimal_service_locator.dart';
 import 'features/authentication/presentation/bloc/auth_bloc.dart';
@@ -272,6 +273,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       child: MaterialApp(
         navigatorKey: navigatorKey,
         title: 'ZiraAI Mobile',
+
+        // Localization support for Turkish keyboard and characters
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('tr', 'TR'), // Turkish
+          Locale('en', 'US'), // English
+        ],
+        locale: const Locale('tr', 'TR'), // Default to Turkish
+
         theme: ThemeData(
           primarySwatch: Colors.green,
           useMaterial3: true,

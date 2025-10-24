@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../plant_analysis/presentation/pages/capture_screen.dart';
+import '../../../plant_analysis/presentation/pages/analysis_history_screen.dart';
 
 class ActionButtons extends StatelessWidget {
   final bool hasSponsorRole;
@@ -54,11 +55,11 @@ class ActionButtons extends StatelessWidget {
                 flex: 1,
                 child: Column(
                   children: [
-                    // Top: Geçmiş Button
+                    // Top: Analizler Button
                     Expanded(
                       child: _ActionButton(
                         icon: Icons.history,
-                        label: 'Geçmiş',
+                        label: 'Analizler',
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -69,7 +70,12 @@ class ActionButtons extends StatelessWidget {
                         ),
                         textColor: Colors.white,
                         onTap: () {
-                          // Geçmiş buton işlevi - sonra eklenecek
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AnalysisHistoryScreen(),
+                            ),
+                          );
                         },
                       ),
                     ),
