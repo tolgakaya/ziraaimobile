@@ -150,6 +150,14 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
             NewMessageReceivedEvent(message),
           );
           print('✅ FARMER CHAT: NewMessageReceivedEvent dispatched');
+          
+          // ✅ NEW: Auto-mark as read if message is for us and we're viewing the conversation
+          if (message.toUserId == widget.farmerId) {
+            print('📬 FARMER CHAT: Auto-marking real-time message as read');
+            context.read<MessagingBloc>().add(
+              MarkMessageAsReadEvent(message.id),
+            );
+          }
         }
       };
 
@@ -160,6 +168,31 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     } catch (e) {
       print('❌ FARMER CHAT: Failed to setup SignalR listener: $e');
     }
+  }
+
+  /// Mark unread messages as read when conversation is opened
+  /// Uses bulk API for better performance
+  void _markUnreadMessagesAsRead(List<Message> messages) {
+    // Get unread messages sent TO current user (farmer)
+    final unreadMessageIds = messages
+        .where((msg) => 
+            !msg.isRead && 
+            msg.toUserId == widget.farmerId
+        )
+        .map((msg) => msg.id)
+        .toList();
+
+    if (unreadMessageIds.isEmpty) {
+      print('✅ FARMER CHAT: No unread messages to mark');
+      return;
+    }
+
+    print('📬 FARMER CHAT: Marking ${unreadMessageIds.length} messages as read');
+    
+    // ✅ Trigger bulk mark as read event
+    context.read<MessagingBloc>().add(
+      MarkMessagesAsReadEvent(unreadMessageIds),
+    );
   }
 
   @override
@@ -187,6 +220,9 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
             );
           } else if (state is MessagesLoaded) {
             _updateMessages(state.messages);
+            
+            // ✅ NEW: Mark unread messages as read when conversation opens
+            _markUnreadMessagesAsRead(state.messages);
           }
         },
         builder: (context, state) {

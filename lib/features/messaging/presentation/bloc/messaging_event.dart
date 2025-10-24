@@ -116,3 +116,23 @@ class LoadMessagingFeaturesEvent extends MessagingEvent {
   @override
   List<Object?> get props => [plantAnalysisId];
 }
+
+// ✅ NEW: Event for marking a single message as read
+class MarkMessageAsReadEvent extends MessagingEvent {
+  final int messageId;
+
+  const MarkMessageAsReadEvent(this.messageId);
+
+  @override
+  List<Object?> get props => [messageId];
+}
+
+// ✅ NEW: Event for marking multiple messages as read (bulk)
+class MarkMessagesAsReadEvent extends MessagingEvent {
+  final List<int> messageIds;
+
+  const MarkMessagesAsReadEvent(this.messageIds);
+
+  @override
+  List<Object?> get props => [messageIds];
+}

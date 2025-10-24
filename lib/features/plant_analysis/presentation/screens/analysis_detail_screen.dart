@@ -51,20 +51,34 @@ class AnalysisDetailScreen extends StatelessWidget {
             ),
             floatingActionButton: detail?.sponsorshipMetadata?.canReply == true
               ? FloatingActionButton.extended(
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    // Store all required values before async gap
+                    final currentAnalysisId = detail!.id!;
+                    final currentFarmerId = detail!.userId!;
+                    final currentSponsorId = detail!.sponsorshipMetadata!.sponsorInfo.sponsorId;
+                    final currentTier = detail!.sponsorshipMetadata!.tierName;
+                    final currentContext = context;
+                    
+                    // ✅ Navigate to chat
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => BlocProvider(
                           create: (context) => GetIt.I<MessagingBloc>(),
                           child: ChatConversationPage(
-                            plantAnalysisId: detail!.id!,
-                            farmerId: detail.userId!,
-                            sponsorUserId: detail.sponsorshipMetadata!.sponsorInfo.sponsorId,
-                            sponsorshipTier: detail.sponsorshipMetadata!.tierName,
+                            plantAnalysisId: currentAnalysisId,
+                            farmerId: currentFarmerId,
+                            sponsorUserId: currentSponsorId,
+                            sponsorshipTier: currentTier,
                           ),
                         ),
                       ),
+                    );
+                    
+                    // ✅ Refresh detail after returning from chat (updates unread count)
+                    // ignore: use_build_context_synchronously
+                    currentContext.read<AnalysisDetailBloc>().add(
+                      LoadAnalysisDetail(analysisId: currentAnalysisId),
                     );
                   },
                   label: const Text('Sponsora Yanıtla'),

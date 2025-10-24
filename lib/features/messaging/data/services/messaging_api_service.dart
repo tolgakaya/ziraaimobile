@@ -258,14 +258,18 @@ class MessagingApiService {
 
   /// Mark multiple messages as read (bulk)
   /// PATCH /sponsorship/messages/read
+  /// Body: [123, 124, 125] - Array of message IDs
   Future<int> markMessagesAsRead(List<int> messageIds) async {
+    if (messageIds.isEmpty) return 0;
+    
     final response = await _networkClient.patch(
       '/sponsorship/messages/read',
-      data: {'messageIds': messageIds},
+      data: messageIds, // ✅ Send array directly, not wrapped in object
     );
 
     if (response.data['success'] == true) {
-      return response.data['data']['updatedCount'] as int;
+      // Backend returns count in 'data' field directly
+      return response.data['data'] as int;
     } else {
       throw DioException(
         requestOptions: response.requestOptions,

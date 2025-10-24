@@ -4,6 +4,11 @@ import '../../../../core/di/injection.dart';
 import '../bloc/messaging_bloc.dart';
 import '../../domain/usecases/send_message_usecase.dart';
 import '../../domain/usecases/get_messages_usecase.dart';
+import '../../domain/usecases/send_message_with_attachments_usecase.dart';
+import '../../domain/usecases/send_voice_message_usecase.dart';
+import '../../domain/usecases/get_messaging_features_usecase.dart';
+import '../../domain/usecases/mark_message_as_read_usecase.dart';
+import '../../domain/usecases/mark_messages_as_read_usecase.dart';
 
 class MessageDetailPage extends StatefulWidget {
   final int plantAnalysisId;
@@ -35,6 +40,11 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
     _messagingBloc = MessagingBloc(
       sendMessageUseCase: getIt<SendMessageUseCase>(),
       getMessagesUseCase: getIt<GetMessagesUseCase>(),
+      sendMessageWithAttachmentsUseCase: getIt<SendMessageWithAttachmentsUseCase>(),
+      sendVoiceMessageUseCase: getIt<SendVoiceMessageUseCase>(),
+      getMessagingFeaturesUseCase: getIt<GetMessagingFeaturesUseCase>(),
+      markMessageAsReadUseCase: getIt<MarkMessageAsReadUseCase>(),
+      markMessagesAsReadUseCase: getIt<MarkMessagesAsReadUseCase>(),
     )..add(LoadMessagesEvent(widget.plantAnalysisId, widget.farmerId));
   }
 

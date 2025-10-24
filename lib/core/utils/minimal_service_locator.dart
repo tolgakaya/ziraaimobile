@@ -32,6 +32,8 @@ import '../../features/messaging/domain/usecases/get_messages_usecase.dart';
 import '../../features/messaging/domain/usecases/send_message_with_attachments_usecase.dart';
 import '../../features/messaging/domain/usecases/send_voice_message_usecase.dart';
 import '../../features/messaging/domain/usecases/get_messaging_features_usecase.dart';
+import '../../features/messaging/domain/usecases/mark_message_as_read_usecase.dart';
+import '../../features/messaging/domain/usecases/mark_messages_as_read_usecase.dart';
 import '../../features/messaging/presentation/bloc/messaging_bloc.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -190,6 +192,14 @@ Future<void> setupMinimalServiceLocator() async {
     () => GetMessagingFeaturesUseCase(getIt<MessagingRepository>()),
   );
 
+  getIt.registerLazySingleton<MarkMessageAsReadUseCase>(
+    () => MarkMessageAsReadUseCase(getIt<MessagingRepository>()),
+  );
+
+  getIt.registerLazySingleton<MarkMessagesAsReadUseCase>(
+    () => MarkMessagesAsReadUseCase(getIt<MessagingRepository>()),
+  );
+
   // ⚠️ TEMPORARY: Manual registration until app restart
   // Injectable auto-registration requires full app restart to load injection.config.dart
   // After restart, this can be removed as @injectable annotation will handle it
@@ -200,6 +210,8 @@ Future<void> setupMinimalServiceLocator() async {
       sendMessageWithAttachmentsUseCase: getIt<SendMessageWithAttachmentsUseCase>(),
       sendVoiceMessageUseCase: getIt<SendVoiceMessageUseCase>(),
       getMessagingFeaturesUseCase: getIt<GetMessagingFeaturesUseCase>(),
+      markMessageAsReadUseCase: getIt<MarkMessageAsReadUseCase>(),
+      markMessagesAsReadUseCase: getIt<MarkMessagesAsReadUseCase>(),
     ),
   );
 

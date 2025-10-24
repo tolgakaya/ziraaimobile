@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:equatable/equatable.dart';
 import '../../data/models/message_model.dart';
 
 class Message extends Equatable {
@@ -193,6 +194,88 @@ class Message extends Equatable {
         forwardedFromMessageId,
         isActive,
       ];
+
+  /// Create a copy of this message with updated fields
+  /// Useful for optimistic UI updates (e.g., marking as read)
+  Message copyWith({
+    int? id,
+    int? plantAnalysisId,
+    int? fromUserId,
+    int? toUserId,
+    String? message,
+    String? senderRole,
+    String? messageType,
+    String? subject,
+    String? senderName,
+    String? senderCompany,
+    String? priority,
+    String? category,
+    bool? isRead,
+    bool? isApproved,
+    DateTime? sentDate,
+    DateTime? readDate,
+    DateTime? approvedDate,
+    MessageStatus? status,
+    DateTime? deliveredDate,
+    String? senderAvatarUrl,
+    String? senderAvatarThumbnailUrl,
+    bool? hasAttachments,
+    int? attachmentCount,
+    List<String>? attachmentUrls,
+    List<String>? attachmentThumbnails,
+    List<String>? attachmentTypes,
+    List<int>? attachmentSizes,
+    List<String>? attachmentNames,
+    bool? isVoiceMessage,
+    String? voiceMessageUrl,
+    int? voiceMessageDuration,
+    List<double>? voiceMessageWaveform,
+    bool? isEdited,
+    DateTime? editedDate,
+    bool? isForwarded,
+    int? forwardedFromMessageId,
+    bool? isActive,
+  }) {
+    return Message(
+      id: id ?? this.id,
+      plantAnalysisId: plantAnalysisId ?? this.plantAnalysisId,
+      fromUserId: fromUserId ?? this.fromUserId,
+      toUserId: toUserId ?? this.toUserId,
+      message: message ?? this.message,
+      senderRole: senderRole ?? this.senderRole,
+      messageType: messageType ?? this.messageType,
+      subject: subject ?? this.subject,
+      senderName: senderName ?? this.senderName,
+      senderCompany: senderCompany ?? this.senderCompany,
+      priority: priority ?? this.priority,
+      category: category ?? this.category,
+      isRead: isRead ?? this.isRead,
+      isApproved: isApproved ?? this.isApproved,
+      sentDate: sentDate ?? this.sentDate,
+      readDate: readDate ?? this.readDate,
+      approvedDate: approvedDate ?? this.approvedDate,
+      status: status ?? this.status,
+      deliveredDate: deliveredDate ?? this.deliveredDate,
+      senderAvatarUrl: senderAvatarUrl ?? this.senderAvatarUrl,
+      senderAvatarThumbnailUrl: senderAvatarThumbnailUrl ?? this.senderAvatarThumbnailUrl,
+      hasAttachments: hasAttachments ?? this.hasAttachments,
+      attachmentCount: attachmentCount ?? this.attachmentCount,
+      attachmentUrls: attachmentUrls ?? this.attachmentUrls,
+      attachmentThumbnails: attachmentThumbnails ?? this.attachmentThumbnails,
+      attachmentTypes: attachmentTypes ?? this.attachmentTypes,
+      attachmentSizes: attachmentSizes ?? this.attachmentSizes,
+      attachmentNames: attachmentNames ?? this.attachmentNames,
+      isVoiceMessage: isVoiceMessage ?? this.isVoiceMessage,
+      voiceMessageUrl: voiceMessageUrl ?? this.voiceMessageUrl,
+      voiceMessageDuration: voiceMessageDuration ?? this.voiceMessageDuration,
+      voiceMessageWaveform: voiceMessageWaveform ?? this.voiceMessageWaveform,
+      isEdited: isEdited ?? this.isEdited,
+      editedDate: editedDate ?? this.editedDate,
+      isForwarded: isForwarded ?? this.isForwarded,
+      forwardedFromMessageId: forwardedFromMessageId ?? this.forwardedFromMessageId,
+      isActive: isActive ?? this.isActive,
+    );
+  }
 }
 
 // ✅ NEW: Message status enum

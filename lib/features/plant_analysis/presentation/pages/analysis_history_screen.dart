@@ -93,7 +93,10 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
           queryParams['filterByMessageStatus'] = 'idle';
           break;
         case 'unread':
-          queryParams['hasUnreadMessages'] = true;
+          // ✅ NEW: Backend now supports hasUnreadForCurrentUser
+          // For farmer: shows analyses where sponsor sent unread messages
+          // Replaces old hasUnreadMessages which counted both directions
+          queryParams['hasUnreadForCurrentUser'] = true;
           break;
         case 'all':
         default:
