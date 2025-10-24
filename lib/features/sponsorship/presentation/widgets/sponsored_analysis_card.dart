@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/models/sponsored_analysis_summary.dart';
 import 'envelope_icon.dart';
-import 'unread_badge.dart';
 
-/// Individual analysis card for sponsor with farmer card design pattern
-/// Image-first layout with message badge overlay in top-left corner
+/// Individual analysis card for sponsor with comprehensive information display
+/// Image-first layout with message badge overlay + all analysis details
 class SponsoredAnalysisCard extends StatelessWidget {
   final SponsoredAnalysisSummary analysis;
   final VoidCallback onTap;
@@ -34,7 +33,7 @@ class SponsoredAnalysisCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section with Status Badge
+            // Image Section with Overlays
             Container(
               height: 200,
               decoration: const BoxDecoration(
@@ -62,6 +61,12 @@ class SponsoredAnalysisCard extends StatelessWidget {
                     right: 8,
                     child: _buildHealthBadge(context),
                   ),
+                  // Tier Badge (top-right)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _buildTierBadge(context),
+                  ),
                   // Message Badge Overlay (top-left corner)
                   if (analysis.hasMessages)
                     Positioned(
@@ -73,15 +78,14 @@ class SponsoredAnalysisCard extends StatelessWidget {
               ),
             ),
 
-            // Plant Info
+            // Plant Info Section
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Plant name and date
+                  // Plant name, health score, and date
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
@@ -95,20 +99,26 @@ class SponsoredAnalysisCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Text(
-                        analysis.analysisDateFormatted,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF9CA3AF),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      const SizedBox(width: 8),
+                      if (analysis.hasBasicAccess && analysis.overallHealthScore != null)
+                        _buildHealthScoreBadge(context),
                     ],
+                  ),
+
+                  // Date
+                  const SizedBox(height: 2),
+                  Text(
+                    analysis.analysisDateFormatted,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9CA3AF),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
 
                   // Plant species and variety
                   if (analysis.hasBasicAccess && analysis.plantSpecies != null) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       '${analysis.plantSpecies}${analysis.plantVariety != null ? ' - ${analysis.plantVariety}' : ''}',
                       style: const TextStyle(
@@ -116,8 +126,151 @@ class SponsoredAnalysisCard extends StatelessWidget {
                         color: Color(0xFF4B5563),
                         height: 1.3,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+
+                  // Growth stage
+                  if (analysis.hasBasicAccess && analysis.growthStage != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.spa, size: 14, color: Color(0xFF10B981)),
+                        const SizedBox(width: 4),
+                        Text(
+                          analysis.growthStage!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // Primary Concern (replaces species detail if available)
+                  if (analysis.hasDetailedAccess && analysis.primaryConcern != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _getSeverityColor(analysis.healthSeverity).withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _getSeverityIcon(analysis.healthSeverity),
+                            size: 16,
+                            color: _getSeverityColor(analysis.healthSeverity),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              analysis.primaryConcern!,
+                              style: TextStyle(
+                                color: _getSeverityColor(analysis.healthSeverity),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Message Preview Section
+                  if (analysis.hasMessages && analysis.lastMessagePreview != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: analysis.hasUnreadMessages
+                            ? Colors.blue.withOpacity(0.05)
+                            : Colors.grey.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: analysis.hasUnreadMessages
+                              ? Colors.blue.withOpacity(0.2)
+                              : Colors.grey.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 14,
+                            color: analysis.hasUnreadMessages ? Colors.blue : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              analysis.lastMessagePreview!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: analysis.hasUnreadMessages ? Colors.black87 : Colors.grey[600],
+                                fontWeight: analysis.hasUnreadMessages ? FontWeight.w500 : FontWeight.normal,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (analysis.lastMessageDate != null) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatMessageDate(analysis.lastMessageDate!),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Sponsor Branding
+                  if (analysis.canViewLogo == true && analysis.sponsorInfo?.logoUrl != null) ...[
+                    const SizedBox(height: 10),
+                    const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Text(
+                          'Sponsorlu',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF9CA3AF),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const Spacer(),
+                        Image.network(
+                          analysis.sponsorInfo?.logoUrl ?? '',
+                          height: 20,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Text(
+                              analysis.sponsorInfo?.companyName ?? 'Sponsor',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF6B7280),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ],
@@ -129,7 +282,7 @@ class SponsoredAnalysisCard extends StatelessWidget {
     );
   }
 
-  /// Build compact message badge for image overlay
+  /// Build compact message badge for image overlay (top-left)
   Widget _buildMessageBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -175,6 +328,67 @@ class SponsoredAnalysisCard extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  /// Build tier badge (top-right on image)
+  Widget _buildTierBadge(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getTierColor(analysis.tierName ?? 'S'),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        analysis.tierName ?? 'S',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  /// Build health score badge (next to plant name)
+  Widget _buildHealthScoreBadge(BuildContext context) {
+    final score = analysis.overallHealthScore ?? 0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getHealthScoreColor(score).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _getHealthScoreColor(score).withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.favorite,
+            size: 12,
+            color: _getHealthScoreColor(score),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            analysis.healthScoreText,
+            style: TextStyle(
+              color: _getHealthScoreColor(score),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -254,7 +468,7 @@ class SponsoredAnalysisCard extends StatelessWidget {
     );
   }
 
-  /// Build health status badge (bottom-right corner)
+  /// Build health status badge (bottom-right on image)
   Widget _buildHealthBadge(BuildContext context) {
     final status = _getHealthStatus();
 
@@ -327,6 +541,75 @@ class SponsoredAnalysisCard extends StatelessWidget {
       backgroundColor: const Color(0xFFE0E7FF), // blue-100
       textColor: const Color(0xFF1E40AF), // blue-800
     );
+  }
+
+  /// Get tier color (S/M: blue, L: orange, XL: purple)
+  Color _getTierColor(String tierName) {
+    if (tierName.contains('S') && !tierName.contains('X')) {
+      return const Color(0xFF3B82F6); // blue-500
+    } else if (tierName.contains('M')) {
+      return const Color(0xFF06B6D4); // cyan-500
+    } else if (tierName == 'L') {
+      return const Color(0xFFF97316); // orange-500
+    } else if (tierName == 'XL') {
+      return const Color(0xFFA855F7); // purple-500
+    }
+    return const Color(0xFF6B7280); // gray-500
+  }
+
+  /// Get health score color (green: 80+, orange: 60-79, red: 0-59)
+  Color _getHealthScoreColor(double score) {
+    if (score >= 80) return const Color(0xFF10B981); // green-500
+    if (score >= 60) return const Color(0xFFF59E0B); // amber-500
+    return const Color(0xFFEF4444); // red-500
+  }
+
+  /// Get severity color
+  Color _getSeverityColor(String? severity) {
+    switch (severity?.toLowerCase()) {
+      case 'healthy':
+        return const Color(0xFF10B981); // green-500
+      case 'moderate':
+        return const Color(0xFFF59E0B); // amber-500
+      case 'critical':
+        return const Color(0xFFEF4444); // red-500
+      default:
+        return const Color(0xFF6B7280); // gray-500
+    }
+  }
+
+  /// Get severity icon
+  IconData _getSeverityIcon(String? severity) {
+    switch (severity?.toLowerCase()) {
+      case 'healthy':
+        return Icons.check_circle;
+      case 'moderate':
+        return Icons.warning_amber_rounded;
+      case 'critical':
+        return Icons.error;
+      default:
+        return Icons.info;
+    }
+  }
+
+  /// Format message date in Turkish-friendly format
+  String _formatMessageDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inMinutes < 1) {
+      return 'Şimdi';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}dk';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}s';
+    } else if (difference.inDays == 1) {
+      return 'Dün';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}g';
+    } else {
+      return '${date.day}/${date.month}';
+    }
   }
 }
 
