@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:json_annotation/json_annotation.dart';
 import '../../../plant_analysis/data/models/plant_analysis_detail_dto.dart';
 
 part 'sponsored_analysis_detail.g.dart';

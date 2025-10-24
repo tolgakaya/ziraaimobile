@@ -1,3 +1,4 @@
+import 'package:injectable/injectable.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../repositories/messaging_repository.dart';
@@ -15,6 +16,7 @@ import '../repositories/messaging_repository.dart';
 ///   (_) => print('Message marked as read'),
 /// );
 /// ```
+@injectable
 class MarkMessageAsReadUseCase {
   final MessagingRepository _repository;
 

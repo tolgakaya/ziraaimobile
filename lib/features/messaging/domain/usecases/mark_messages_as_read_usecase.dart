@@ -1,3 +1,4 @@
+import 'package:injectable/injectable.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../repositories/messaging_repository.dart';
@@ -20,6 +21,7 @@ import '../repositories/messaging_repository.dart';
 ///   (count) => print('$count messages marked as read'),
 /// );
 /// ```
+@injectable
 class MarkMessagesAsReadUseCase {
   final MessagingRepository _repository;
 
