@@ -51,8 +51,9 @@ class AnalysisDetailScreen extends StatelessWidget {
             ),
             floatingActionButton: detail?.sponsorshipMetadata?.canReply == true
               ? FloatingActionButton.extended(
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    // ✅ Navigate to chat and refresh when returning
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => BlocProvider(
@@ -66,6 +67,13 @@ class AnalysisDetailScreen extends StatelessWidget {
                         ),
                       ),
                     );
+                    
+                    // ✅ Refresh detail after returning from chat (updates unread count)
+                    if (mounted) {
+                      setState(() {
+                        // Trigger rebuild to refresh detail
+                      });
+                    }
                   },
                   label: const Text('Sponsora Yanıtla'),
                   icon: const Icon(Icons.reply),

@@ -153,6 +153,14 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
             NewMessageReceivedEvent(message),
           );
           print('✅ SPONSOR CHAT: NewMessageReceivedEvent dispatched');
+          
+          // ✅ NEW: Auto-mark as read if message is for us and we're viewing the conversation
+          if (message.toUserId == widget.sponsorUserId) {
+            print('📬 SPONSOR CHAT: Auto-marking real-time message as read');
+            context.read<MessagingBloc>().add(
+              MarkMessageAsReadEvent(message.id),
+            );
+          }
         }
       };
 
@@ -163,6 +171,31 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
     } catch (e) {
       print('❌ SPONSOR CHAT: Failed to setup SignalR listener: $e');
     }
+  }
+
+  /// Mark unread messages as read when conversation is opened
+  /// Uses bulk API for better performance
+  void _markUnreadMessagesAsRead(List<Message> messages) {
+    // Get unread messages sent TO current user (sponsor)
+    final unreadMessageIds = messages
+        .where((msg) => 
+            !msg.isRead && 
+            msg.toUserId == widget.sponsorUserId
+        )
+        .map((msg) => msg.id)
+        .toList();
+
+    if (unreadMessageIds.isEmpty) {
+      print('✅ SPONSOR CHAT: No unread messages to mark');
+      return;
+    }
+
+    print('📬 SPONSOR CHAT: Marking ${unreadMessageIds.length} messages as read');
+    
+    // ✅ Trigger bulk mark as read event
+    context.read<MessagingBloc>().add(
+      MarkMessagesAsReadEvent(unreadMessageIds),
+    );
   }
 
   @override
@@ -204,6 +237,9 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
             );
           } else if (state is MessagesLoaded) {
             _updateMessages(state.messages);
+            
+            // ✅ NEW: Mark unread messages as read when conversation opens
+            _markUnreadMessagesAsRead(state.messages);
           }
         },
         builder: (context, state) {

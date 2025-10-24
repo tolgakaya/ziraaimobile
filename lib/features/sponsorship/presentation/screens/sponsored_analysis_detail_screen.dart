@@ -111,7 +111,7 @@ class _SponsoredAnalysisDetailScreenState
           // if (!tier.canMessage) return const SizedBox.shrink();
 
           return FloatingActionButton.extended(
-            onPressed: () {
+            onPressed: () async {
               // Get sponsor ID directly from analysis data (no GetIt needed!)
               final sponsorUserId = data.analysis.sponsorUserId;
 
@@ -122,7 +122,8 @@ class _SponsoredAnalysisDetailScreenState
                 return;
               }
 
-              Navigator.push(
+              // ✅ Navigate to chat and refresh when returning
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => BlocProvider(
@@ -139,6 +140,13 @@ class _SponsoredAnalysisDetailScreenState
                   ),
                 ),
               );
+              
+              // ✅ Refresh detail after returning from chat (updates unread count)
+              if (mounted) {
+                setState(() {
+                  // Trigger rebuild to refresh detail
+                });
+              }
             },
             label: const Text('Çiftçiye Mesaj Gönder'),
             icon: const Icon(Icons.send),
