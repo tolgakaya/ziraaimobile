@@ -41,4 +41,17 @@ class SecureStorageService {
   Future<void> deleteToken() async {
     await delete(key: 'auth_token');
   }
+
+  // Refresh token specific methods
+  Future<String?> getRefreshToken() async {
+    return await read(key: 'refresh_token');
+  }
+
+  Future<void> saveRefreshToken(String refreshToken) async {
+    await write(key: 'refresh_token', value: refreshToken);
+  }
+
+  Future<void> deleteRefreshToken() async {
+    await delete(key: 'refresh_token');
+  }
 }
