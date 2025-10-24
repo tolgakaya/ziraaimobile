@@ -100,9 +100,70 @@ Future<void> configureDependencies() async {
 
         handler.next(response);
       },
-      onError: (error, handler) {
+      onError: (error, handler) async {
         print('🚨 DIO ERROR: ${error.message}');
         print('🚨 ERROR TYPE: ${error.type}');
+        
+        // Handle 401 Unauthorized - Token expired
+        if (error.response?.statusCode == 401) {
+          print('🔄 Token expired (401), attempting refresh...');
+          
+          try {
+            // Get fresh token from secure storage
+            final secureStorage = getIt<SecureStorageService>();
+            final refreshToken = await secureStorage.getRefreshToken();
+            
+            if (refreshToken != null) {
+              print('✅ Refresh token found, refreshing access token...');
+              
+              // Create a new dio instance to avoid interceptor recursion
+              final refreshDio = Dio(BaseOptions(
+                baseUrl: ApiConfig.apiBaseUrl,
+              ));
+              
+              // Call refresh token endpoint
+              final refreshResponse = await refreshDio.post(
+                '/api/v1/auth/refresh-token',
+                data: {'refreshToken': refreshToken},
+              );
+              
+              if (refreshResponse.statusCode == 200 && 
+                  refreshResponse.data['success'] == true) {
+                final newAccessToken = refreshResponse.data['data']['accessToken'];
+                final newRefreshToken = refreshResponse.data['data']['refreshToken'];
+                
+                // Save new tokens
+                await secureStorage.saveToken(newAccessToken);
+                await secureStorage.saveRefreshToken(newRefreshToken);
+                
+                print('✅ Token refreshed successfully, retrying original request...');
+                
+                // Retry original request with new token
+                final options = Options(
+                  method: error.requestOptions.method,
+                  headers: {
+                    ...error.requestOptions.headers,
+                    'Authorization': 'Bearer $newAccessToken',
+                  },
+                );
+                
+                final response = await dio.request(
+                  error.requestOptions.path,
+                  data: error.requestOptions.data,
+                  queryParameters: error.requestOptions.queryParameters,
+                  options: options,
+                );
+                
+                return handler.resolve(response);
+              }
+            }
+            
+            print('❌ Token refresh failed, returning error');
+          } catch (e) {
+            print('❌ Token refresh exception: $e');
+          }
+        }
+        
         if (error.response != null) {
           print('🚨 ERROR RESPONSE LENGTH: ${error.response.toString().length}');
         }
