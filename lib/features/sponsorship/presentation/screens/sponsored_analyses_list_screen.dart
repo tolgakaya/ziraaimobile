@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/network/network_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
@@ -7,7 +6,6 @@ import '../../../../core/config/api_config.dart';
 import '../../data/models/sponsored_analysis_summary.dart';
 import '../../data/models/sponsored_analyses_list_response.dart';
 import '../widgets/sponsored_analysis_card.dart';
-import '../widgets/summary_statistics_card.dart';
 import 'sponsored_analysis_detail_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
@@ -701,18 +699,10 @@ class _SponsoredAnalysesListScreenState
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _allAnalyses.length + 2, // +1 summary, +1 loading
+              itemCount: _allAnalyses.length + 1, // +1 for "Load More" button
               itemBuilder: (context, index) {
-                // Summary statistics card at top
-                if (index == 0 && _summary != null) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: SummaryStatisticsCard(summary: _summary!),
-                  );
-                }
-
                 // "Load More" button at bottom
-                if (index == _allAnalyses.length + 1) {
+                if (index == _allAnalyses.length) {
                   if (!_hasMorePages) {
                     return const Padding(
                       padding: EdgeInsets.all(24.0),
@@ -752,12 +742,7 @@ class _SponsoredAnalysesListScreenState
                 }
 
                 // Analysis card
-                final analysisIndex = index - 1;
-                if (analysisIndex < 0 || analysisIndex >= _allAnalyses.length) {
-                  return const SizedBox.shrink();
-                }
-
-                final analysis = _allAnalyses[analysisIndex];
+                final analysis = _allAnalyses[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: SponsoredAnalysisCard(
