@@ -340,6 +340,7 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
                 child: Stack(
                   children: [
                     chat_ui.Chat(
+                      key: ValueKey('sponsor_chat_${widget.plantAnalysisId}_${widget.farmerId}'),
                       currentUserId: _currentUserId,
                       chatController: _chatController,
                       resolveUser: (userId) async {

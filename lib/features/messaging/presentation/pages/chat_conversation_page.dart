@@ -323,6 +323,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                 child: Stack(
                   children: [
                     chat_ui.Chat(
+                      key: ValueKey('farmer_chat_${widget.plantAnalysisId}_${widget.sponsorUserId}'),
                       currentUserId: _currentUserId,
                       chatController: _chatController,
                       resolveUser: (userId) async {
