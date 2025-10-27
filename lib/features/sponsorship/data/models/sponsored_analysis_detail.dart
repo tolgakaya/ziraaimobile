@@ -1,5 +1,4 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 import '../../../plant_analysis/data/models/plant_analysis_detail_dto.dart';
 
 part 'sponsored_analysis_detail.g.dart';
@@ -155,6 +154,7 @@ class AnalysisTierMetadata {
   final String tierName;
   final int accessPercentage;
   final bool canMessage;
+  final bool canReply; // ✅ NEW: Sponsor can reply to farmer (conversation initiated by sponsor)
   final bool canViewLogo;
   final SponsorDisplayInfo sponsorInfo;
   final AccessibleFields accessibleFields;
@@ -163,6 +163,7 @@ class AnalysisTierMetadata {
     required this.tierName,
     required this.accessPercentage,
     required this.canMessage,
+    required this.canReply,
     required this.canViewLogo,
     required this.sponsorInfo,
     required this.accessibleFields,
