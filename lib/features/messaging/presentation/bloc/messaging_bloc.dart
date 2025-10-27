@@ -312,21 +312,13 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         _cachedFeatures = features;
         print('✅ MessagingFeatures loaded for analysis ${event.plantAnalysisId}: imageAttachments.available=${features.imageAttachments.available}, fileAttachments.available=${features.fileAttachments.available}, voiceMessages.available=${features.voiceMessages.available}');
 
-        // ✅ FIX: Always emit state to trigger UI rebuild when features are loaded
-        // This ensures attachment/voice buttons update immediately
+        // ✅ FIX: Only emit state update if messages are already loaded
+        // Otherwise, features will be picked up from _cachedFeatures when messages load
         if (currentState is MessagesLoaded) {
           // If messages already loaded, update state with features
           emit(currentState.copyWith(features: features));
-        } else {
-          // ✅ NEW: Force UI rebuild by emitting intermediate state
-          // This triggers BlocConsumer builder to update attachment/voice buttons
-          // Even though messages aren't loaded yet, buttons will check cachedFeatures
-          emit(MessagingLoading());
-
-          // Immediately restore previous state
-          // This "ping" pattern forces rebuild without changing logical state
-          emit(currentState);
         }
+        // No need to emit for other states - cachedFeatures will be used by UI
         // Features will also be picked up from _cachedFeatures when LoadMessagesEvent completes
       },
     );
