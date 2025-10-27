@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/network/network_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
@@ -7,7 +6,6 @@ import '../../../../core/config/api_config.dart';
 import '../../data/models/sponsored_analysis_summary.dart';
 import '../../data/models/sponsored_analyses_list_response.dart';
 import '../widgets/sponsored_analysis_card.dart';
-import '../widgets/summary_statistics_card.dart';
 import 'sponsored_analysis_detail_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
@@ -551,25 +549,16 @@ class _SponsoredAnalysesListScreenState
       body: SafeArea(
         child: Column(
           children: [
-            // Header with logo and actions
+            // Header with ZiraAI Logo (matches dashboard)
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.white,
               child: Row(
                 children: [
-                  // Back button
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 12),
-                  
                   // ZiraAI Logo
                   Image.asset(
                     'assets/logos/ziraai_logo.png',
-                    height: 64,
+                    height: 90,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return const Text(
@@ -583,27 +572,20 @@ class _SponsoredAnalysesListScreenState
                     },
                   ),
                   const Spacer(),
-                  
-                  // Filter button
+                  // Back to Dashboard button
                   IconButton(
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: _showFilterDialog,
-                    tooltip: 'Filtrele',
-                    color: const Color(0xFF6B7280),
-                  ),
-                  
-                  // Sort button
-                  IconButton(
-                    icon: const Icon(Icons.sort),
-                    onPressed: _showSortDialog,
-                    tooltip: 'Sırala',
-                    color: const Color(0xFF6B7280),
+                    icon: const Icon(
+                      Icons.dashboard,
+                      color: Color(0xFF10B981),
+                    ),
+                    tooltip: 'Dashboard',
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
             
-            // Filter chips section
+            // Filter chips and actions section
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: Colors.white,
@@ -620,6 +602,21 @@ class _SponsoredAnalysesListScreenState
                         ],
                       ),
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Date range filter button
+                  IconButton(
+                    icon: const Icon(Icons.date_range),
+                    onPressed: _showFilterDialog,
+                    tooltip: 'Tarih Aralığı',
+                    color: const Color(0xFF6B7280),
+                  ),
+                  // Sort button
+                  IconButton(
+                    icon: const Icon(Icons.sort),
+                    onPressed: _showSortDialog,
+                    tooltip: 'Sırala',
+                    color: const Color(0xFF6B7280),
                   ),
                 ],
               ),
@@ -702,18 +699,10 @@ class _SponsoredAnalysesListScreenState
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _allAnalyses.length + 2, // +1 summary, +1 loading
+              itemCount: _allAnalyses.length + 1, // +1 for "Load More" button
               itemBuilder: (context, index) {
-                // Summary statistics card at top
-                if (index == 0 && _summary != null) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: SummaryStatisticsCard(summary: _summary!),
-                  );
-                }
-
                 // "Load More" button at bottom
-                if (index == _allAnalyses.length + 1) {
+                if (index == _allAnalyses.length) {
                   if (!_hasMorePages) {
                     return const Padding(
                       padding: EdgeInsets.all(24.0),
@@ -753,12 +742,7 @@ class _SponsoredAnalysesListScreenState
                 }
 
                 // Analysis card
-                final analysisIndex = index - 1;
-                if (analysisIndex < 0 || analysisIndex >= _allAnalyses.length) {
-                  return const SizedBox.shrink();
-                }
-
-                final analysis = _allAnalyses[analysisIndex];
+                final analysis = _allAnalyses[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: SponsoredAnalysisCard(
