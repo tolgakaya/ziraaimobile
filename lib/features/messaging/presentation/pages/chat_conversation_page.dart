@@ -327,12 +327,16 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                       currentUserId: _currentUserId,
                       chatController: _chatController,
                       resolveUser: (userId) async {
+                        print('🔍 DEBUG: resolveUser called for userId=$userId');
                         return chat_core.User(
                           id: userId,
                           name: userId == _currentUserId ? 'Ben' : 'Sponsor',
                         );
                       },
-                      onMessageSend: _sendWithAttachments,
+                      onMessageSend: (text) {
+                        print('🚀 DEBUG: onMessageSend called with text="$text"');
+                        _sendWithAttachments(text);
+                      },
                       builders: customBuilders,
                     ),
                     // Attachment button positioned over input area (only if not recording)
