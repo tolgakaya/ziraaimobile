@@ -106,9 +106,8 @@ class _SponsoredAnalysisDetailScreenState
           final data = snapshot.data!;
           final tier = data.tierMetadata;
 
-          // ⚠️ TEMPORARY: Show FAB always for testing (remove tier check)
-          // TODO: Re-enable tier check after testing
-          // if (!tier.canMessage) return const SizedBox.shrink();
+          // ✅ Hide FAB if messaging not allowed for this tier
+          if (!tier.canMessage) return const SizedBox.shrink();
 
           return FloatingActionButton.extended(
             onPressed: () async {

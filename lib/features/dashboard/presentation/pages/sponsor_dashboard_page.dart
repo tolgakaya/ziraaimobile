@@ -8,6 +8,9 @@ import '../../../sponsorship/data/models/sponsor_dashboard_summary.dart';
 import '../../../sponsorship/presentation/screens/code_distribution_screen.dart';
 import '../../../sponsorship/presentation/screens/tier_selection_screen.dart';
 import '../../../sponsorship/presentation/screens/sponsored_analyses_list_screen.dart';
+import '../../../dealer/data/dealer_api_service.dart';
+import '../../../dealer/domain/models/dealer_dashboard_summary.dart';
+import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
@@ -22,9 +25,12 @@ class SponsorDashboardPage extends StatefulWidget {
 
 class _SponsorDashboardPageState extends State<SponsorDashboardPage> with WidgetsBindingObserver {
   final SponsorService _sponsorService = GetIt.instance<SponsorService>();
+  final DealerApiService _dealerApiService = GetIt.instance<DealerApiService>();
 
   SponsorDashboardSummary? _summary;
+  DealerDashboardSummary? _dealerSummary;
   bool _isLoading = true;
+  bool _isDealerDataLoading = false;
   String? _errorMessage;
 
   @override
@@ -63,12 +69,39 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
           _summary = summary;
           _isLoading = false;
         });
+
+        // Load dealer data separately (non-blocking)
+        _loadDealerData();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadDealerData() async {
+    setState(() {
+      _isDealerDataLoading = true;
+    });
+
+    try {
+      final dealerSummary = await _dealerApiService.getMyDashboard();
+
+      if (mounted) {
+        setState(() {
+          _dealerSummary = dealerSummary;
+          _isDealerDataLoading = false;
+        });
+      }
+    } catch (e) {
+      print('[SponsorDashboard] ℹ️ Dealer data not available (user may not be a dealer): $e');
+      if (mounted) {
+        setState(() {
+          _isDealerDataLoading = false;
         });
       }
     }
@@ -390,6 +423,14 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                                       );
                                     },
                                   ),
+
+                                // Dealer Statistics Section (only show if dealer data available)
+                                if (_dealerSummary != null) ...[
+                                  const SizedBox(height: 24),
+                                  _buildDealerCodesCard(),
+                                  const SizedBox(height: 12),
+                                  _buildPendingInvitationsCard(),
+                                ],
                               ],
                             ),
                           ),
@@ -399,6 +440,280 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
         ),
       ),
       bottomNavigationBar: _buildBottomNavigation(),
+    );
+  }
+
+  Widget _buildDealerCodesCard() {
+    if (_dealerSummary == null) return const SizedBox.shrink();
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.business_center,
+                    color: Color(0xFF3B82F6),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Dealer Kodlarım',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Statistics Grid
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.archive,
+                    iconColor: const Color(0xFF10B981),
+                    label: 'Toplam Transfer',
+                    value: '${_dealerSummary!.totalCodesReceived}',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.send,
+                    iconColor: const Color(0xFF3B82F6),
+                    label: 'Gönderilmiş',
+                    value: '${_dealerSummary!.codesSent}',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.check_circle,
+                    iconColor: const Color(0xFF8B5CF6),
+                    label: 'Kullanılmış',
+                    value: '${_dealerSummary!.codesUsed}',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatItem(
+                    icon: Icons.inventory,
+                    iconColor: const Color(0xFFF59E0B),
+                    label: 'Kullanılabilir',
+                    value: '${_dealerSummary!.codesAvailable}',
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Usage Rate Progress Bar
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Kullanım Oranı',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    Text(
+                      '${_dealerSummary!.usageRate.toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: _dealerSummary!.usageRate / 100,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _dealerSummary!.usageRate >= 80
+                          ? const Color(0xFF10B981)
+                          : _dealerSummary!.usageRate >= 50
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFFEF4444),
+                    ),
+                    minHeight: 8,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 16),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPendingInvitationsCard() {
+    if (_dealerSummary == null) return const SizedBox.shrink();
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: _dealerSummary!.pendingInvitationsCount > 0
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PendingInvitationsScreen(),
+                  ),
+                ).then((_) {
+                  // Refresh dealer data when returning
+                  _loadDealerData();
+                });
+              }
+            : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _dealerSummary!.pendingInvitationsCount > 0
+                      ? const Color(0xFFF59E0B).withOpacity(0.1)
+                      : const Color(0xFF10B981).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _dealerSummary!.pendingInvitationsCount > 0
+                      ? Icons.mail
+                      : Icons.check_circle,
+                  color: _dealerSummary!.pendingInvitationsCount > 0
+                      ? const Color(0xFFF59E0B)
+                      : const Color(0xFF10B981),
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Bekleyen Dealer Davetiyelerim',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _dealerSummary!.pendingInvitationsCount > 0
+                          ? '${_dealerSummary!.pendingInvitationsCount} adet bekleyen davetiniz var'
+                          : 'Bekleyen davetiniz bulunmuyor',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow icon (only if there are pending invitations)
+              if (_dealerSummary!.pendingInvitationsCount > 0)
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Color(0xFF9CA3AF),
+                  size: 16,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -9,6 +9,7 @@ import '../bloc/notification_state.dart';
 import '../../../plant_analysis/presentation/screens/analysis_detail_screen.dart';
 import '../../../messaging/presentation/pages/chat_conversation_page.dart';
 import '../../../messaging/presentation/bloc/messaging_bloc.dart'; // ✅ NEW: For BLoC provider
+import '../../../dealer/presentation/screens/pending_invitations_screen.dart'; // ✅ NEW: For dealer invitations
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({Key? key}) : super(key: key);
@@ -148,7 +149,15 @@ class NotificationsPage extends StatelessWidget {
     }
 
     // ✅ SMART NAVIGATION: Route based on notification type
-    if (notification.isMessageNotification) {
+    if (notification.status == 'DealerInvitation') {
+      // Dealer invitation notification → Navigate to pending invitations screen
+      print('🎯 Navigating to pending invitations for dealer invitation notification');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const PendingInvitationsScreen(),
+        ),
+      );
+    } else if (notification.isMessageNotification) {
       // Message notification → Navigate to chat page
       print('📱 Navigating to chat for message notification from ${notification.senderDisplayName}');
       Navigator.of(context).push(
@@ -379,6 +388,11 @@ class _NotificationCard extends StatelessWidget {
 
   /// ✅ NEW: Build notification icon based on type
   Widget _buildNotificationIcon(BuildContext context, PlantAnalysisNotification notification) {
+    if (notification.status == 'DealerInvitation') {
+      // Dealer invitation - Show handshake icon
+      return _buildDealerInvitationIconFallback(context);
+    }
+
     if (notification.isMessageNotification) {
       // Message notification - Show avatar or message icon
       if (notification.senderAvatarUrl != null) {
@@ -443,6 +457,22 @@ class _NotificationCard extends StatelessWidget {
       child: Icon(
         Icons.eco,
         color: Theme.of(context).primaryColor,
+        size: 30,
+      ),
+    );
+  }
+
+  Widget _buildDealerInvitationIconFallback(BuildContext context) {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.orange.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(
+        Icons.handshake,
+        color: Colors.orange.shade700,
         size: 30,
       ),
     );

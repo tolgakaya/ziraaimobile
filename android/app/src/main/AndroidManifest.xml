@@ -72,6 +72,19 @@
                     android:pathPrefix="/redeem"/>
             </intent-filter>
 
+            <!-- Deep linking for dealer invitation - Environment specific -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+
+                <!-- Deep link for dealer invitation -->
+                <data
+                    android:scheme="https"
+                    android:host="${deepLinkHost}"
+                    android:pathPrefix="/dealer-invitation"/>
+            </intent-filter>
+
             <!-- Custom scheme fallback -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>

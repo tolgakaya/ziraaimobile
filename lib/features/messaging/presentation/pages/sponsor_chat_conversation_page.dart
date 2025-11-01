@@ -340,15 +340,20 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
                 child: Stack(
                   children: [
                     chat_ui.Chat(
+                      key: ValueKey('sponsor_chat_${widget.plantAnalysisId}_${widget.farmerId}'),
                       currentUserId: _currentUserId,
                       chatController: _chatController,
                       resolveUser: (userId) async {
+                        print('🔍 DEBUG: resolveUser called for userId=$userId');
                         return chat_core.User(
                           id: userId,
                           name: userId == _currentUserId ? 'Ben' : (widget.farmerName ?? 'Çiftçi'),  // ⬅️ CHANGED: Show farmer name
                         );
                       },
-                      onMessageSend: _sendWithAttachments,
+                      onMessageSend: (text) {
+                        print('🚀 DEBUG: onMessageSend called with text="$text"');
+                        _sendWithAttachments(text);
+                      },
                       builders: customBuilders,
                     ),
                     // Attachment button positioned over input area (only if not recording)

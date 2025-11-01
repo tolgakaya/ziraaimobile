@@ -8,10 +8,14 @@ import '../../bloc/auth_state.dart';
 import '../../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../../../../../core/services/signalr_service.dart';
 import '../../../../../core/services/signalr_notification_integration.dart';
+import '../../../../../core/services/notification_signalr_service.dart';
 import '../../../../../core/services/auth_service.dart';
 import '../../../../dashboard/presentation/bloc/notification_bloc.dart';
 import '../../../../../core/services/sponsorship_sms_listener.dart';
+// ✅ REMOVED: dealer_invitation_sms_listener - no longer used (switched to backend API)
 import '../../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
+import '../../../../dealer/presentation/screens/pending_invitations_screen.dart';
+import '../../../../dealer/data/dealer_api_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
@@ -188,16 +192,23 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         final signalRService = SignalRService();
         await signalRService.initialize(token);
 
+        // ✅ Initialize NotificationHub for dealer invitations
+        print('🔔 Phone Auth: Initializing NotificationHub for dealer invitations...');
+        final notificationHubService = GetIt.instance<NotificationSignalRService>();
+        await notificationHubService.initialize(token);
+        print('✅ Phone Auth: NotificationHub initialized successfully');
+
         final notificationBloc = GetIt.instance<NotificationBloc>();
         final localNotifications = GetIt.instance<FlutterLocalNotificationsPlugin>();
         final integration = SignalRNotificationIntegration(
           signalRService: signalRService,
+          notificationHubService: notificationHubService,
           notificationBloc: notificationBloc,
           localNotifications: localNotifications,
         );
         integration.setupEventHandlers();
 
-        print('✅ Phone Auth: SignalR initialized and integrated successfully');
+        print('✅ Phone Auth: SignalR and NotificationHub integrated successfully');
       }
     } catch (e) {
       print('❌ Phone Auth: SignalR initialization error: $e');
@@ -224,6 +235,30 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     } catch (e) {
       print('[OTP] ❌ Error checking pending code: $e');
       return null;
+    }
+  }
+
+  /// ✅ UPDATED: Check backend API for pending dealer invitations after authentication
+  /// Returns true if pending invitations found (will navigate to PendingInvitationsScreen)
+  /// Returns false if no invitations (caller should proceed to dashboard)
+  Future<bool> _checkPendingDealerInvitationsAfterAuth() async {
+    try {
+      print('[OTP] 🔍 Checking backend for pending dealer invitations...');
+
+      // ✅ NEW: Call backend API to get pending invitations
+      final dealerApi = GetIt.instance<DealerApiService>();
+      final invitations = await dealerApi.getMyPendingInvitations();
+
+      if (invitations.isNotEmpty) {
+        print('[OTP] ✅ Found ${invitations.length} pending dealer invitation(s)');
+        return true; // ✅ Signal caller to navigate to PendingInvitationsScreen instead of dashboard
+      } else {
+        print('[OTP] ℹ️ No pending dealer invitations found');
+        return false; // Proceed to dashboard normally
+      }
+    } catch (e) {
+      print('[OTP] ❌ Error fetching dealer invitations from backend: \$e');
+      return false; // Don't block login flow if this fails
     }
   }
 
@@ -282,12 +317,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             // Check for pending sponsorship code from SMS
             final pendingCode = await _checkPendingSponsorshipCode();
 
-            // Navigate to dashboard (pass pending code as parameter)
+            // ✅ NEW: Check backend API for pending dealer invitations
+            final hasPendingInvitations = await _checkPendingDealerInvitationsAfterAuth();
+
+            // Navigate to dashboard with pending dealer invitations flag
             if (mounted) {
+              print('[OTP] 🧭 Navigating to dashboard (hasPendingInvitations: $hasPendingInvitations)');
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                   builder: (_) => FarmerDashboardPage(
                     pendingSponsorshipCode: pendingCode,
+                    hasPendingDealerInvitations: hasPendingInvitations,
                   ),
                 ),
                 (route) => false,

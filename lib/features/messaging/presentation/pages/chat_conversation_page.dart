@@ -320,28 +320,35 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
               // Chat UI
               Expanded(
-                child: Stack(
-                  children: [
-                    chat_ui.Chat(
-                      currentUserId: _currentUserId,
-                      chatController: _chatController,
-                      resolveUser: (userId) async {
-                        return chat_core.User(
-                          id: userId,
-                          name: userId == _currentUserId ? 'Ben' : 'Sponsor',
-                        );
-                      },
-                      onMessageSend: _sendWithAttachments,
-                      builders: customBuilders,
+                child: (state is MessagesLoaded && !state.canReply)
+                  ? _buildCannotReplyView()
+                  : Stack(
+                      children: [
+                        chat_ui.Chat(
+                          key: ValueKey('farmer_chat_${widget.plantAnalysisId}_${widget.sponsorUserId}'),
+                          currentUserId: _currentUserId,
+                          chatController: _chatController,
+                          resolveUser: (userId) async {
+                            print('🔍 DEBUG: resolveUser called for userId=$userId');
+                            return chat_core.User(
+                              id: userId,
+                              name: userId == _currentUserId ? 'Ben' : 'Sponsor',
+                            );
+                          },
+                          onMessageSend: (text) {
+                            print('🚀 DEBUG: onMessageSend called with text="$text"');
+                            _sendWithAttachments(text);
+                          },
+                          builders: customBuilders,
+                        ),
+                        // Attachment button positioned over input area (only if not recording)
+                        if (!_isRecordingVoice)
+                          _buildAttachmentButton(state),
+                        // Voice recording button (only if not recording and no attachments selected)
+                        if (!_isRecordingVoice && _selectedImages.isEmpty)
+                          _buildVoiceButton(state),
+                      ],
                     ),
-                    // Attachment button positioned over input area (only if not recording)
-                    if (!_isRecordingVoice)
-                      _buildAttachmentButton(state),
-                    // Voice recording button (only if not recording and no attachments selected)
-                    if (!_isRecordingVoice && _selectedImages.isEmpty)
-                      _buildVoiceButton(state),
-                  ],
-                ),
               ),
 
               // ✅ NEW: Voice recorder overlay (when recording)
@@ -1137,6 +1144,64 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Full-screen view when sponsor hasn't initiated conversation
+  /// Shows messages in read-only mode without input capabilities
+  Widget _buildCannotReplyView() {
+    return Column(
+      children: [
+        // Messages display (read-only)
+        Expanded(
+          child: chat_ui.Chat(
+            key: ValueKey('farmer_chat_readonly_${widget.plantAnalysisId}_${widget.sponsorUserId}'),
+            currentUserId: _currentUserId,
+            chatController: _chatController,
+            resolveUser: (userId) async {
+              return chat_core.User(
+                id: userId,
+                name: userId == _currentUserId ? 'Ben' : 'Sponsor',
+              );
+            },
+            onMessageSend: null, // ✅ CRITICAL: Disable sending in read-only mode
+            builders: chat_core.Builders(
+              textMessageBuilder: (context, message, index, {
+                required bool isSentByMe,
+                chat_core.MessageGroupStatus? groupStatus,
+              }) {
+                return _buildTextMessageWithAvatarStatus(message, isSentByMe);
+              },
+            ),
+          ),
+        ),
+        // Warning message at bottom
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            border: Border(
+              top: BorderSide(color: Colors.orange[200]!, width: 1),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.orange[700], size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Sponsor size ilk mesajı gönderdiğinde yanıt verebilirsiniz.',
+                  style: TextStyle(
+                    color: Colors.orange[900],
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

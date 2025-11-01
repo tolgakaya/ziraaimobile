@@ -140,6 +140,9 @@ class PlantAnalysisNotification {
     if (isMessageNotification) {
       return 'Yeni Mesaj';
     }
+    if (status == 'DealerInvitation') {
+      return 'Bayilik Daveti';
+    }
     return status == 'Completed' ? 'Analiz Tamamlandı' : status;
   }
 

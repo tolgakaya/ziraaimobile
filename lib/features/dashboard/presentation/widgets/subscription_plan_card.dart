@@ -414,23 +414,35 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
                                   size: 14,
                                   color: Color(0xFF16A34A), // green-600
                                 ),
-                                const SizedBox(width: 4),
-                                if (referralCredits > 0) ...[
-                                  Text(
-                                    '$referralCredits • ',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF16A34A), // green-600
-                                    ),
-                                  ),
-                                ],
-                                const Text(
-                                  'Davet',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF15803D), // green-700
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (referralCredits > 0) ...[
+                                        Text(
+                                          '$referralCredits',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF16A34A), // green-600
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(width: 2),
+                                      ],
+                                      const Flexible(
+                                        child: Text(
+                                          'Davet',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF15803D), // green-700
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],

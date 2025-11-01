@@ -14,9 +14,13 @@ import '../../../../core/services/signalr_service.dart';
 import '../../../../core/services/signalr_notification_integration.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/sponsorship_sms_listener.dart';
+// ✅ REMOVED: dealer_invitation_sms_listener - no longer used (switched to backend API)
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../../dashboard/presentation/bloc/notification_bloc.dart';
 import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
+import '../../../dealer/presentation/screens/dealer_invitation_screen.dart';
+import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
+import '../../../dealer/data/dealer_api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -188,6 +192,30 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// ✅ UPDATED: Check backend API for pending dealer invitations
+  /// Replaces SMS-based detection with backend API call
+  /// Backend returns only "Pending" invitations sorted by urgency
+  Future<bool> _checkPendingDealerInvitation() async {
+    try {
+      print('[Login] 🔍 Checking backend for pending dealer invitations...');
+
+      // ✅ NEW: Call backend API to get pending invitations
+      final dealerApi = GetIt.instance<DealerApiService>();
+      final invitations = await dealerApi.getMyPendingInvitations();
+
+      if (invitations.isNotEmpty) {
+        print('[Login] ✅ Found ${invitations.length} pending dealer invitation(s)');
+        return true;
+      } else {
+        print('[Login] ℹ️ No pending dealer invitations found');
+        return false;
+      }
+    } catch (e) {
+      print('[Login] ❌ Error fetching dealer invitations from backend: $e');
+      return false; // Don't block login flow if this fails
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -199,12 +227,20 @@ class _LoginScreenState extends State<LoginScreen> {
           // Check for pending sponsorship code from SMS
           await _checkPendingSponsorshipCode();
 
+          // Check for pending dealer invitations from backend API
+          final hasPendingInvitations = await _checkPendingDealerInvitation();
+
           // Navigate to dashboard on successful login
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const FarmerDashboardPage(),
-            ),
-          );
+          if (mounted) {
+            print('[Login] 🧭 Navigating to dashboard (hasPendingInvitations: $hasPendingInvitations)');
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => FarmerDashboardPage(
+                  hasPendingDealerInvitations: hasPendingInvitations,
+                ),
+              ),
+            );
+          }
         } else if (state is PhoneOtpSent) {
           // Navigate to OTP verification screen
           final authBloc = GetIt.instance<AuthBloc>();

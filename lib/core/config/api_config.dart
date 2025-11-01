@@ -81,8 +81,15 @@ class ApiConfig {
   static const String messagingGetBlocked = '/sponsorship/messages/blocked';
   static const String messagingGetQuota = '/sponsorship/messages/remaining';
 
+  // Dealer Invitation Endpoints
+  static const String dealerInvitationDetails = '/sponsorship/dealer/invitation-details';
+  static const String dealerInvitationAccept = '/sponsorship/dealer/accept-invitation';
+
   // SignalR Hub Endpoint
   static String get signalRHubUrl => '$baseUrl/hubs/plantanalysis';
+
+  // Notification Hub Endpoint (for dealer invitations)
+  static String get notificationHubUrl => '$baseUrl/hubs/notification';
 
   // Timeout configurations
   static const Duration connectTimeout = Duration(seconds: 30);
