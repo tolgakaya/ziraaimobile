@@ -24,6 +24,7 @@ import '../../features/referral/presentation/bloc/referral_bloc.dart';
 import '../../features/sponsorship/data/services/sponsor_service.dart';
 // import '../services/install_referrer_service.dart';  // TEMPORARILY DISABLED
 import '../services/sms_referral_service.dart';
+import '../services/sponsorship_sms_listener.dart';
 import '../../features/messaging/data/services/messaging_api_service.dart';
 import '../../features/messaging/data/repositories/messaging_repository_impl.dart';
 import '../../features/messaging/domain/repositories/messaging_repository.dart';
@@ -36,10 +37,22 @@ import '../../features/messaging/domain/usecases/mark_message_as_read_usecase.da
 import '../../features/messaging/domain/usecases/mark_messages_as_read_usecase.dart';
 import '../../features/messaging/presentation/bloc/messaging_bloc.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/material.dart';
+import '../../features/dealer/data/dealer_api_service.dart';
+import '../../features/dealer/presentation/screens/pending_invitations_screen.dart';
+import '../services/notification_signalr_service.dart';
+import '../services/navigation_service.dart';
 
 final GetIt getIt = GetIt.instance;
 
 Future<void> setupMinimalServiceLocator() async {
+
+  // ✅ SIGNALR NOTIFICATION HUB - Singleton for /hubs/notification
+  getIt.registerLazySingleton<NotificationSignalRService>(
+    () => NotificationSignalRService(),
+  );
+
+  print('✅ SIGNALR: NotificationSignalRService registered successfully!');
   // External dependencies
   final sharedPreferences = await SharedPreferences.getInstance();
   getIt.registerSingleton<SharedPreferences>(sharedPreferences);
@@ -62,6 +75,14 @@ Future<void> setupMinimalServiceLocator() async {
   getIt.registerLazySingleton<SmsReferralService>(
     () => SmsReferralService(),
   );
+
+  // ✅ SPONSORSHIP SMS LISTENER - Real-time SMS code detection
+  // Required for automatic sponsorship code extraction from SMS
+  getIt.registerLazySingleton<SponsorshipSmsListener>(
+    () => SponsorshipSmsListener(),
+  );
+
+  print('✅ SMS: SmsReferralService and SponsorshipSmsListener registered successfully!');
 
   // Token management
   getIt.registerLazySingleton<TokenManager>(
@@ -217,6 +238,13 @@ Future<void> setupMinimalServiceLocator() async {
 
   print('✅ MESSAGING: All messaging services registered successfully!');
 
+  // ✅ DEALER INVITATION API SERVICE
+  getIt.registerLazySingleton<DealerApiService>(
+    () => DealerApiService(getIt<NetworkClient>()),
+  );
+
+  print('✅ DEALER: Dealer API service registered successfully!');
+
   // ✅ NOTIFICATIONS - FlutterLocalNotificationsPlugin for push notifications
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   
@@ -240,9 +268,22 @@ Future<void> setupMinimalServiceLocator() async {
   await flutterLocalNotificationsPlugin.initialize(
     initSettings,
     onDidReceiveNotificationResponse: (NotificationResponse response) {
-      print('🔔 Notification tapped: ${response.payload}');
-      // Handle notification tap - navigate to relevant screen
-      // This will be implemented later for deep linking to message detail
+      print('🔔 Notification tapped: \${response.payload}');
+      
+      // Handle different notification types based on payload
+      final payload = response.payload;
+      if (payload != null) {
+        if (payload.startsWith('dealer_invitation_')) {
+          // Dealer invitation notification tapped
+          print('🔔 Dealer invitation notification tapped, navigating to PendingInvitationsScreen');
+          // Navigation will be handled by main.dart's NavigatorKey
+          _handleDealerInvitationTap(payload);
+        } else if (payload.startsWith('message_')) {
+          // Message notification tapped
+          print('🔔 Message notification tapped: \$payload');
+          // Handle message navigation (existing functionality)
+        }
+      }
     },
   );
   
@@ -436,4 +477,22 @@ class _RequestRetry {
     required this.requestOptions,
     required this.handler,
   });
+}
+
+/// Handle dealer invitation notification tap
+void _handleDealerInvitationTap(String payload) {
+  // Get navigator key from main.dart via NavigationService
+  final navigationService = getIt<NavigationService>();
+  final context = navigationService.navigatorKey.currentContext;
+  
+  if (context != null) {
+    print('🔔 Navigating to PendingInvitationsScreen from notification tap');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const PendingInvitationsScreen(),
+      ),
+    );
+  } else {
+    print('⚠️ Cannot navigate - no context available');
+  }
 }

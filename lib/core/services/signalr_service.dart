@@ -3,6 +3,7 @@ import 'package:signalr_netcore/signalr_client.dart';
 import '../config/api_config.dart';
 import '../models/plant_analysis_notification.dart';
 import '../models/message_notification.dart';
+import '../models/dealer_invitation_notification.dart';
 
 class SignalRService {
   late HubConnection _hubConnection;
@@ -22,6 +23,9 @@ class SignalRService {
   Function(int userId, String userName, int plantAnalysisId, bool isTyping)? onUserTyping;
   Function(int messageId, int readByUserId, DateTime readAt)? onMessageRead;
 
+  // ✅ NEW: Dealer invitation callbacks - support multiple listeners (same pattern as messages)
+  final List<Function(DealerInvitationNotification)> _onNewDealerInvitationListeners = [];
+
   // ✅ Methods to manage message listeners
   void addNewMessageListener(Function(MessageNotification) listener) {
     if (!_onNewMessageListeners.contains(listener)) {
@@ -40,6 +44,19 @@ class SignalRService {
     if (callback != null) {
       addNewMessageListener(callback);
     }
+  }
+
+  // ✅ NEW: Methods to manage dealer invitation listeners (same pattern as message listeners)
+  void addDealerInvitationListener(Function(DealerInvitationNotification) listener) {
+    if (!_onNewDealerInvitationListeners.contains(listener)) {
+      _onNewDealerInvitationListeners.add(listener);
+      print('✅ SignalR: Added dealer invitation listener (total: ${_onNewDealerInvitationListeners.length})');
+    }
+  }
+
+  void removeDealerInvitationListener(Function(DealerInvitationNotification) listener) {
+    _onNewDealerInvitationListeners.remove(listener);
+    print('✅ SignalR: Removed dealer invitation listener (remaining: ${_onNewDealerInvitationListeners.length})');
   }
 
   // Singleton pattern
@@ -293,6 +310,40 @@ class SignalRService {
           onMessageRead?.call(messageId, readByUserId, readAt);
         } catch (e, stackTrace) {
           print('❌ SignalR: Error parsing message read event: $e');
+          print('❌ SignalR: Stack trace: $stackTrace');
+        }
+      }
+    });
+
+    // ✅ NEW: Dealer invitation event
+    print('📝 SignalR: Registering NewDealerInvitation event...');
+    _hubConnection.on('NewDealerInvitation', (arguments) {
+      print('🎉 SignalR: NewDealerInvitation event triggered!');
+      if (arguments != null && arguments.isNotEmpty) {
+        final invitationData = arguments[0] as Map<String, dynamic>;
+        print('🎉 SignalR: Invitation data: $invitationData');
+
+        try {
+          final invitation = DealerInvitationNotification.fromJson(invitationData);
+          print('✅ SignalR: Dealer invitation parsed successfully');
+          print('📋 SignalR: Invitation from ${invitation.sponsorCompanyName}, ${invitation.codeCount} codes');
+
+          // ✅ Notify ALL listeners (same pattern as message listeners)
+          if (_onNewDealerInvitationListeners.isNotEmpty) {
+            print('🔔 SignalR: Notifying ${_onNewDealerInvitationListeners.length} dealer invitation listener(s)...');
+            for (final listener in _onNewDealerInvitationListeners) {
+              try {
+                listener(invitation);
+              } catch (e) {
+                print('❌ SignalR: Error in dealer invitation listener: $e');
+              }
+            }
+            print('✅ SignalR: All dealer invitation listeners notified');
+          } else {
+            print('⚠️ SignalR: WARNING - No dealer invitation listeners registered!');
+          }
+        } catch (e, stackTrace) {
+          print('❌ SignalR: Error parsing dealer invitation: $e');
           print('❌ SignalR: Stack trace: $stackTrace');
         }
       }

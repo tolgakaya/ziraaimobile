@@ -4,20 +4,25 @@ import '../../features/dashboard/presentation/bloc/notification_bloc.dart';
 import '../../features/dashboard/presentation/bloc/notification_event.dart';
 import '../models/plant_analysis_notification.dart';
 import '../models/message_notification.dart';
+import '../models/dealer_invitation_notification.dart';
 import 'signalr_service.dart';
+import 'notification_signalr_service.dart';
 
 /// Integration service that connects SignalR events with NotificationBloc
 class SignalRNotificationIntegration {
   final SignalRService _signalRService;
+  final NotificationSignalRService? _notificationHubService;
   final NotificationBloc _notificationBloc;
   final FlutterLocalNotificationsPlugin? _localNotifications;
   bool _isInitialized = false;
 
   SignalRNotificationIntegration({
     required SignalRService signalRService,
+    NotificationSignalRService? notificationHubService,
     required NotificationBloc notificationBloc,
     FlutterLocalNotificationsPlugin? localNotifications,
   })  : _signalRService = signalRService,
+        _notificationHubService = notificationHubService,
         _notificationBloc = notificationBloc,
         _localNotifications = localNotifications;
 
@@ -99,6 +104,61 @@ class SignalRNotificationIntegration {
       print('✅ SignalRIntegration: Message notification added to bloc with sender: ${messageNotification.fromUserName} (${messageNotification.senderRole})!');
     };
 
+    // Handle dealer invitation notifications
+    _signalRService.addDealerInvitationListener((invitation) {
+      print('🎉 SignalRIntegration: CALLBACK TRIGGERED! New dealer invitation from ${invitation.sponsorCompanyName}');
+      print('🎉 SignalRIntegration: Invitation data: ${invitation.codeCount} codes, tier: ${invitation.packageTier}');
+
+      // Show local notification for dealer invitation
+      _showDealerInvitationNotification(invitation);
+
+      // Add to NotificationBloc so it appears in notification bell icon
+      final plantAnalysisNotification = PlantAnalysisNotification(
+        analysisId: invitation.invitationId,
+        userId: invitation.invitationId,
+        status: 'DealerInvitation',
+        completedAt: invitation.createdAt,
+        primaryConcern: 'Yeni Bayi Davetiyesi',
+        message: '${invitation.sponsorCompanyName} tarafından ${invitation.codeCount} kod davetiyesi gönderildi',
+        sponsorId: invitation.invitationId.toString(),
+        isRead: false,
+        deepLink: 'dealer_invitation_${invitation.token}',
+      );
+
+      _notificationBloc.add(AddNotification(plantAnalysisNotification));
+      print('✅ SignalRIntegration: Dealer invitation notification added to bloc!');
+    });
+
+    // ✅ Setup NotificationHub dealer invitation handler (if available)
+    if (_notificationHubService != null) {
+      print('🔔 SignalRIntegration: Setting up NotificationHub dealer invitation handler...');
+      _notificationHubService!.addDealerInvitationListener((invitation) {
+        print('🎉 SignalRIntegration: CALLBACK TRIGGERED! New dealer invitation from ${invitation.sponsorCompanyName}');
+        print('🎉 SignalRIntegration: ${invitation.codeCount} codes, expires in ${invitation.remainingDays} days');
+
+        // Show local notification
+        print('🔔 SignalRIntegration: Showing notification for dealer invitation');
+        _showDealerInvitationNotification(invitation);
+
+        // Add to NotificationBloc
+        print('📲 SignalRIntegration: Adding dealer invitation to notification bloc...');
+        final plantAnalysisNotification = PlantAnalysisNotification(
+          analysisId: invitation.invitationId,
+          userId: 0,
+          status: 'DealerInvitation',
+          completedAt: invitation.createdAt,
+          message: '${invitation.sponsorCompanyName} sizi bayiliğe davet ediyor',
+          primaryConcern: '${invitation.codeCount} kod, ${invitation.remainingDays} gün geçerli',
+        );
+
+        _notificationBloc.add(AddNotification(plantAnalysisNotification));
+        print('✅ SignalRIntegration: Dealer invitation notification added to bloc!');
+      });
+      print('✅ SignalRIntegration: NotificationHub handler setup complete!');
+    } else {
+      print('⚠️ SignalRIntegration: NotificationHub service not provided - dealer invitations disabled');
+    }
+
     _isInitialized = true;
     print('✅ SignalRIntegration: Event handlers setup complete!');
   }
@@ -156,6 +216,50 @@ class SignalRNotificationIntegration {
     );
 
     print('✅ SignalRIntegration: Notification shown successfully');
+  }
+
+  /// Show local notification for dealer invitation
+  void _showDealerInvitationNotification(DealerInvitationNotification invitation) {
+    if (_localNotifications == null) {
+      print('⚠️ SignalRIntegration: Local notifications not initialized');
+      return;
+    }
+
+    print('🔔 SignalRIntegration: Showing notification for dealer invitation from ${invitation.sponsorCompanyName}');
+
+    const androidDetails = AndroidNotificationDetails(
+      'dealer_invitations',
+      'Bayi Davetiyeleri',
+      channelDescription: 'Sponsorlardan gelen bayi davetiye bildirimleri',
+      importance: Importance.high,
+      priority: Priority.high,
+      enableVibration: true,
+      playSound: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final title = 'Yeni Bayi Davetiyesi';
+    final body = '${invitation.sponsorCompanyName} tarafından ${invitation.codeCount} kod davetiyesi gönderildi. ${invitation.expirationMessage}';
+
+    _localNotifications!.show(
+      invitation.invitationId,
+      title,
+      body,
+      notificationDetails,
+      payload: 'dealer_invitation_${invitation.token}',
+    );
+
+    print('✅ SignalRIntegration: Dealer invitation notification shown successfully');
   }
 
   /// Clear event handlers

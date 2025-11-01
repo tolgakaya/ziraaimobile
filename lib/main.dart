@@ -13,6 +13,7 @@ import 'core/services/navigation_service.dart';
 // import 'core/services/install_referrer_service.dart';  // TEMPORARILY DISABLED
 import 'core/services/sms_referral_service.dart';
 import 'core/services/sponsorship_sms_listener.dart';
+// ✅ REMOVED: dealer_invitation_sms_listener - switched to backend API integration
 import 'dart:async';
 
 void main() async {
@@ -68,6 +69,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // Initialize sponsorship SMS listener for automatic code detection
     _initializeSponsorshipSmsListener();
+
+    // ✅ REMOVED: Dealer invitation SMS listener - switched to backend API integration
+    // Dealer invitations are now checked via backend API in login/register screens
 
     // Initialize deep link service with app_links
     _initializeDeepLinks();
@@ -158,16 +162,27 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     try {
       print('🎁 Main: Initializing sponsorship SMS listener (delayed)...');
 
-      final smsListener = SponsorshipSmsListener();
+      // ✅ FIX: Use GetIt to get singleton instance (prevents garbage collection)
+      final smsListener = getIt<SponsorshipSmsListener>();
       await smsListener.initialize();
 
       print('✅ Main: Sponsorship SMS listener initialized successfully');
     } catch (e) {
       print('❌ Main: Failed to initialize sponsorship SMS listener: $e');
+      print('❌ Stack trace: ${StackTrace.current}');  // ✅ Added stack trace for debugging
       // Don't block app startup if SMS listener fails
       // Silently ignore errors to prevent crashes
     }
   }
+
+  /// ✅ REMOVED: Dealer invitation SMS listener initialization
+  /// Dealer invitations are now checked via backend API integration:
+  /// - LoginScreen: checks backend after email/password login
+  /// - RegisterScreen: checks backend after registration
+  /// - OtpVerificationScreen: checks backend after phone OTP login
+  /// - SignalR: real-time notifications for new invitations
+  /// SMS listener is NO LONGER USED for dealer invitations
+  /// (SMS scanning is still active for sponsorship codes via SponsorshipSmsListener)
 
   /// Initialize deep link handling with app_links package
   Future<void> _initializeDeepLinks() async {
@@ -190,6 +205,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       print('📱 Main: Sponsorship code received from deep link: $sponsorshipCode');
       // Note: Actual navigation happens in login_screen.dart post-login hook
       // This is just for logging/monitoring purposes
+    });
+
+    // Listen to dealer invitation token stream
+    _deepLinkService.dealerInvitationTokenStream.listen((token) {
+      print('📱 Main: Dealer invitation token received from deep link: $token');
+      // Note: Navigation will be handled in DealerInvitationScreen
+      // For now, just log for monitoring purposes
+      // Actual implementation will check if user is logged in and navigate accordingly
     });
   }
 

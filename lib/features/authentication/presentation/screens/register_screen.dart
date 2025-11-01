@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
+import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
+import '../../../dealer/data/dealer_api_service.dart';
+import '../../../../core/services/signalr_service.dart';
+import '../../../../core/services/signalr_notification_integration.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../../dashboard/presentation/bloc/notification_bloc.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -175,17 +182,78 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  /// Initialize SignalR after successful registration/login
+  Future<void> _initializeSignalRAfterRegistration() async {
+    try {
+      print('[Register] 🔄 Initializing SignalR after registration...');
+
+      final signalRService = GetIt.instance<SignalRService>();
+      final notificationBloc = GetIt.instance<NotificationBloc>();
+      final localNotifications = GetIt.instance<FlutterLocalNotificationsPlugin>();
+
+      // Setup SignalR notification integration
+      final signalRIntegration = SignalRNotificationIntegration(
+        signalRService: signalRService,
+        notificationBloc: notificationBloc,
+        localNotifications: localNotifications,
+      );
+      signalRIntegration.setupEventHandlers();
+
+      // Connect to SignalR if not already connected
+      if (!signalRService.isConnected) {
+        await signalRService.connect();
+      }
+
+      print('[Register] ✅ SignalR initialized successfully after registration');
+    } catch (e) {
+      print('[Register] ❌ Error initializing SignalR: $e');
+    }
+  }
+
+  /// ✅ NEW: Check backend API for pending dealer invitations after registration
+  /// Scenario 2: After registration (auto-login), check backend
+  Future<bool> _checkPendingDealerInvitationsAfterRegistration() async {
+    try {
+      print('[Register] 🔍 Checking backend for pending dealer invitations...');
+
+      final dealerApi = GetIt.instance<DealerApiService>();
+      final invitations = await dealerApi.getMyPendingInvitations();
+
+      if (invitations.isNotEmpty) {
+        print('[Register] ✅ Found ${invitations.length} pending dealer invitation(s)');
+        return true;
+      } else {
+        print('[Register] ℹ️ No pending dealer invitations found');
+        return false;
+      }
+    } catch (e) {
+      print('[Register] ❌ Error fetching dealer invitations from backend: $e');
+      return false; // Don't block registration flow if this fails
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state is AuthAuthenticated) {
+          // ✅ Initialize SignalR after successful registration/login
+          await _initializeSignalRAfterRegistration();
+
+          // ✅ Check for pending dealer invitations from backend
+          final hasPendingInvitations = await _checkPendingDealerInvitationsAfterRegistration();
+
           // Navigate to dashboard on successful registration and login
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const FarmerDashboardPage(),
-            ),
-          );
+          if (mounted) {
+            print('[Register] 🧭 Navigating to dashboard (hasPendingInvitations: $hasPendingInvitations)');
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => FarmerDashboardPage(
+                  hasPendingDealerInvitations: hasPendingInvitations,
+                ),
+              ),
+            );
+          }
         } else if (state is AuthError) {
           _showErrorSnackBar(state.message);
         }

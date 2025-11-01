@@ -20,13 +20,16 @@ import '../../../../core/security/token_manager.dart';
 import 'sponsor_dashboard_page.dart';
 import 'package:flutter/scheduler.dart';
 import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
+import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   final String? pendingSponsorshipCode;
+  final bool hasPendingDealerInvitations;
 
   const FarmerDashboardPage({
     super.key,
     this.pendingSponsorshipCode,
+    this.hasPendingDealerInvitations = false,
   });
 
   @override
@@ -112,6 +115,22 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
         }
       });
     }
+
+    // ✅ Handle pending dealer invitations navigation
+    if (widget.hasPendingDealerInvitations) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            print('[Dashboard] 🧭 Navigating to PendingInvitationsScreen');
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const PendingInvitationsScreen(),
+              ),
+            );
+          }
+        });
+      });
+    }
   }
 
   void _navigateToSponsorshipRedemption(String code) async {
@@ -155,6 +174,9 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
       ),
     );
   }
+
+  // ✅ REMOVED: _navigateToDealerInvitation method
+  // Dealer invitation navigation now handled in LoginScreen/RegisterScreen via backend API
 
   Future<void> _checkSponsorRole() async {
     try {

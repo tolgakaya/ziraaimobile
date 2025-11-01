@@ -6,7 +6,9 @@ import '../../data/models/code_package.dart';
 import '../../data/models/code_recipient.dart';
 import '../../data/models/send_link_response.dart';
 import '../../data/models/sponsor_dashboard_summary.dart';
+import '../../data/models/unified_code.dart';
 import '../../data/services/sponsor_service.dart';
+import '../../../dealer/data/dealer_api_service.dart';
 import '../widgets/package_selector_widget.dart';
 import '../widgets/recipient_list_item.dart';
 import '../widgets/add_recipient_dialog.dart';
@@ -25,8 +27,15 @@ class CodeDistributionScreen extends StatefulWidget {
   State<CodeDistributionScreen> createState() => _CodeDistributionScreenState();
 }
 
+enum CodeSourceMode {
+  purchasedNew,        // Sponsor's purchased unsent codes
+  purchasedExpired,    // Sponsor's expired codes for resend
+  dealerTransferred,   // Dealer's transferred codes
+}
+
 class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   final SponsorService _sponsorService = GetIt.instance<SponsorService>();
+  final DealerApiService _dealerApiService = GetIt.instance<DealerApiService>();
 
   List<SponsorshipCode> _allCodes = [];
   List<CodePackage> _packages = [];
@@ -52,8 +61,8 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   bool _isLoadingMore = false;
   int _totalCodesAvailable = 0;
 
-  // Mode toggle state
-  bool _showExpiredCodes = false; // false = unsent (new codes), true = sent expired codes
+  // Mode toggle state - UPDATED to 3-way toggle
+  CodeSourceMode _currentMode = CodeSourceMode.purchasedNew;
   bool _allowResendExpired = false; // Allow renewal of expired codes when resending
 
   @override
@@ -79,15 +88,28 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
     try {
       // Load codes based on current mode
-      final result = _showExpiredCodes
+      if (_currentMode == CodeSourceMode.dealerTransferred) {
+        // Load dealer transferred codes
+        await _loadDealerCodes(loadMore: loadMore);
+        return;
+      }
+
+      // Load sponsor codes (purchased new or expired)
+      // Backend now filters dealer codes via excludeDealerTransferred parameter
+      final result = _currentMode == CodeSourceMode.purchasedExpired
           ? await _sponsorService.getSentExpiredCodes(
               page: loadMore ? _currentPage + 1 : 1,
               pageSize: 50,
+              excludeDealerTransferred: true, // Only sponsor's own codes
             )
           : await _sponsorService.getUnsentCodes(
               page: loadMore ? _currentPage + 1 : 1,
               pageSize: 50,
+              excludeDealerTransferred: true, // Only sponsor's own codes
             );
+
+      // DEBUG: Verify backend filtering
+      print('✅ [CODE_DIST] Loaded ${result.items.length} sponsor codes (excludeDealerTransferred=true)');
 
       // Create mapping of purchaseId -> totalCodes
       // Use API's totalCount (total available codes for this filter) since it's more reliable
@@ -148,6 +170,94 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             _allCodes,
             packageTotalCodesMap: packageTotalCodesMap,
           );
+
+          // Set first package as default selection (only on initial load)
+          if (!loadMore && _packages.isNotEmpty && _selectedPackage == null) {
+            _selectedPackage = _packages.first;
+          }
+
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  /// Load dealer transferred codes
+  Future<void> _loadDealerCodes({bool loadMore = false}) async {
+    try {
+      final result = await _dealerApiService.getMyCodes(
+        page: loadMore ? _currentPage + 1 : 1,
+        pageSize: 50,
+        onlyUnsent: true, // Only unsent codes for distribution
+      );
+
+      if (mounted) {
+        setState(() {
+          if (loadMore) {
+            // Append new codes by converting dealer codes to unified codes
+            final unifiedCodes = result.items
+                .map((dealerCode) => UnifiedCode.fromDealerCode(dealerCode))
+                .toList();
+
+            // Convert to SponsorshipCode for compatibility
+            final dealerSponsorCodes = unifiedCodes.map((uc) => SponsorshipCode(
+              id: uc.id,
+              code: uc.code,
+              sponsorId: 0,
+              subscriptionTierId: uc.subscriptionTierId,
+              sponsorshipPurchaseId: 0,
+              isUsed: uc.isUsed,
+              createdDate: uc.createdDate,
+              expiryDate: uc.expiryDate,
+              isActive: uc.isActive,
+              linkClickCount: 0,
+              linkDelivered: false,
+            )).toList();
+
+            _allCodes.addAll(dealerSponsorCodes);
+            _currentPage++;
+          } else {
+            // Replace with fresh data
+            final unifiedCodes = result.items
+                .map((dealerCode) => UnifiedCode.fromDealerCode(dealerCode))
+                .toList();
+
+            // Group dealer codes by tier
+            _packages = CodePackage.groupDealerCodesByTier(
+              unifiedCodes,
+              totalCodesCount: result.totalCount,
+            );
+
+            // Convert to SponsorshipCode list for _allCodes
+            _allCodes = unifiedCodes.map((uc) => SponsorshipCode(
+              id: uc.id,
+              code: uc.code,
+              sponsorId: 0,
+              subscriptionTierId: uc.subscriptionTierId,
+              sponsorshipPurchaseId: 0,
+              isUsed: uc.isUsed,
+              createdDate: uc.createdDate,
+              expiryDate: uc.expiryDate,
+              isActive: uc.isActive,
+              linkClickCount: 0,
+              linkDelivered: false,
+            )).toList();
+
+            _currentPage = result.page;
+          }
+
+          // Update pagination state
+          _hasMoreCodes = result.hasNextPage;
+          _totalCodesAvailable = result.totalCount;
 
           // Set first package as default selection (only on initial load)
           if (!loadMore && _packages.isNotEmpty && _selectedPackage == null) {
@@ -234,14 +344,15 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Yeni Kodlar (Purchased New)
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      if (_showExpiredCodes) {
+                      if (_currentMode != CodeSourceMode.purchasedNew) {
                         setState(() {
-                          _showExpiredCodes = false;
+                          _currentMode = CodeSourceMode.purchasedNew;
                           _allowResendExpired = false;
-                          _packageRecipients.clear(); // Clear recipients when switching
+                          _packageRecipients.clear();
                           _selectedPackage = null;
                         });
                         _loadCodes();
@@ -250,7 +361,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: !_showExpiredCodes
+                        color: _currentMode == CodeSourceMode.purchasedNew
                             ? const Color(0xFF10B981)
                             : Colors.transparent,
                         borderRadius: const BorderRadius.only(
@@ -267,18 +378,18 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                         children: [
                           Icon(
                             Icons.fiber_new,
-                            size: 18,
-                            color: !_showExpiredCodes
+                            size: 16,
+                            color: _currentMode == CodeSourceMode.purchasedNew
                                 ? Colors.white
                                 : const Color(0xFF10B981),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           Text(
-                            'Yeni Kodlar',
+                            'Yeni',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: !_showExpiredCodes
+                              color: _currentMode == CodeSourceMode.purchasedNew
                                   ? Colors.white
                                   : const Color(0xFF10B981),
                             ),
@@ -288,14 +399,15 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                     ),
                   ),
                 ),
+                // Süresi Dolmuş (Purchased Expired)
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      if (!_showExpiredCodes) {
+                      if (_currentMode != CodeSourceMode.purchasedExpired) {
                         setState(() {
-                          _showExpiredCodes = true;
+                          _currentMode = CodeSourceMode.purchasedExpired;
                           _allowResendExpired = false;
-                          _packageRecipients.clear(); // Clear recipients when switching
+                          _packageRecipients.clear();
                           _selectedPackage = null;
                         });
                         _loadCodes();
@@ -304,13 +416,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: _showExpiredCodes
+                        color: _currentMode == CodeSourceMode.purchasedExpired
                             ? const Color(0xFFF59E0B)
                             : Colors.transparent,
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(8),
-                          bottomRight: Radius.circular(8),
-                        ),
                         border: Border.all(
                           color: const Color(0xFFF59E0B),
                           width: 1.5,
@@ -321,20 +429,75 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                         children: [
                           Icon(
                             Icons.restore,
-                            size: 18,
-                            color: _showExpiredCodes
+                            size: 16,
+                            color: _currentMode == CodeSourceMode.purchasedExpired
                                 ? Colors.white
                                 : const Color(0xFFF59E0B),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           Text(
-                            'Süresi Dolmuş',
+                            'Dolmuş',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: _showExpiredCodes
+                              color: _currentMode == CodeSourceMode.purchasedExpired
                                   ? Colors.white
                                   : const Color(0xFFF59E0B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Bayi Kodları (Dealer Transferred)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_currentMode != CodeSourceMode.dealerTransferred) {
+                        setState(() {
+                          _currentMode = CodeSourceMode.dealerTransferred;
+                          _allowResendExpired = false;
+                          _packageRecipients.clear();
+                          _selectedPackage = null;
+                        });
+                        _loadCodes();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _currentMode == CodeSourceMode.dealerTransferred
+                            ? const Color(0xFF6366F1)
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(8),
+                          bottomRight: Radius.circular(8),
+                        ),
+                        border: Border.all(
+                          color: const Color(0xFF6366F1),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.store,
+                            size: 16,
+                            color: _currentMode == CodeSourceMode.dealerTransferred
+                                ? Colors.white
+                                : const Color(0xFF6366F1),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Bayi',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _currentMode == CodeSourceMode.dealerTransferred
+                                  ? Colors.white
+                                  : const Color(0xFF6366F1),
                             ),
                           ),
                         ],
@@ -406,9 +569,11 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                _showExpiredCodes
+                _currentMode == CodeSourceMode.purchasedExpired
                     ? 'Süresi dolmuş kod bulunamadı'
-                    : 'Kullanılabilir kod bulunamadı',
+                    : _currentMode == CodeSourceMode.dealerTransferred
+                        ? 'Bayi kodu bulunamadı'
+                        : 'Kullanılabilir kod bulunamadı',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -442,9 +607,11 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        _showExpiredCodes
+                        _currentMode == CodeSourceMode.purchasedExpired
                             ? 'Toplam $_totalCodesAvailable süresi dolmuş kod mevcut. Şu an ${_allCodes.length} kod yüklendi.'
-                            : 'Toplam $_totalCodesAvailable kod mevcut. Şu an ${_allCodes.length} kod yüklendi.',
+                            : _currentMode == CodeSourceMode.dealerTransferred
+                                ? 'Toplam $_totalCodesAvailable bayi kodu mevcut. Şu an ${_allCodes.length} kod yüklendi.'
+                                : 'Toplam $_totalCodesAvailable kod mevcut. Şu an ${_allCodes.length} kod yüklendi.',
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF6B7280),
@@ -533,7 +700,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
             const SizedBox(height: 24),
 
             // Expired Code Renewal Warning (only show in expired mode)
-            if (_showExpiredCodes)
+            if (_currentMode == CodeSourceMode.purchasedExpired)
               Container(
                 margin: const EdgeInsets.only(bottom: 24),
                 padding: const EdgeInsets.all(16),
@@ -684,7 +851,9 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                         ),
                       )
                     : Text(
-                        _showExpiredCodes ? 'Kodları Tekrar Gönder' : 'Kodları Gönder',
+                        _currentMode == CodeSourceMode.purchasedExpired
+                            ? 'Kodları Tekrar Gönder'
+                            : 'Kodları Gönder',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -1169,7 +1338,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         recipients: allRecipients,
         channel: channelName,
         selectedCodes: allCodes,
-        allowResendExpired: _showExpiredCodes && _allowResendExpired,
+        allowResendExpired: _currentMode == CodeSourceMode.purchasedExpired && _allowResendExpired,
       );
 
       // DEBUG LOG

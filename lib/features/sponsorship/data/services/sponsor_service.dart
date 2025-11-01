@@ -45,7 +45,7 @@ class SponsorService {
         '${ApiConfig.apiBaseUrl}${ApiConfig.createSponsorProfile}',
         data: {
           'companyName': companyName,
-          'businessEmail': businessEmail,
+          'contactEmail': businessEmail, // ✅ FIXED: Added contactEmail field
           'password': password,
         },
         options: Options(
@@ -261,7 +261,7 @@ class SponsorService {
   }
 
   /// Get SENT + EXPIRED + UNUSED sponsorship codes with pagination
-  /// Endpoint: GET /api/v1/sponsorship/codes?onlySentExpired=true&page=1&pageSize=50
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlySentExpired=true&excludeDealerTransferred=true&page=1&pageSize=50
   /// Use this for resending expired codes to farmers
   ///
   /// Filters:
@@ -269,11 +269,14 @@ class SponsorService {
   /// - ExpiryDate < NOW (expired)
   /// - IsUsed = false (not redeemed)
   ///
+  /// [excludeDealerTransferred] When true, excludes codes transferred to dealers (default: true)
+  ///
   /// Backend returns paginated format:
   /// { "success": true, "data": { "items": [...], "totalCount": 100, "page": 1, ... } }
   Future<PaginatedSponsorshipCodes> getSentExpiredCodes({
     int page = 1,
     int pageSize = 50,
+    bool excludeDealerTransferred = true,
   }) async {
     try {
       final token = await _authService.getToken();
@@ -283,7 +286,7 @@ class SponsorService {
       }
 
       developer.log(
-        'Fetching SENT EXPIRED sponsorship codes - Page $page (size: $pageSize)',
+        'Fetching SENT EXPIRED sponsorship codes - Page $page (size: $pageSize, excludeDealer: $excludeDealerTransferred)',
         name: 'SponsorService',
       );
 
@@ -291,6 +294,7 @@ class SponsorService {
         '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorshipCodes}',
         queryParameters: {
           'onlySentExpired': true,
+          'excludeDealerTransferred': excludeDealerTransferred,
           'page': page,
           'pageSize': pageSize,
         },
@@ -377,14 +381,17 @@ class SponsorService {
   }
 
   /// Get UNSENT sponsorship codes with pagination (DistributionDate = NULL)
-  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true&page=1&pageSize=50
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true&excludeDealerTransferred=true&page=1&pageSize=50
   /// RECOMMENDED: Use this for code distribution to prevent duplicate sends
+  ///
+  /// [excludeDealerTransferred] When true, excludes codes transferred to dealers (default: true)
   ///
   /// Backend returns paginated format:
   /// { "success": true, "data": { "items": [...], "totalCount": 100, "page": 1, ... } }
   Future<PaginatedSponsorshipCodes> getUnsentCodes({
     int page = 1,
     int pageSize = 50,
+    bool excludeDealerTransferred = true,
   }) async {
     try {
       final token = await _authService.getToken();
@@ -394,7 +401,7 @@ class SponsorService {
       }
 
       developer.log(
-        'Fetching UNSENT sponsorship codes - Page $page (size: $pageSize)',
+        'Fetching UNSENT sponsorship codes - Page $page (size: $pageSize, excludeDealer: $excludeDealerTransferred)',
         name: 'SponsorService',
       );
 
@@ -402,6 +409,7 @@ class SponsorService {
         '${ApiConfig.apiBaseUrl}${ApiConfig.sponsorshipCodes}',
         queryParameters: {
           'onlyUnsent': true,
+          'excludeDealerTransferred': excludeDealerTransferred,
           'page': page,
           'pageSize': pageSize,
         },
