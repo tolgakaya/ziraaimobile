@@ -89,7 +89,7 @@ class PackageSelectorWidget extends StatelessWidget {
     final loadedCodes = selectedPackage!.codes.length;
 
     // Get package tier name
-    final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
+    final tierNameMap = {1: 'S', 2: 'M', 3: 'L', 4: 'XL', 5: 'Trial'};
     final tierName = tierNameMap[selectedPackage!.tierId] ?? 'Bilinmeyen';
 
     return 'Paket $tierName ($remainingCodes / $totalCodes Kod)';

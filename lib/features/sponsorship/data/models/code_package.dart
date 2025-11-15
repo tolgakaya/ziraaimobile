@@ -28,11 +28,11 @@ class CodePackage {
   String get displayName {
     // Tier name mapping
     final tierNameMap = {
-      1: 'Trial',
-      2: 'S',
-      3: 'M',
-      4: 'L',
-      5: 'XL',
+      1: 'S',
+      2: 'M',
+      3: 'L',
+      4: 'XL',
+      5: 'Trial',
     };
 
     final name = tierNameMap[tierId] ?? 'Bilinmeyen';
