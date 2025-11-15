@@ -12,7 +12,12 @@ import '../../../dashboard/presentation/widgets/notification_bell_icon.dart';
 /// Full analysis history screen with pagination and filtering
 /// Accessed from Farmer Dashboard "Geçmiş" button
 class AnalysisHistoryScreen extends StatefulWidget {
-  const AnalysisHistoryScreen({super.key});
+  final String? initialFilter; // Optional initial filter: 'all', 'active', 'idle', 'unread'
+
+  const AnalysisHistoryScreen({
+    super.key,
+    this.initialFilter,
+  });
 
   @override
   State<AnalysisHistoryScreen> createState() => _AnalysisHistoryScreenState();
@@ -20,20 +25,22 @@ class AnalysisHistoryScreen extends StatefulWidget {
 
 class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
   final ScrollController _scrollController = ScrollController();
-  
+
   List<AnalysisSummary> _analyses = [];
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
   int _currentPage = 1;
   final int _pageSize = 20;
-  
-  String _selectedFilter = 'all'; // all, active, idle, unread
+
+  late String _selectedFilter; // all, active, idle, unread
   String _selectedSort = 'date_desc'; // date_desc, date_asc, urgency
 
   @override
   void initState() {
     super.initState();
+    // Initialize filter from widget parameter or default to 'all'
+    _selectedFilter = widget.initialFilter ?? 'all';
     _loadAnalyses();
     _scrollController.addListener(_onScroll);
   }
