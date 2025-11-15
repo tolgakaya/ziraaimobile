@@ -10,6 +10,12 @@ class SponsorshipCode {
   final bool isActive;
   final int linkClickCount;
   final bool linkDelivered;
+  
+  // Dealer Invitation Reservation Fields
+  // Backend filters these via excludeReserved=true parameter
+  // See: claudedocs/INTEGRATION_GUIDE_Reserved_Codes_Filter.md
+  final int? reservedForInvitationId;
+  final DateTime? reservedAt;
 
   SponsorshipCode({
     required this.id,
@@ -23,6 +29,8 @@ class SponsorshipCode {
     required this.isActive,
     required this.linkClickCount,
     required this.linkDelivered,
+    this.reservedForInvitationId,
+    this.reservedAt,
   });
 
   factory SponsorshipCode.fromJson(Map<String, dynamic> json) {
@@ -38,6 +46,10 @@ class SponsorshipCode {
       isActive: json['isActive'] as bool,
       linkClickCount: json['linkClickCount'] as int,
       linkDelivered: json['linkDelivered'] as bool,
+      reservedForInvitationId: json['reservedForInvitationId'] as int?,
+      reservedAt: json['reservedAt'] != null 
+          ? DateTime.parse(json['reservedAt'] as String)
+          : null,
     );
   }
 
@@ -54,6 +66,13 @@ class SponsorshipCode {
       'isActive': isActive,
       'linkClickCount': linkClickCount,
       'linkDelivered': linkDelivered,
+      if (reservedForInvitationId != null) 
+        'reservedForInvitationId': reservedForInvitationId,
+      if (reservedAt != null)
+        'reservedAt': reservedAt!.toIso8601String(),
     };
   }
+  
+  /// Returns true if this code is reserved for a dealer invitation
+  bool get isReservedForDealer => reservedForInvitationId != null && reservedAt != null;
 }

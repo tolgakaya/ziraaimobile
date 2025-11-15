@@ -8,6 +8,7 @@ import '../../../sponsorship/data/models/sponsor_dashboard_summary.dart';
 import '../../../sponsorship/presentation/screens/code_distribution_screen.dart';
 import '../../../sponsorship/presentation/screens/tier_selection_screen.dart';
 import '../../../sponsorship/presentation/screens/sponsored_analyses_list_screen.dart';
+import '../../../sponsorship/presentation/screens/sponsor_profile_screen.dart';
 import '../../../dealer/data/dealer_api_service.dart';
 import '../../../dealer/domain/models/dealer_dashboard_summary.dart';
 import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
@@ -197,6 +198,22 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                     tooltip: 'Çiftçi Paneli',
                     onPressed: () {
                       Navigator.of(context).pop();
+                    },
+                  ),
+                  // Profile button
+                  IconButton(
+                    icon: const Icon(
+                      Icons.person,
+                      color: Color(0xFF10B981),
+                    ),
+                    tooltip: 'Profil',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SponsorProfileScreen(),
+                        ),
+                      );
                     },
                   ),
                   // Logout button
