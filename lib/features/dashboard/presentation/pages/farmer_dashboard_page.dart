@@ -237,6 +237,21 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
           _selectedIndex = 0;
         });
       });
+    } else if (index == 2) {
+      // Mesajlar - Navigate to Analysis History with Active Conversations filter
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AnalysisHistoryScreen(
+            initialFilter: 'active',
+          ),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
     } else if (index == 3) {
       // Analiz - Camera/Capture
       Navigator.push(

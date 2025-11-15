@@ -879,7 +879,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         .where((entry) => entry.value.isNotEmpty)
         .toList();
 
-    final tierNameMap = {1: 'Trial', 2: 'S', 3: 'M', 4: 'L', 5: 'XL'};
+    final tierNameMap = {1: 'S', 2: 'M', 3: 'L', 4: 'XL', 5: 'Trial'};
 
     return Container(
       padding: const EdgeInsets.all(16),

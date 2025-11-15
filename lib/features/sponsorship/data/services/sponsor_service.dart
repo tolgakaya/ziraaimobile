@@ -8,6 +8,8 @@ import '../models/code_recipient.dart';
 import '../models/send_link_response.dart';
 import '../models/paginated_sponsorship_codes.dart';
 import '../models/sponsorship_tier_comparison.dart';
+import '../models/sponsor_profile.dart';
+import '../models/update_sponsor_profile_request.dart';
 import 'dart:developer' as developer;
 
 @lazySingleton
@@ -270,6 +272,7 @@ class SponsorService {
   /// - IsUsed = false (not redeemed)
   ///
   /// [excludeDealerTransferred] When true, excludes codes transferred to dealers (default: true)
+  /// [excludeReserved] When true, excludes codes reserved for dealer invitations (default: true)
   ///
   /// Backend returns paginated format:
   /// { "success": true, "data": { "items": [...], "totalCount": 100, "page": 1, ... } }
@@ -277,6 +280,7 @@ class SponsorService {
     int page = 1,
     int pageSize = 50,
     bool excludeDealerTransferred = true,
+    bool excludeReserved = true,  // 🆕 Exclude codes reserved for dealer invitations
   }) async {
     try {
       final token = await _authService.getToken();
@@ -286,7 +290,7 @@ class SponsorService {
       }
 
       developer.log(
-        'Fetching SENT EXPIRED sponsorship codes - Page $page (size: $pageSize, excludeDealer: $excludeDealerTransferred)',
+        'Fetching SENT EXPIRED sponsorship codes - Page $page (size: $pageSize, excludeDealer: $excludeDealerTransferred, excludeReserved: $excludeReserved)',
         name: 'SponsorService',
       );
 
@@ -295,6 +299,7 @@ class SponsorService {
         queryParameters: {
           'onlySentExpired': true,
           'excludeDealerTransferred': excludeDealerTransferred,
+          'excludeReserved': excludeReserved,  // 🆕 Backend filters reserved codes
           'page': page,
           'pageSize': pageSize,
         },
@@ -381,10 +386,11 @@ class SponsorService {
   }
 
   /// Get UNSENT sponsorship codes with pagination (DistributionDate = NULL)
-  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true&excludeDealerTransferred=true&page=1&pageSize=50
+  /// Endpoint: GET /api/v1/sponsorship/codes?onlyUnsent=true&excludeDealerTransferred=true&excludeReserved=true&page=1&pageSize=50
   /// RECOMMENDED: Use this for code distribution to prevent duplicate sends
   ///
   /// [excludeDealerTransferred] When true, excludes codes transferred to dealers (default: true)
+  /// [excludeReserved] When true, excludes codes reserved for dealer invitations (default: true)
   ///
   /// Backend returns paginated format:
   /// { "success": true, "data": { "items": [...], "totalCount": 100, "page": 1, ... } }
@@ -392,6 +398,7 @@ class SponsorService {
     int page = 1,
     int pageSize = 50,
     bool excludeDealerTransferred = true,
+    bool excludeReserved = true,  // 🆕 Exclude codes reserved for dealer invitations
   }) async {
     try {
       final token = await _authService.getToken();
@@ -401,7 +408,7 @@ class SponsorService {
       }
 
       developer.log(
-        'Fetching UNSENT sponsorship codes - Page $page (size: $pageSize, excludeDealer: $excludeDealerTransferred)',
+        'Fetching UNSENT sponsorship codes - Page $page (size: $pageSize, excludeDealer: $excludeDealerTransferred, excludeReserved: $excludeReserved)',
         name: 'SponsorService',
       );
 
@@ -410,6 +417,7 @@ class SponsorService {
         queryParameters: {
           'onlyUnsent': true,
           'excludeDealerTransferred': excludeDealerTransferred,
+          'excludeReserved': excludeReserved,  // 🆕 Backend filters reserved codes
           'page': page,
           'pageSize': pageSize,
         },
@@ -850,6 +858,155 @@ class SponsorService {
     } catch (e) {
       developer.log(
         'Unexpected error validating code',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Get complete sponsor profile with all fields
+  /// Endpoint: GET /api/sponsorship/profile
+  ///
+  /// Returns complete sponsor profile including:
+  /// - Basic info (company name, description, contact)
+  /// - Social media URLs (LinkedIn, Twitter, Facebook, Instagram)
+  /// - Business information (tax number, trade registry, address, city, country, postal code)
+  /// - System fields (verification status, purchase stats)
+  Future<SponsorProfile> getProfile() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching sponsor profile',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}/sponsorship/profile',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Sponsor profile fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "data": {...} }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        return SponsorProfile.fromJson(responseData['data']);
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load profile');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get sponsor profile',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load profile')
+            : 'Failed to load profile';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting sponsor profile',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Update sponsor profile (partial updates supported)
+  /// Endpoint: PUT /api/sponsorship/update-profile
+  ///
+  /// Supports partial updates - only send fields that changed.
+  /// All fields in UpdateSponsorProfileRequest are optional.
+  ///
+  /// Updatable fields:
+  /// - Basic: companyName, companyDescription, contactEmail, contactPhone
+  /// - Social Media: linkedInUrl, twitterUrl, facebookUrl, instagramUrl
+  /// - Business: taxNumber, tradeRegistryNumber, address, city, country, postalCode
+  /// - Security: password (if changing password)
+  ///
+  /// Returns updated profile data
+  Future<SponsorProfile> updateProfile(UpdateSponsorProfileRequest request) async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      // Check if request has any fields to update
+      if (request.isEmpty) {
+        throw Exception('No fields to update');
+      }
+
+      developer.log(
+        'Updating sponsor profile (${request.toJson().keys.length} fields)',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.put(
+        '${ApiConfig.apiBaseUrl}/sponsorship/update-profile',
+        data: request.toJson(), // Only includes non-null fields
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Sponsor profile updated successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "message": "...", "data": {...} }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        return SponsorProfile.fromJson(responseData['data']);
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to update profile');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to update sponsor profile',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to update profile')
+            : 'Failed to update profile';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error updating sponsor profile',
         name: 'SponsorService',
         error: e,
       );
