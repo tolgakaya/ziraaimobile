@@ -169,9 +169,17 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
         _selectedIndex = 0;
       });
     } else if (index == 1) {
-      // Analizler - TODO: Navigate to sponsor analyses
-      setState(() {
-        _selectedIndex = 0;
+      // Analizler - Navigate to Sponsored Analyses List Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsoredAnalysesListScreen(),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
       });
     } else if (index == 2) {
       // Mesajlar - TODO: Navigate to sponsor messages
