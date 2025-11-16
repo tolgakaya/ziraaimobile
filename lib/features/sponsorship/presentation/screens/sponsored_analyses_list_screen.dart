@@ -671,16 +671,6 @@ class _SponsoredAnalysesListScreenState
                       },
                     ),
                   ),
-                  const Spacer(),
-                  // Back to Dashboard button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.dashboard,
-                      color: Color(0xFF10B981),
-                    ),
-                    tooltip: 'Dashboard',
-                    onPressed: () => Navigator.pop(context),
-                  ),
                 ],
               ),
             ),
