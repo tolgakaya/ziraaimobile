@@ -15,6 +15,9 @@ import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
+import '../widgets/sponsor_bottom_navigation.dart';
+import '../widgets/notification_bell_icon.dart';
+import 'farmer_dashboard_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SponsorDashboardPage extends StatefulWidget {
@@ -33,6 +36,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
   bool _isLoading = true;
   bool _isDealerDataLoading = false;
   String? _errorMessage;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -159,6 +163,70 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
     );
   }
 
+  void _onItemTapped(int index) {
+    // Navigate to screens based on tab
+    if (index == 0) {
+      // Ana Sayfa - Already on dashboard, do nothing or refresh
+      setState(() {
+        _selectedIndex = 0;
+      });
+    } else if (index == 1) {
+      // Analizler - Navigate to Sponsored Analyses List Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsoredAnalysesListScreen(),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
+    } else if (index == 2) {
+      // Mesajlar - Navigate to Sponsored Analyses List with Unread filter
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsoredAnalysesListScreen(
+            initialFilter: 'unread',
+          ),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
+    } else if (index == 3) {
+      // Çiftçi - Navigate to Farmer Dashboard
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const FarmerDashboardPage(),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
+    } else if (index == 4) {
+      // Profil - Navigate to Sponsor Profile Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsorProfileScreen(),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -189,40 +257,26 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                     },
                   ),
                   const Spacer(),
-                  // Switch to Farmer Dashboard button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.agriculture,
-                      color: Color(0xFF10B981),
-                    ),
-                    tooltip: 'Çiftçi Paneli',
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                  // Profile button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.person,
-                      color: Color(0xFF10B981),
-                    ),
-                    tooltip: 'Profil',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SponsorProfileScreen(),
-                        ),
-                      );
-                    },
-                  ),
+                  // Notifications Bell with Badge
+                  const NotificationBellIcon(),
+                  const SizedBox(width: 8),
                   // Logout button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Color(0xFFEF4444),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    onPressed: () => _showLogoutDialog(context),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.logout,
+                        color: Color(0xFFEF4444), // Red color for logout
+                        size: 24,
+                      ),
+                      onPressed: () => _showLogoutDialog(context),
+                      tooltip: 'Çıkış Yap',
+                    ),
                   ),
                 ],
               ),
@@ -396,7 +450,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
 
                                 // Active Packages Section
                                 const Text(
-                                  'Aktif Sponsorluk Paketleriniz',
+                                  'Aktif Çiftçi Paketleriniz',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -456,7 +510,10 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigation(),
+      bottomNavigationBar: SponsorBottomNavigation(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
     );
   }
 
@@ -491,7 +548,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    'Dealer Kodlarım',
+                    'Bayi Kodlarım',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -699,7 +756,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Bekleyen Dealer Davetiyelerim',
+                      'Bekleyen Bayi Davetiyelerim',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -731,58 +788,6 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildBottomNavigation() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.check_circle,
-                isSelected: true,
-              ),
-              _buildNavItem(
-                icon: Icons.person_outline,
-                isSelected: false,
-              ),
-              _buildNavItem(
-                icon: Icons.bar_chart_outlined,
-                isSelected: false,
-              ),
-              _buildNavItem(
-                icon: Icons.search,
-                isSelected: false,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required bool isSelected,
-  }) {
-    return Icon(
-      icon,
-      color: isSelected ? const Color(0xFF10B981) : const Color(0xFF9CA3AF),
-      size: 28,
     );
   }
 }

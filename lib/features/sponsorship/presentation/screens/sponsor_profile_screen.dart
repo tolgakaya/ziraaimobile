@@ -133,7 +133,6 @@ class _SponsorProfileScreenState extends State<SponsorProfileScreen> {
               _buildBusinessInfoSection(),
               const SizedBox(height: 24),
             ],
-            _buildStatsSection(),
           ],
         ),
       ),
@@ -294,52 +293,6 @@ class _SponsorProfileScreenState extends State<SponsorProfileScreen> {
     );
   }
 
-  Widget _buildStatsSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: const [
-                Icon(Icons.analytics, color: Color(0xFF16A34A)),
-                SizedBox(width: 8),
-                Text(
-                  'İstatistikler',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    'Toplam Alım',
-                    _profile!.totalPurchases.toString(),
-                    Icons.shopping_cart,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard(
-                    'Oluşturulan Kod',
-                    _profile!.totalCodesGenerated.toString(),
-                    Icons.qr_code,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildInfoRow(String label, String value, {IconData? icon}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,42 +371,6 @@ class _SponsorProfileScreenState extends State<SponsorProfileScreen> {
             const Icon(Icons.open_in_new, size: 16, color: Colors.grey),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF16A34A).withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: const Color(0xFF16A34A).withOpacity(0.2),
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 24, color: const Color(0xFF16A34A)),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF16A34A),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }

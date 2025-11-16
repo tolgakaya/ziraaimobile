@@ -328,7 +328,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('Kod Dağıt'),
+        title: const Text('Çiftçilere Üyelik Kodu Gönder'),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
@@ -570,10 +570,10 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
               const SizedBox(height: 16),
               Text(
                 _currentMode == CodeSourceMode.purchasedExpired
-                    ? 'Süresi dolmuş kod bulunamadı'
+                    ? 'Süresi dolmuş üyelik kodu bulunamadı'
                     : _currentMode == CodeSourceMode.dealerTransferred
-                        ? 'Bayi kodu bulunamadı'
-                        : 'Kullanılabilir kod bulunamadı',
+                        ? 'Bayi üyelik kodu bulunamadı'
+                        : 'Kullanılabilir üyelik kodu bulunamadı',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -608,10 +608,10 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                     Expanded(
                       child: Text(
                         _currentMode == CodeSourceMode.purchasedExpired
-                            ? 'Toplam $_totalCodesAvailable süresi dolmuş kod mevcut. Şu an ${_allCodes.length} kod yüklendi.'
+                            ? 'Toplam $_totalCodesAvailable süresi dolmuş üyelik kodu mevcut. Şu an ${_allCodes.length} üyelik kodu yüklendi.'
                             : _currentMode == CodeSourceMode.dealerTransferred
-                                ? 'Toplam $_totalCodesAvailable bayi kodu mevcut. Şu an ${_allCodes.length} kod yüklendi.'
-                                : 'Toplam $_totalCodesAvailable kod mevcut. Şu an ${_allCodes.length} kod yüklendi.',
+                                ? 'Toplam $_totalCodesAvailable bayi üyelik kodu mevcut. Şu an ${_allCodes.length} üyelik kodu yüklendi.'
+                                : 'Toplam $_totalCodesAvailable üyelik kodu mevcut. Şu an ${_allCodes.length} üyelik kodu yüklendi.',
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF6B7280),
@@ -725,7 +725,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Süresi Dolmuş Kodlar',
+                            'Süresi Dolmuş Üyelik Kodları',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -737,7 +737,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Seçtiğiniz kodların süresi dolmuş. Bu kodları tekrar göndermek için son kullanma tarihlerini yenilemelisiniz.',
+                      'Seçtiğiniz üyelik kodlarının süresi dolmuş. Bu üyelik kodlarını tekrar göndermek için son kullanma tarihlerini yenilemelisiniz.',
                       style: TextStyle(
                         fontSize: 14,
                         color: Color(0xFF92400E),
@@ -761,7 +761,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                         ),
                       ),
                       subtitle: const Text(
-                        'Kodlar 30 gün daha geçerli olacak',
+                        'Üyelik kodları 30 gün daha geçerli olacak',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF92400E),
@@ -784,7 +784,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () => _loadCodes(loadMore: true),
                   icon: const Icon(Icons.download),
-                  label: const Text('Daha Fazla Kod Yükle'),
+                  label: const Text('Daha Fazla Üyelik Kodu Yükle'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF10B981),
                     side: const BorderSide(color: Color(0xFF10B981)),
@@ -811,7 +811,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Kodlar yükleniyor...',
+                        'Üyelik kodları yükleniyor...',
                         style: TextStyle(
                           fontSize: 13,
                           color: Color(0xFF6B7280),
@@ -852,8 +852,8 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
                       )
                     : Text(
                         _currentMode == CodeSourceMode.purchasedExpired
-                            ? 'Kodları Tekrar Gönder'
-                            : 'Kodları Gönder',
+                            ? 'Üyelik Kodlarını Tekrar Gönder'
+                            : 'Üyelik Kodlarını Gönder',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -1121,7 +1121,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
           ],
         ),
         content: Text(
-          '$packageName için maksimum $availableCodes kişiye kod gönderebilirsiniz.\n\nDaha fazla kod göndermek için başka bir paket seçin veya yeni paket satın alın.',
+          '$packageName için maksimum $availableCodes kişiye üyelik kodu gönderebilirsiniz.\n\nDaha fazla üyelik kodu göndermek için başka bir paket seçin veya yeni paket satın alın.',
           style: const TextStyle(fontSize: 16),
         ),
         actions: [
