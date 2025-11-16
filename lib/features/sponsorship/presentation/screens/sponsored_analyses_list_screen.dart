@@ -11,8 +11,8 @@ import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import '../../../dashboard/presentation/widgets/sponsor_bottom_navigation.dart';
 import '../../../dashboard/presentation/pages/sponsor_dashboard_page.dart';
-import 'tier_selection_screen.dart';
-import 'code_distribution_screen.dart';
+import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
+import 'sponsor_profile_screen.dart';
 import '../../data/models/sponsor_dashboard_summary.dart';
 import '../../data/services/sponsor_service.dart';
 
@@ -254,28 +254,24 @@ class _SponsoredAnalysesListScreenState
         _initialLoadFuture = _loadAnalyses(refresh: true);
       });
     } else if (index == 3) {
-      // Gönder - Navigate to Code Distribution Screen
-      if (_dashboardSummary != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CodeDistributionScreen(
-              dashboardSummary: _dashboardSummary!,
-            ),
-          ),
-        ).then((_) {
-          // Reset selection when returning
-          setState(() {
-            _selectedIndex = 1;
-          });
-        });
-      }
-    } else if (index == 4) {
-      // Satın Al - Navigate to Tier Selection Screen
+      // Çiftçi - Navigate to Farmer Dashboard
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const TierSelectionScreen(),
+          builder: (context) => const FarmerDashboardPage(),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 1;
+        });
+      });
+    } else if (index == 4) {
+      // Profil - Navigate to Sponsor Profile Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsorProfileScreen(),
         ),
       ).then((_) {
         // Reset selection when returning

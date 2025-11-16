@@ -16,6 +16,7 @@ import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
 import '../widgets/sponsor_bottom_navigation.dart';
+import 'farmer_dashboard_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SponsorDashboardPage extends StatefulWidget {
@@ -197,33 +198,27 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
         });
       });
     } else if (index == 3) {
-      // Gönder - Navigate to Code Distribution Screen
-      if (_summary != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CodeDistributionScreen(
-              dashboardSummary: _summary!,
-            ),
-          ),
-        ).then((_) {
-          // Refresh dashboard and reset selection when returning
-          _loadDashboardData();
-          setState(() {
-            _selectedIndex = 0;
-          });
-        });
-      }
-    } else if (index == 4) {
-      // Satın Al - Navigate to Tier Selection Screen
+      // Çiftçi - Navigate to Farmer Dashboard
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const TierSelectionScreen(),
+          builder: (context) => const FarmerDashboardPage(),
         ),
       ).then((_) {
-        // Refresh dashboard and reset selection when returning
-        _loadDashboardData();
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
+      });
+    } else if (index == 4) {
+      // Profil - Navigate to Sponsor Profile Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsorProfileScreen(),
+        ),
+      ).then((_) {
+        // Reset selection when returning
         setState(() {
           _selectedIndex = 0;
         });
