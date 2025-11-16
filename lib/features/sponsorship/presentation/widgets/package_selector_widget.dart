@@ -92,7 +92,7 @@ class PackageSelectorWidget extends StatelessWidget {
     final tierNameMap = {1: 'S', 2: 'M', 3: 'L', 4: 'XL', 5: 'Trial'};
     final tierName = tierNameMap[selectedPackage!.tierId] ?? 'Bilinmeyen';
 
-    return 'Paket $tierName ($remainingCodes / $totalCodes Kod)';
+    return 'Paket $tierName ($remainingCodes / $totalCodes Üyelik Kodu)';
   }
 
   void _showPackageSelector(BuildContext context) {
