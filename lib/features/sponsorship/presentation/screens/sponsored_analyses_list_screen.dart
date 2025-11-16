@@ -648,21 +648,32 @@ class _SponsoredAnalysesListScreenState
               color: Colors.white,
               child: Row(
                 children: [
-                  // ZiraAI Logo
-                  Image.asset(
-                    'assets/logos/ziraai_logo.png',
-                    height: 90,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Text(
-                        'ZiraAI',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF111827),
+                  // ZiraAI Logo (clickable - navigates to dashboard)
+                  GestureDetector(
+                    onTap: () {
+                      // Navigate to Sponsor Dashboard
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SponsorDashboardPage(),
                         ),
                       );
                     },
+                    child: Image.asset(
+                      'assets/logos/ziraai_logo.png',
+                      height: 90,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Text(
+                          'ZiraAI',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF111827),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   const Spacer(),
                   // Back to Dashboard button
