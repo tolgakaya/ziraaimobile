@@ -16,6 +16,7 @@ import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
 import '../widgets/sponsor_bottom_navigation.dart';
+import '../widgets/notification_bell_icon.dart';
 import 'farmer_dashboard_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -256,40 +257,26 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                     },
                   ),
                   const Spacer(),
-                  // Switch to Farmer Dashboard button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.agriculture,
-                      color: Color(0xFF10B981),
-                    ),
-                    tooltip: 'Çiftçi Paneli',
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                  // Profile button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.person,
-                      color: Color(0xFF10B981),
-                    ),
-                    tooltip: 'Profil',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SponsorProfileScreen(),
-                        ),
-                      );
-                    },
-                  ),
+                  // Notifications Bell with Badge
+                  const NotificationBellIcon(),
+                  const SizedBox(width: 8),
                   // Logout button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Color(0xFFEF4444),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    onPressed: () => _showLogoutDialog(context),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.logout,
+                        color: Color(0xFFEF4444), // Red color for logout
+                        size: 24,
+                      ),
+                      onPressed: () => _showLogoutDialog(context),
+                      tooltip: 'Çıkış Yap',
+                    ),
                   ),
                 ],
               ),
