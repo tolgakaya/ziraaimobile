@@ -468,7 +468,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
 
                                 // Active Packages Section
                                 const Text(
-                                  'Aktif Sponsorluk Paketleriniz',
+                                  'Aktif Çiftçi Paketleriniz',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -566,7 +566,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    'Dealer Kodlarım',
+                    'Bayi Kodlarım',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -774,7 +774,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Bekleyen Dealer Davetiyelerim',
+                      'Bekleyen Bayi Davetiyelerim',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
