@@ -15,7 +15,7 @@ import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
-import '../widgets/bottom_navigation.dart';
+import '../widgets/sponsor_bottom_navigation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SponsorDashboardPage extends StatefulWidget {
@@ -197,14 +197,36 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
         });
       });
     } else if (index == 3) {
-      // Analiz - TODO: Navigate to sponsor analysis
-      setState(() {
-        _selectedIndex = 0;
-      });
+      // Gönder - Navigate to Code Distribution Screen
+      if (_summary != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CodeDistributionScreen(
+              dashboardSummary: _summary!,
+            ),
+          ),
+        ).then((_) {
+          // Refresh dashboard and reset selection when returning
+          _loadDashboardData();
+          setState(() {
+            _selectedIndex = 0;
+          });
+        });
+      }
     } else if (index == 4) {
-      // Davet - TODO: Navigate to sponsor invitations
-      setState(() {
-        _selectedIndex = 0;
+      // Satın Al - Navigate to Tier Selection Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const TierSelectionScreen(),
+        ),
+      ).then((_) {
+        // Refresh dashboard and reset selection when returning
+        _loadDashboardData();
+        setState(() {
+          _selectedIndex = 0;
+        });
       });
     }
   }
@@ -506,7 +528,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
           ],
         ),
       ),
-      bottomNavigationBar: DashboardBottomNavigation(
+      bottomNavigationBar: SponsorBottomNavigation(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
