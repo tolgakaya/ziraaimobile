@@ -15,6 +15,7 @@ import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../widgets/sponsor_metric_card.dart';
 import '../widgets/sponsor_action_button.dart';
 import '../widgets/active_package_card.dart';
+import '../widgets/bottom_navigation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SponsorDashboardPage extends StatefulWidget {
@@ -33,6 +34,7 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
   bool _isLoading = true;
   bool _isDealerDataLoading = false;
   String? _errorMessage;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -157,6 +159,36 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
       ),
       (route) => false,
     );
+  }
+
+  void _onItemTapped(int index) {
+    // Navigate to screens based on tab
+    if (index == 0) {
+      // Ana Sayfa - Already on dashboard, do nothing or refresh
+      setState(() {
+        _selectedIndex = 0;
+      });
+    } else if (index == 1) {
+      // Analizler - TODO: Navigate to sponsor analyses
+      setState(() {
+        _selectedIndex = 0;
+      });
+    } else if (index == 2) {
+      // Mesajlar - TODO: Navigate to sponsor messages
+      setState(() {
+        _selectedIndex = 0;
+      });
+    } else if (index == 3) {
+      // Analiz - TODO: Navigate to sponsor analysis
+      setState(() {
+        _selectedIndex = 0;
+      });
+    } else if (index == 4) {
+      // Davet - TODO: Navigate to sponsor invitations
+      setState(() {
+        _selectedIndex = 0;
+      });
+    }
   }
 
   @override
@@ -456,7 +488,10 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigation(),
+      bottomNavigationBar: DashboardBottomNavigation(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
     );
   }
 
@@ -731,58 +766,6 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildBottomNavigation() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.check_circle,
-                isSelected: true,
-              ),
-              _buildNavItem(
-                icon: Icons.person_outline,
-                isSelected: false,
-              ),
-              _buildNavItem(
-                icon: Icons.bar_chart_outlined,
-                isSelected: false,
-              ),
-              _buildNavItem(
-                icon: Icons.search,
-                isSelected: false,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required bool isSelected,
-  }) {
-    return Icon(
-      icon,
-      color: isSelected ? const Color(0xFF10B981) : const Color(0xFF9CA3AF),
-      size: 28,
     );
   }
 }
