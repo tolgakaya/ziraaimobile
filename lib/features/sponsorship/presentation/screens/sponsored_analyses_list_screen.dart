@@ -9,6 +9,12 @@ import '../widgets/sponsored_analysis_card.dart';
 import 'sponsored_analysis_detail_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import '../../../dashboard/presentation/widgets/sponsor_bottom_navigation.dart';
+import '../../../dashboard/presentation/pages/sponsor_dashboard_page.dart';
+import 'tier_selection_screen.dart';
+import 'code_distribution_screen.dart';
+import '../../data/models/sponsor_dashboard_summary.dart';
+import '../../data/services/sponsor_service.dart';
 
 /// Sponsored Analyses List Screen
 /// Shows paginated list of plant analyses from sponsored farmers
@@ -29,6 +35,7 @@ class SponsoredAnalysesListScreen extends StatefulWidget {
 class _SponsoredAnalysesListScreenState
     extends State<SponsoredAnalysesListScreen> {
   final ScrollController _scrollController = ScrollController();
+  final SponsorService _sponsorService = GetIt.instance<SponsorService>();
 
   // Pagination state
   int _currentPage = 1;
@@ -44,6 +51,10 @@ class _SponsoredAnalysesListScreenState
   DateTime? _endDate;
   late String _selectedFilter; // all, unread
 
+  // Navigation state
+  int _selectedIndex = 1; // Default to 1 (Analizler) since we're on analysis list
+  SponsorDashboardSummary? _dashboardSummary; // For code distribution
+
   late Future<void> _initialLoadFuture;
 
   @override
@@ -53,6 +64,23 @@ class _SponsoredAnalysesListScreenState
     _selectedFilter = widget.initialFilter ?? 'all';
     // Removed scroll listener - using "Load More" button instead
     _initialLoadFuture = _loadAnalyses(refresh: true);
+    _loadDashboardSummary(); // Load dashboard summary for code distribution
+  }
+
+  /// Load dashboard summary for code distribution
+  Future<void> _loadDashboardSummary() async {
+    try {
+      final summary = await _sponsorService.getDashboardSummary();
+      if (mounted) {
+        setState(() {
+          _dashboardSummary = summary;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Failed to load dashboard summary: $e');
+      // Don't show error to user, just log it
+      // Code distribution button will be disabled if summary is null
+    }
   }
 
   @override
@@ -198,6 +226,64 @@ class _SponsoredAnalysesListScreenState
       }
     }
     return 'Beklenmeyen bir hata oluştu.';
+  }
+
+  /// Handle bottom navigation item taps
+  void _onItemTapped(int index) {
+    if (index == 0) {
+      // Ana Sayfa - Navigate to Sponsor Dashboard
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsorDashboardPage(),
+        ),
+      );
+    } else if (index == 1) {
+      // Analizler - Already on this screen, reset selection
+      setState(() {
+        _selectedIndex = 1;
+      });
+    } else if (index == 2) {
+      // Mesajlar - Reload current screen with unread filter
+      setState(() {
+        _selectedFilter = 'unread';
+        _selectedIndex = 1; // Stay on analyses screen
+        _currentPage = 1;
+        _allAnalyses.clear();
+        _hasMorePages = true;
+        _initialLoadFuture = _loadAnalyses(refresh: true);
+      });
+    } else if (index == 3) {
+      // Gönder - Navigate to Code Distribution Screen
+      if (_dashboardSummary != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CodeDistributionScreen(
+              dashboardSummary: _dashboardSummary!,
+            ),
+          ),
+        ).then((_) {
+          // Reset selection when returning
+          setState(() {
+            _selectedIndex = 1;
+          });
+        });
+      }
+    } else if (index == 4) {
+      // Satın Al - Navigate to Tier Selection Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const TierSelectionScreen(),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 1;
+        });
+      });
+    }
   }
 
 /// Show filter dialog with date range
@@ -775,6 +861,10 @@ class _SponsoredAnalysesListScreenState
       ],
     ),
   ),
+      bottomNavigationBar: SponsorBottomNavigation(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
     );
   }
 }
