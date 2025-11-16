@@ -182,9 +182,19 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
         });
       });
     } else if (index == 2) {
-      // Mesajlar - TODO: Navigate to sponsor messages
-      setState(() {
-        _selectedIndex = 0;
+      // Mesajlar - Navigate to Sponsored Analyses List with Unread filter
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SponsoredAnalysesListScreen(
+            initialFilter: 'unread',
+          ),
+        ),
+      ).then((_) {
+        // Reset selection when returning
+        setState(() {
+          _selectedIndex = 0;
+        });
       });
     } else if (index == 3) {
       // Analiz - TODO: Navigate to sponsor analysis

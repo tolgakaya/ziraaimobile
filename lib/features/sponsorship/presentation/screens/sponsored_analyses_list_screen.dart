@@ -14,7 +14,12 @@ import 'package:intl/intl.dart';
 /// Shows paginated list of plant analyses from sponsored farmers
 /// Follows farmer dashboard pattern (StatefulWidget + FutureBuilder)
 class SponsoredAnalysesListScreen extends StatefulWidget {
-  const SponsoredAnalysesListScreen({super.key});
+  final String? initialFilter; // Optional initial filter: 'all', 'unread'
+
+  const SponsoredAnalysesListScreen({
+    super.key,
+    this.initialFilter,
+  });
 
   @override
   State<SponsoredAnalysesListScreen> createState() =>
@@ -24,26 +29,28 @@ class SponsoredAnalysesListScreen extends StatefulWidget {
 class _SponsoredAnalysesListScreenState
     extends State<SponsoredAnalysesListScreen> {
   final ScrollController _scrollController = ScrollController();
-  
+
   // Pagination state
   int _currentPage = 1;
   final List<SponsoredAnalysisSummary> _allAnalyses = [];
   bool _isLoadingMore = false;
   bool _hasMorePages = true;
   SponsoredAnalysesListSummary? _summary;
-  
+
   // Filter & sort state
   String _sortBy = 'date';
   String _sortOrder = 'desc';
   DateTime? _startDate;
   DateTime? _endDate;
-  String _selectedFilter = 'all'; // all, unread
-  
+  late String _selectedFilter; // all, unread
+
   late Future<void> _initialLoadFuture;
 
   @override
   void initState() {
     super.initState();
+    // Initialize filter from widget parameter or default to 'all'
+    _selectedFilter = widget.initialFilter ?? 'all';
     // Removed scroll listener - using "Load More" button instead
     _initialLoadFuture = _loadAnalyses(refresh: true);
   }
