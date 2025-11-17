@@ -1,7 +1,6 @@
 import '../../domain/entities/farmer_profile.dart';
 import '../../domain/repositories/farmer_profile_repository.dart';
 import '../services/farmer_profile_api_service.dart';
-import '../models/farmer_profile_dto.dart';
 import '../models/update_farmer_profile_dto.dart';
 import 'package:intl/intl.dart';
 
@@ -21,17 +20,14 @@ class FarmerProfileRepositoryImpl implements FarmerProfileRepository {
 
       print('📥 FarmerProfileRepository: Response received');
 
-      final data = response['data'];
-
-      if (data == null) {
-        throw Exception('Profile data is null');
+      if (!response.success || response.data == null) {
+        throw Exception(response.message ?? 'Profile data is null');
       }
 
       print('✅ FarmerProfileRepository: Profile data received');
 
-      // Parse DTO and convert to entity
-      final dto = FarmerProfileDto.fromJson(data as Map<String, dynamic>);
-      return dto.toEntity();
+      // Convert DTO to entity
+      return response.data!.toEntity();
     } catch (e, stackTrace) {
       print('❌ FarmerProfileRepository: Error getting profile: $e');
       print('Stack trace: $stackTrace');
@@ -74,13 +70,13 @@ class FarmerProfileRepositoryImpl implements FarmerProfileRepository {
 
       print('📥 FarmerProfileRepository: Update response received');
 
-      if (response['success'] == true) {
+      if (response.success) {
         print('✅ FarmerProfileRepository: Profile updated successfully');
 
         // After successful update, fetch the updated profile
         return await getProfile();
       } else {
-        final errorMessage = response['message'] ?? 'Failed to update profile';
+        final errorMessage = response.message ?? 'Failed to update profile';
         throw Exception(errorMessage);
       }
     } catch (e, stackTrace) {
