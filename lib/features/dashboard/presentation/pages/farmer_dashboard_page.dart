@@ -21,6 +21,7 @@ import 'sponsor_dashboard_page.dart';
 import 'package:flutter/scheduler.dart';
 import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
+import '../../../profile/presentation/screens/farmer_profile_screen.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   final String? pendingSponsorshipCode;
@@ -379,6 +380,32 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                       children: [
                         // Notifications Bell with Badge
                         const NotificationBellIcon(),
+                        const SizedBox(width: 8),
+                        // Profile Icon
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.person_outline,
+                              color: Color(0xFF059669), // Green color for profile
+                              size: 24,
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const FarmerProfileScreen(),
+                                ),
+                              );
+                            },
+                            tooltip: 'Profilim',
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         // Logout Icon
                         Container(

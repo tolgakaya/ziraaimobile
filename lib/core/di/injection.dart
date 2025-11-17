@@ -16,6 +16,10 @@ import '../../features/authentication/presentation/bloc/auth_bloc.dart';
 import '../../features/messaging/data/services/messaging_api_service.dart';
 import '../../features/messaging/data/repositories/messaging_repository_impl.dart';
 import '../../features/messaging/domain/repositories/messaging_repository.dart';
+import '../../features/profile/data/services/farmer_profile_api_service.dart';
+import '../../features/profile/data/repositories/farmer_profile_repository_impl.dart';
+import '../../features/profile/domain/repositories/farmer_profile_repository.dart';
+import '../../features/profile/presentation/bloc/farmer_profile_bloc.dart';
 import 'injection.config.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -286,9 +290,22 @@ Future<void> configureDependencies() async {
   // Repositories - will be auto-registered by injectable
   // Manual registration removed to use @injectable annotation
 
+  // Farmer Profile Services
+  getIt.registerLazySingleton<FarmerProfileApiService>(
+    () => FarmerProfileApiService(getIt<Dio>()),
+  );
+
+  getIt.registerLazySingleton<FarmerProfileRepository>(
+    () => FarmerProfileRepositoryImpl(getIt<FarmerProfileApiService>()),
+  );
+
   // BLoCs
   getIt.registerFactory<AuthBloc>(
     () => AuthBloc(getIt<AuthRepository>()),
+  );
+
+  getIt.registerFactory<FarmerProfileBloc>(
+    () => FarmerProfileBloc(repository: getIt<FarmerProfileRepository>()),
   );
 
   // Run injectable code generation - MUST be awaited
