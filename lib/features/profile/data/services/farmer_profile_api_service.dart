@@ -24,6 +24,9 @@ abstract class FarmerProfileApiService {
   /// Requires JWT authentication
   /// UserId automatically extracted from JWT token on backend
   /// Returns ProfileUpdateResponse
+  ///
+  /// Note: Backend returns {"success": true, "message": "Updated"}
+  /// without a data field for successful updates
   @PUT('/farmer/profile')
   Future<ProfileUpdateResponse> updateProfile(
     @Body() UpdateFarmerProfileDto updateDto,

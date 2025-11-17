@@ -66,9 +66,14 @@ class FarmerProfileRepositoryImpl implements FarmerProfileRepository {
       );
 
       print('📤 FarmerProfileRepository: Sending update request...');
+      print('📤 Update DTO: ${updateDto.toJson()}');
+
       final response = await _apiService.updateProfile(updateDto);
 
       print('📥 FarmerProfileRepository: Update response received');
+      print('📥 Response success: ${response.success}');
+      print('📥 Response message: ${response.message}');
+      print('📥 Response data: ${response.data}');
 
       if (response.success) {
         print('✅ FarmerProfileRepository: Profile updated successfully');

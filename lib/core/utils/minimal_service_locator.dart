@@ -110,6 +110,7 @@ Future<void> setupMinimalServiceLocator() async {
     dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
+      logPrint: (obj) => print('🌐 DIO: $obj'),
     ));
     
     return dio;
