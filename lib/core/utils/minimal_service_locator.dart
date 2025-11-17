@@ -42,6 +42,10 @@ import '../../features/dealer/data/dealer_api_service.dart';
 import '../../features/dealer/presentation/screens/pending_invitations_screen.dart';
 import '../services/notification_signalr_service.dart';
 import '../services/navigation_service.dart';
+import '../../features/profile/data/services/farmer_profile_api_service.dart';
+import '../../features/profile/data/repositories/farmer_profile_repository_impl.dart';
+import '../../features/profile/domain/repositories/farmer_profile_repository.dart';
+import '../../features/profile/presentation/bloc/farmer_profile_bloc.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -236,6 +240,21 @@ Future<void> setupMinimalServiceLocator() async {
   );
 
   print('✅ MESSAGING: All messaging services registered successfully!');
+
+  // ✅ FARMER PROFILE - API Service, Repository, BLoC
+  getIt.registerLazySingleton<FarmerProfileApiService>(
+    () => FarmerProfileApiService(getIt<Dio>()),
+  );
+
+  getIt.registerLazySingleton<FarmerProfileRepository>(
+    () => FarmerProfileRepositoryImpl(getIt<FarmerProfileApiService>()),
+  );
+
+  getIt.registerFactory<FarmerProfileBloc>(
+    () => FarmerProfileBloc(repository: getIt<FarmerProfileRepository>()),
+  );
+
+  print('✅ FARMER PROFILE: All profile services registered successfully!');
 
   // ✅ DEALER INVITATION API SERVICE
   getIt.registerLazySingleton<DealerApiService>(
