@@ -6,6 +6,13 @@ part 'farmer_profile_api_service.g.dart';
 
 /// Farmer Profile API service using Retrofit
 /// Endpoints: /api/v1/farmer/profile
+///
+/// NOTE: Retrofit generator bug with Map<String, dynamic> return types
+/// After running build_runner, manually fix the generated file (.g.dart):
+/// Replace the complex map transformation blocks with:
+///   final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+///   final _value = _result.data!;
+///   return _value;
 @RestApi()
 abstract class FarmerProfileApiService {
   factory FarmerProfileApiService(Dio dio, {String baseUrl}) =
