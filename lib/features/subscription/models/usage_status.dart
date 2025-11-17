@@ -8,6 +8,7 @@ class UsageStatus {
   final int monthlyUsed;
   final int monthlyRemaining;
   final String subscriptionTier;
+  final String subscriptionStatus; // API status message
   final String nextRenewalDate;
   final bool hasActiveSubscription;
 
@@ -20,6 +21,7 @@ class UsageStatus {
     required this.monthlyUsed,
     required this.monthlyRemaining,
     required this.subscriptionTier,
+    required this.subscriptionStatus,
     required this.nextRenewalDate,
     required this.hasActiveSubscription,
   });
@@ -33,7 +35,8 @@ class UsageStatus {
       monthlyLimit: json['monthlyLimit'] ?? 0,
       monthlyUsed: json['monthlyUsed'] ?? 0,
       monthlyRemaining: json['monthlyRemaining'] ?? 0,
-      subscriptionTier: json['subscriptionTier'] ?? 'Free',
+      subscriptionTier: json['subscriptionTier'] ?? 'Ücretsiz',
+      subscriptionStatus: json['subscriptionStatus'] ?? 'Abonelik yok',
       nextRenewalDate: json['nextRenewalDate'] ?? '',
       hasActiveSubscription: json['hasActiveSubscription'] ?? false,
     );
@@ -49,6 +52,7 @@ class UsageStatus {
       'monthlyUsed': monthlyUsed,
       'monthlyRemaining': monthlyRemaining,
       'subscriptionTier': subscriptionTier,
+      'subscriptionStatus': subscriptionStatus,
       'nextRenewalDate': nextRenewalDate,
       'hasActiveSubscription': hasActiveSubscription,
     };

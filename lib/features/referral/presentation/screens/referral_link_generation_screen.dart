@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 import '../bloc/referral_bloc.dart';
 import '../bloc/referral_event.dart';
 import '../bloc/referral_state.dart';
@@ -519,6 +520,7 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
           );
         },
       ),
+      bottomNavigationBar: const FarmerBottomNav(currentIndex: 2), // Davet Et sekmesi
     );
   }
 

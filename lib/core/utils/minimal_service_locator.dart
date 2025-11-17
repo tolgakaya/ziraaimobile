@@ -136,7 +136,6 @@ Future<void> setupMinimalServiceLocator() async {
   getIt.registerLazySingleton<ReferralRepository>(
     () => ReferralRepositoryImpl(
       getIt<ReferralApiService>(),
-      getIt<SecureStorageService>(),
     ),
   );
 

@@ -17,24 +17,23 @@ abstract class PlantAnalysisApiService {
   factory PlantAnalysisApiService(Dio dio, {String baseUrl}) = _PlantAnalysisApiService;
 
   /// Submit plant analysis for asynchronous processing
+  /// NOTE: Authorization header is automatically added by Dio interceptor
   @POST('/plantanalyses/analyze-async')
   Future<ApiResponse<PlantAnalysisAsyncResponse>> submitAnalysisAsync(
     @Body() PlantAnalysisRequest request,
-    @Header('Authorization') String authorization,
   );
 
   /// Get analysis result by ID (deprecated - use getAnalysisDetail)
+  /// NOTE: Authorization header is automatically added by Dio interceptor
   @GET('/plantanalyses/{id}')
   Future<ApiResponse<PlantAnalysisResult>> getAnalysisResult(
     @Path('id') String analysisId,
-    @Header('Authorization') String authorization,
   );
 
-
   /// Get analyses list for dashboard
+  /// NOTE: Authorization header is automatically added by Dio interceptor
   @GET('/plantanalyses/list')
   Future<ApiResponse<PlantAnalysisListResponse>> getAnalysesList(
-    @Header('Authorization') String authorization,
     @Query('page') int page,
     @Query('pageSize') int pageSize,
   );

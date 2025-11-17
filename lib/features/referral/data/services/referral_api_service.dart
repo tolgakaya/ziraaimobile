@@ -27,10 +27,11 @@ abstract class ReferralApiService {
   ///
   /// Returns deep link in format: https://ziraai.com/ref/ZIRA-XXXXXX
   /// Link expires after configured time period (e.g., 30 days)
+  ///
+  /// NOTE: Authorization header is automatically added by Dio interceptor
   @POST('/Referral/generate')
   Future<ReferralLinkResponse> generateReferralLink(
     @Body() ReferralGenerateRequest request,
-    @Header('Authorization') String authorization,
   );
 
   /// Get referral statistics for current user
@@ -41,10 +42,10 @@ abstract class ReferralApiService {
   /// - registered: Users who completed registration
   /// - validated: Users who validated their phone
   /// - rewarded: Users who triggered reward for referrer
+  ///
+  /// NOTE: Authorization header is automatically added by Dio interceptor
   @GET('/Referral/stats')
-  Future<ReferralStatsResponse> getReferralStats(
-    @Header('Authorization') String authorization,
-  );
+  Future<ReferralStatsResponse> getReferralStats();
 
   /// Get credit breakdown for current user
   /// API: GET /api/v1/Referral/credits
@@ -53,10 +54,10 @@ abstract class ReferralApiService {
   /// - totalEarned: Total credits earned from referrals
   /// - totalUsed: Credits used for plant analyses
   /// - currentBalance: Available credits
+  ///
+  /// NOTE: Authorization header is automatically added by Dio interceptor
   @GET('/Referral/credits')
-  Future<CreditBreakdownResponse> getCreditBreakdown(
-    @Header('Authorization') String authorization,
-  );
+  Future<CreditBreakdownResponse> getCreditBreakdown();
 
   /// Get list of referral rewards received
   /// API: GET /api/v1/Referral/rewards
@@ -66,8 +67,8 @@ abstract class ReferralApiService {
   /// - refereeUserName: Name of user who was referred (NOT email)
   /// - creditAmount: Credits awarded for this referral
   /// - awardedAt: When the reward was granted
+  ///
+  /// NOTE: Authorization header is automatically added by Dio interceptor
   @GET('/Referral/rewards')
-  Future<ReferralRewardsResponse> getReferralRewards(
-    @Header('Authorization') String authorization,
-  );
+  Future<ReferralRewardsResponse> getReferralRewards();
 }

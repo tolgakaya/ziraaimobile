@@ -59,53 +59,67 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
       }
 
       print('✅ Token found, making API requests...');
-      
-      // Make parallel API requests
-      final results = await Future.wait([
-        // Usage status endpoint
-        networkClient.get(
-          ApiConfig.usageStatus,
-          options: Options(
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
-            },
-          ),
+
+      // Get usage status (main data source)
+      final usageResponse = await networkClient.get(
+        ApiConfig.usageStatus,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
         ),
-        // My subscription endpoint (for queued subscriptions)
-        networkClient.get(
+      );
+
+      print('📡 Usage Status Response: ${usageResponse.statusCode}');
+      print('📊 Usage Status Data: ${usageResponse.data}');
+
+      // Try to get subscription data (for queued subscriptions)
+      // 404 is expected when user has no subscription - handle gracefully
+      dynamic subscriptionData;
+      try {
+        final subscriptionResponse = await networkClient.get(
           ApiConfig.mySubscription,
           options: Options(
             headers: {
               'Authorization': 'Bearer $token',
               'Content-Type': 'application/json',
             },
+            validateStatus: (status) => status! < 500, // Accept 404 as valid response
           ),
-        ),
-      ]);
+        );
 
-      print('📡 API Responses: ${results[0].statusCode}, ${results[1].statusCode}');
-      print('📊 Usage Status Data: ${results[0].data}');
-      print('📊 My Subscription Data: ${results[1].data}');
+        print('📡 My Subscription Response: ${subscriptionResponse.statusCode}');
+        print('📊 My Subscription Data: ${subscriptionResponse.data}');
 
-      if (results[0].statusCode == 200 && results[0].data != null) {
-        final usageData = results[0].data['data'];
-        final subscriptionData = results[1].statusCode == 200 ? results[1].data['data'] : null;
-        
+        if (subscriptionResponse.statusCode == 200 && subscriptionResponse.data?['data'] != null) {
+          subscriptionData = subscriptionResponse.data['data'];
+        } else {
+          print('ℹ️ No active subscription found (404 expected)');
+          subscriptionData = null;
+        }
+      } catch (e) {
+        print('ℹ️ Could not load subscription data (expected when no subscription): $e');
+        subscriptionData = null;
+      }
+
+      if (usageResponse.statusCode == 200 && usageResponse.data != null) {
+        final usageData = usageResponse.data['data'];
+
         if (usageData != null) {
-          // Merge queued subscriptions info
+          // Merge queued subscriptions info if available
           if (subscriptionData != null && subscriptionData['queuedSubscriptions'] != null) {
             usageData['queuedSubscriptions'] = subscriptionData['queuedSubscriptions'];
             usageData['queuedCount'] = (subscriptionData['queuedSubscriptions'] as List).length;
           } else {
             usageData['queuedCount'] = 0;
           }
-          
+
           print('✅ Subscription data loaded successfully with ${usageData['queuedCount']} queued');
           return usageData;
         }
       }
-      
+
       print('⚠️ API returned null data');
       return null;
     } catch (e) {
@@ -137,10 +151,14 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
         final subscriptionData = snapshot.data;
         print('🔍 Subscription data: $subscriptionData');
 
-        final planName = subscriptionData?['tierName'] ?? 'Temel';
-        final usedCount = subscriptionData?['dailyUsed'] ?? 5;
-        final totalCount = subscriptionData?['dailyLimit'] ?? 50;
-        final daysLeft = _calculateDaysLeft(subscriptionData?['subscriptionEndDate']) ?? 15;
+        // Priority: tierName > subscriptionTier > "Abonelik Yok" (when hasActiveSubscription is false)
+        final hasActiveSubscription = subscriptionData?['hasActiveSubscription'] ?? false;
+        final planName = hasActiveSubscription
+            ? (subscriptionData?['tierName'] ?? subscriptionData?['subscriptionTier'] ?? 'Ücretsiz')
+            : 'Abonelik Yok';
+        final usedCount = subscriptionData?['dailyUsed'] ?? 0;
+        final totalCount = subscriptionData?['dailyLimit'] ?? 0;
+        final daysLeft = _calculateDaysLeft(subscriptionData?['subscriptionEndDate']) ?? 0;
         final referralCredits = subscriptionData?['referralCredits'] ?? 0;
         final queuedCount = subscriptionData?['queuedCount'] ?? 0;
         final progress = totalCount > 0 ? (usedCount / totalCount).clamp(0.0, 1.0) : 0.1;

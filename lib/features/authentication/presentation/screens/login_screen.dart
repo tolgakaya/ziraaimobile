@@ -41,8 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Default test phone for development
-    _phoneController.text = '05551234567';
+    // Phone field starts empty
   }
 
   @override
@@ -516,7 +515,7 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Color(0xFF111827),
           ),
           decoration: InputDecoration(
-            hintText: '05XX XXX XX XX',
+            hintText: 'Telefonunuzu girin',
             hintStyle: const TextStyle(
               color: Color(0xFF6B7280),
               fontSize: 16,

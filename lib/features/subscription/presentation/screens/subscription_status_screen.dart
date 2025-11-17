@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import '../../models/usage_status.dart';
 import '../../models/subscription_tier.dart';
 import '../../services/subscription_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/error/subscription_exceptions.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 import 'sponsor_request_screen.dart';
 import 'payment_screen.dart';
 
@@ -112,6 +112,15 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
                         onPressed: _loadUsageStatus,
                         child: const Text('Tekrar Dene'),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => _showUpgradeOptions(),
+                        icon: const Icon(Icons.shopping_cart),
+                        label: const Text('Yine de Paketleri Gör'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                      ),
                     ],
                   ),
                 )
@@ -151,6 +160,7 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
                     ],
                   ),
                 ),
+      bottomNavigationBar: const FarmerBottomNav(currentIndex: 0),
     );
   }
 
@@ -228,7 +238,7 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
         break;
       case 'sponsor_code':
         button = _buildSecondaryButton(
-          'Sponsor Kodu Gir',
+          'Abonelik Kodu Gir',
           Icons.card_giftcard,
           () => _showSponsorCodeDialog(),
         );
@@ -396,10 +406,22 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
   }
 
   Widget _buildSponsorshipRequestButton() {
-    return _buildSecondaryButton(
-      'Sponsorluk İsteği Gönder',
-      Icons.handshake,
-      () => _navigateToSponsorshipRequest(),
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: OutlinedButton.icon(
+        onPressed: null, // Disabled
+        icon: const Icon(Icons.handshake),
+        label: const Text(
+          'Ziraat Firmalarına İstek Gönderin (Yakında...)',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(width: 2, color: Colors.grey.shade300),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          disabledForegroundColor: Colors.grey.shade400,
+        ),
+      ),
     );
   }
 
@@ -649,11 +671,11 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
               child: Icon(Icons.confirmation_number, color: Colors.green.shade600),
             ),
             title: const Text(
-              'Sponsor Kodu Var mı?',
+              'Abonelik Kodu Var mı?',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: const Text(
-              'Sponsor kodunuz varsa hemen kullanın',
+              'Abonelik kodunuz varsa hemen kullanın',
               style: TextStyle(fontSize: 12),
             ),
             trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
@@ -665,29 +687,32 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
         ),
         const SizedBox(height: 8),
         
-        // Sponsorship Request Card
+        // Sponsorship Request Card (Disabled - Coming Soon)
         Card(
           elevation: 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
+          child: Opacity(
+            opacity: 0.5,
+            child: ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.handshake, color: Colors.grey.shade400),
               ),
-              child: Icon(Icons.handshake, color: Colors.blue.shade600),
+              title: const Text(
+                'Ziraat Firmalarına İstek Gönderin',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+              ),
+              subtitle: const Text(
+                'Yakında... • Tarım firmalarından ücretsiz abonelik talep edin',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              trailing: Icon(Icons.lock_outline, size: 16, color: Colors.grey.shade400),
+              enabled: false,
             ),
-            title: const Text(
-              'Sponsorluk İsteği Gönder',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: const Text(
-              'Tarım firmalarından sponsorluk talep edin',
-              style: TextStyle(fontSize: 12),
-            ),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
-            onTap: _navigateToSponsorRequest,
           ),
         ),
       ],
@@ -922,16 +947,16 @@ class _SponsorCodeDialogState extends State<_SponsorCodeDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Sponsor Kodu Gir'),
+      title: const Text('Abonelik Kodu Gir'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Sponsor kodunuzu girerek ücretsiz analiz hakkı kazanabilirsiniz.'),
+          const Text('Abonelik kodunuzu girerek ücretsiz analiz hakkı kazanabilirsiniz.'),
           const SizedBox(height: 16),
           TextField(
             controller: _controller,
             decoration: const InputDecoration(
-              labelText: 'Sponsor Kodu',
+              labelText: 'Abonelik Kodu',
               hintText: 'Örn: DEMO2025',
               border: OutlineInputBorder(),
             ),

@@ -8,6 +8,7 @@ import '../../../../core/config/api_config.dart';
 import '../screens/analysis_detail_screen.dart';
 import '../../../dashboard/presentation/widgets/farmer_analysis_card.dart';
 import '../../../dashboard/presentation/widgets/notification_bell_icon.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 
 /// Full analysis history screen with pagination and filtering
 /// Accessed from Farmer Dashboard "Geçmiş" button
@@ -311,6 +312,7 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const FarmerBottomNav(currentIndex: 1), // Analizler sekmesi
     );
   }
 

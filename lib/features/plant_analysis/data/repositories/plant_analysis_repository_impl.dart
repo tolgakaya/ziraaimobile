@@ -98,8 +98,8 @@ class PlantAnalysisRepositoryImpl implements PlantAnalysisRepository {
   @override
   Future<Either<Failure, AnalysisResult>> getAnalysisResult(String analysisId) async {
     try {
-      final token = await _authService.getToken();
-      final response = await _apiService.getAnalysisResult(analysisId, 'Bearer $token');
+      // Authorization header automatically added by Dio interceptor
+      final response = await _apiService.getAnalysisResult(analysisId);
 
       if (response.success && response.data != null) {
         // Convert PlantAnalysisResult to AnalysisResult
@@ -130,8 +130,8 @@ class PlantAnalysisRepositoryImpl implements PlantAnalysisRepository {
     int pageSize = 20,
   }) async {
     try {
-      final token = await _authService.getToken();
-      final response = await _apiService.getAnalysesList('Bearer $token', page, pageSize);
+      // Authorization header automatically added by Dio interceptor
+      final response = await _apiService.getAnalysesList(page, pageSize);
 
       if (response.success && response.data != null) {
         // Convert PlantAnalysisListResponse to AnalysisListData

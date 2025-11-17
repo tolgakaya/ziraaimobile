@@ -4,6 +4,7 @@ import '../bloc/referral_bloc.dart';
 import '../bloc/referral_event.dart';
 import '../bloc/referral_state.dart';
 import 'referral_link_generation_screen.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 
 class ReferralDashboardScreen extends StatefulWidget {
   const ReferralDashboardScreen({super.key});
@@ -199,6 +200,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
           );
         },
       ),
+      bottomNavigationBar: const FarmerBottomNav(currentIndex: 4),
     );
   }
 

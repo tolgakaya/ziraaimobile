@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
 import '../../../../core/services/image_processing_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
@@ -8,6 +8,9 @@ import '../../../../core/error/plant_analysis_exceptions.dart';
 import '../../../../core/widgets/error_widgets.dart';
 import '../../../subscription/presentation/screens/subscription_status_screen.dart';
 import '../../../dashboard/presentation/pages/farmer_dashboard_page.dart';
+import '../../../referral/presentation/screens/referral_link_generation_screen.dart';
+import '../../../referral/presentation/bloc/referral_bloc.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 
 class AnalysisOptionsScreen extends StatefulWidget {
   final File selectedImage;
@@ -47,6 +50,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   ];
 
   String? _selectedPlantType;
+  String _selectedAnalysisType = 'quick'; // 'quick' or 'detailed'
   bool _isSubmitting = false;
   PlantAnalysisException? _currentError;
 
@@ -111,6 +115,15 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
       result.fold(
         // Left - Failure/Error
         (failure) {
+          // Special handling for AuthorizationFailure (403 - no subscription)
+          if (failure.toString().contains('AuthorizationFailure')) {
+            _showNoSubscriptionDialog();
+            setState(() {
+              _isSubmitting = false;
+            });
+            return;
+          }
+
           setState(() {
             _currentError = UnknownException(
               failure.toString(),
@@ -187,6 +200,124 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
     }
   }
 
+  /// Show dialog when user has no subscription
+  void _showNoSubscriptionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.lock_outline, color: Colors.orange.shade700, size: 28),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Abonelik Gerekli',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Analiz yapabilmek için aktif bir aboneliğiniz olması gerekiyor.',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.celebration, color: Colors.green.shade700, size: 24),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Ücretsiz Abonelik Kazanın!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Arkadaşlarınızı davet ederek ücretsiz premium abonelik kazanabilirsiniz.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.green.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Vazgeç'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to referral screen with BlocProvider
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider(
+                      create: (_) => getIt<ReferralBloc>(),
+                      child: const ReferralLinkGenerationScreen(),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.person_add),
+              label: const Text('Arkadaş Davet Et'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to subscription packages
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const SubscriptionStatusScreen(
+                      scenario: 'no_subscription',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.shopping_cart),
+              label: const Text('Paketleri Gör'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _notesController.dispose();
@@ -200,7 +331,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         title: const Text(
-          'Analysis Options',
+          'Analiz Seçenekleri',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Color(0xFF111827),
@@ -310,7 +441,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
                       // Crop & Rotate functionality
                     },
                     icon: const Icon(Icons.crop_rotate),
-                    label: const Text('Crop & Rotate'),
+                    label: const Text('Kırp & Döndür'),
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0xFF6B7280),
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -323,7 +454,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
                       // Filters functionality
                     },
                     icon: const Icon(Icons.tune),
-                    label: const Text('Filters'),
+                    label: const Text('Filtreler'),
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0xFF6B7280),
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -337,7 +468,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             // Analysis Type Section
             const Text(
-              'Analysis Type',
+              'Analiz Tipi',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -350,49 +481,91 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
             Row(
               children: [
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF22C55E)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.flash_on, color: Color(0xFF22C55E), size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Quick Analysis',
-                          style: TextStyle(
-                            color: Color(0xFF22C55E),
-                            fontWeight: FontWeight.w600,
-                          ),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedAnalysisType = 'quick';
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: _selectedAnalysisType == 'quick'
+                            ? const Color(0xFFF0FDF4)
+                            : const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedAnalysisType == 'quick'
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFE5E7EB),
                         ),
-                      ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.flash_on,
+                            color: _selectedAnalysisType == 'quick'
+                                ? const Color(0xFF22C55E)
+                                : const Color(0xFF6B7280),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Hızlı Analiz',
+                            style: TextStyle(
+                              color: _selectedAnalysisType == 'quick'
+                                  ? const Color(0xFF22C55E)
+                                  : const Color(0xFF6B7280),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.science, color: Color(0xFF6B7280), size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Detailed',
-                          style: TextStyle(
-                            color: Color(0xFF6B7280),
-                            fontWeight: FontWeight.w600,
-                          ),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedAnalysisType = 'detailed';
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: _selectedAnalysisType == 'detailed'
+                            ? const Color(0xFFF0FDF4)
+                            : const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedAnalysisType == 'detailed'
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFE5E7EB),
                         ),
-                      ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.science,
+                            color: _selectedAnalysisType == 'detailed'
+                                ? const Color(0xFF22C55E)
+                                : const Color(0xFF6B7280),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Detaylı',
+                            style: TextStyle(
+                              color: _selectedAnalysisType == 'detailed'
+                                  ? const Color(0xFF22C55E)
+                                  : const Color(0xFF6B7280),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -403,7 +576,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             // Plant Type Dropdown
             const Text(
-              'Plant Type (Optional)',
+              'Bitki Türü (Opsiyonel)',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -425,7 +598,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
                 child: DropdownButton<String>(
                   value: _selectedPlantType,
                   hint: const Text(
-                    'Select Plant Type',
+                    'Bitki Türü Seçin',
                     style: TextStyle(color: Color(0xFF9CA3AF)),
                   ),
                   isExpanded: true,
@@ -448,7 +621,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             // Location Input
             const Text(
-              'Location (Optional)',
+              'Konum (Opsiyonel)',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -467,7 +640,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
               child: TextField(
                 controller: _locationController,
                 decoration: const InputDecoration(
-                  hintText: 'e.g., Ankara, Turkey',
+                  hintText: 'Örn: Ankara, Türkiye',
                   hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(16),
@@ -480,7 +653,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             // Additional Notes
             const Text(
-              'Additional Notes (Optional)',
+              'Ek Notlar (Opsiyonel)',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -502,7 +675,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
                 controller: _notesController,
                 maxLines: 4,
                 decoration: const InputDecoration(
-                  hintText: 'e.g., discoloration on lower leaves, plant is in a greenhouse...',
+                  hintText: 'Örn: alt yapraklarda renk değişimi, bitki serada...',
                   hintStyle: TextStyle(
                     color: Color(0xFF9CA3AF),
                   ),
@@ -554,7 +727,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
                         ),
                       )
                     : const Text(
-                        'Analyze',
+                        'Analiz Et',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -565,6 +738,7 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: const FarmerBottomNav(currentIndex: 3),
     );
   }
 
