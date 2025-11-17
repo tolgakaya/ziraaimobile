@@ -9,6 +9,7 @@ import '../../../sponsorship/presentation/screens/code_distribution_screen.dart'
 import '../../../sponsorship/presentation/screens/tier_selection_screen.dart';
 import '../../../sponsorship/presentation/screens/sponsored_analyses_list_screen.dart';
 import '../../../sponsorship/presentation/screens/sponsor_profile_screen.dart';
+import '../../../sponsorship/presentation/screens/sponsor_statistics_screen.dart';
 import '../../../dealer/data/dealer_api_service.dart';
 import '../../../dealer/domain/models/dealer_dashboard_summary.dart';
 import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
@@ -435,9 +436,10 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
                                         label: 'İstatistik',
                                         color: const Color(0xFFF59E0B),
                                         onPressed: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('İstatistikler - Yakında'),
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => const SponsorStatisticsScreen(),
                                             ),
                                           );
                                         },

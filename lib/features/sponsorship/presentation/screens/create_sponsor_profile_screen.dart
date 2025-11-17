@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import 'package:dio/dio.dart';
 import '../../data/services/sponsor_service.dart';
 import '../../../../core/security/token_manager.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 import 'dart:developer' as developer;
 
 class CreateSponsorProfileScreen extends StatefulWidget {
@@ -77,7 +78,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
             // Show success message
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Sponsor profili başarıyla oluşturuldu!'),
+                content: Text('Ziraat Firması profili başarıyla oluşturuldu!'),
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 2),
               ),
@@ -96,7 +97,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
             // Show message that logout/login is needed
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Sponsor profili oluşturuldu! Lütfen çıkış yapıp tekrar giriş yapın.'),
+                content: Text('Ziraat Firması profili oluşturuldu! Lütfen çıkış yapıp tekrar giriş yapın.'),
                 backgroundColor: Colors.orange,
                 duration: Duration(seconds: 4),
               ),
@@ -112,7 +113,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Sponsor profili oluşturuldu! Lütfen çıkış yapıp tekrar giriş yapın.'),
+              content: Text('Ziraat Firması profili oluşturuldu! Lütfen çıkış yapıp tekrar giriş yapın.'),
               backgroundColor: Colors.orange,
               duration: Duration(seconds: 4),
             ),
@@ -238,7 +239,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('Sponsor Ol'),
+        title: const Text('Ziraat Firması Ol'),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
@@ -252,7 +253,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
             children: [
               // Header
               const Text(
-                'Sponsor Profili Oluştur',
+                'Ziraat Firması Profili Oluştur',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -261,7 +262,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
               ),
               const SizedBox(height: 8),
               const Text(
-                'Sponsor olarak tarım topluluğuna destek olun ve özel özelliklerden yararlanın.',
+                'Ziraat Firması olarak tarım topluluğuna destek olun ve özel özelliklerden yararlanın.',
                 style: TextStyle(
                   fontSize: 16,
                   color: Color(0xFF6B7280),
@@ -411,7 +412,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Profil oluşturulduktan sonra hem telefon hem de e-posta ile giriş yapabilirsiniz. Sponsor seviyeniz paket satın alma ile belirlenecektir.',
+                        'Profil oluşturulduktan sonra hem telefon hem de e-posta ile giriş yapabilirsiniz. Ziraat Firması seviyeniz paket satın alma ile belirlenecektir.',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.blue[900],
@@ -447,7 +448,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
                           ),
                         )
                       : const Text(
-                          'Sponsor Profili Oluştur',
+                          'Ziraat Firması Profili Oluştur',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -459,6 +460,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
           ),
         ),
       ),
+      bottomNavigationBar: const FarmerBottomNav(currentIndex: 0), // Ana Sayfa sekmesi
     );
   }
 }

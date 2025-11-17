@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'analysis_options_screen.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 
 class CaptureScreen extends StatefulWidget {
   const CaptureScreen({super.key});
@@ -183,6 +184,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const FarmerBottomNav(currentIndex: 3),
     );
   }
 }

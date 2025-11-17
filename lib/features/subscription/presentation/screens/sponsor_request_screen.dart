@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/mock_sponsorship_service.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 
 class SponsorRequestScreen extends StatefulWidget {
   const SponsorRequestScreen({super.key});
@@ -32,7 +33,7 @@ class _SponsorRequestScreenState extends State<SponsorRequestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sponsorluk İsteği'),
+        title: const Text('Ziraat Firmasına Abonelik İsteği'),
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
       ),
@@ -228,7 +229,7 @@ class _SponsorRequestScreenState extends State<SponsorRequestScreen> {
                         ),
                       )
                     : const Text(
-                        'Sponsorluk İsteği Gönder',
+                        'İstek Gönder',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -251,6 +252,7 @@ class _SponsorRequestScreenState extends State<SponsorRequestScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: const FarmerBottomNav(currentIndex: 0),
     );
   }
   

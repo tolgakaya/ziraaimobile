@@ -78,7 +78,7 @@ class _SponsorshipRedemptionScreenState
 
     if (code.isEmpty) {
       setState(() {
-        _errorMessage = 'Lütfen sponsorluk kodunu girin';
+        _errorMessage = 'Lütfen abonelik kodunu girin';
       });
       return;
     }
@@ -298,7 +298,7 @@ class _SponsorshipRedemptionScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Sponsorluk Kodu Nedir?',
+                'Abonelik Kodu Nedir?',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               SizedBox(height: 8),
@@ -384,7 +384,7 @@ class _SponsorshipRedemptionScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sponsorluk Kodu Kullan'),
+        title: Text('Abonelik Kodu Kullan'),
         backgroundColor: Colors.green,
         elevation: 0,
       ),
@@ -426,7 +426,7 @@ class _SponsorshipRedemptionScreenState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Sponsorluk Kodu',
+                                'Abonelik Kodu',
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -450,7 +450,7 @@ class _SponsorshipRedemptionScreenState
                     Divider(color: Colors.green.shade200),
                     SizedBox(height: 8),
                     Text(
-                      'SMS ile gelen sponsorluk kodunuzu kullanarak ücretsiz premium abonelik kazanın!',
+                      'SMS ile gelen abonelik kodunuzu kullanarak ücretsiz premium abonelik kazanın!',
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontSize: 14,
@@ -467,7 +467,7 @@ class _SponsorshipRedemptionScreenState
             TextField(
               controller: _codeController,
               decoration: InputDecoration(
-                labelText: 'Sponsorluk Kodu',
+                labelText: 'Abonelik Kodu',
                 hintText: 'AGRI-X3K9',
                 prefixIcon: Icon(
                   Icons.qr_code,
@@ -597,7 +597,7 @@ class _SponsorshipRedemptionScreenState
                     '• Kod SMS ile otomatik gelir\n'
                     '• Her kod sadece bir kez kullanılabilir\n'
                     '• Kodun geçerlilik süresi vardır\n'
-                    '• Aktif sponsorluk varsa kod sıraya alınır',
+                    '• Aktif abonelik varsa yeni abonelik sıraya alınır',
                     style: TextStyle(
                       color: Colors.blue.shade800,
                       fontSize: 13,

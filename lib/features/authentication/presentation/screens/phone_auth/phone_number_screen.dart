@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/auth_bloc.dart';
 import '../../bloc/auth_event.dart';
 import '../../bloc/auth_state.dart';
@@ -26,12 +27,15 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   String? _phoneError;
+  bool _agreeToTerms = true; // Default olarak seçili
 
   @override
   void initState() {
     super.initState();
-    // Use initialPhone if provided, otherwise use default test phone
-    _phoneController.text = widget.initialPhone ?? '05551234567';
+    // Use initialPhone if provided, otherwise leave empty
+    if (widget.initialPhone != null) {
+      _phoneController.text = widget.initialPhone!;
+    }
   }
 
   @override
@@ -98,6 +102,26 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final Uri url = Uri.parse('https://www.ziraai.com/privacy-policy');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        if (mounted) {
+          _showErrorSnackBar('Gizlilik politikası sayfası açılamadı');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar('Link açılırken bir hata oluştu');
+      }
+    }
   }
 
   @override
@@ -320,7 +344,7 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                             color: Color(0xFF111827),
                           ),
                           decoration: InputDecoration(
-                            hintText: '05XX XXX XX XX',
+                            hintText: 'Telefon numarası',
                             hintStyle: const TextStyle(
                               color: Color(0xFF6B7280),
                               fontSize: 16,
@@ -348,6 +372,58 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                         ),
                       ),
 
+                      // KVKK/Privacy Policy Checkbox (only for registration)
+                      if (widget.isRegistration) ...[
+                        const SizedBox(height: 24),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: Checkbox(
+                                value: _agreeToTerms,
+                                onChanged: isLoading ? null : (value) {
+                                  setState(() {
+                                    _agreeToTerms = value ?? false;
+                                  });
+                                },
+                                activeColor: const Color(0xFF17CF17),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: _openPrivacyPolicy,
+                                child: RichText(
+                                  text: const TextSpan(
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF374151),
+                                      height: 1.5,
+                                    ),
+                                    children: [
+                                      TextSpan(text: 'Kayıt olarak '),
+                                      TextSpan(
+                                        text: 'KVKK/Gizlilik Politikası',
+                                        style: TextStyle(
+                                          color: Color(0xFF17CF17),
+                                          fontWeight: FontWeight.w600,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                      TextSpan(text: '\'nı kabul ediyorum.'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
 
                       const SizedBox(height: 32),
 
@@ -356,21 +432,27 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                         width: double.infinity,
                         height: 52,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF17CF17),
+                          color: (widget.isRegistration && !_agreeToTerms)
+                              ? const Color(0xFFD1D5DB)
+                              : const Color(0xFF17CF17),
                           borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF17CF17).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          boxShadow: (widget.isRegistration && !_agreeToTerms)
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: const Color(0xFF17CF17).withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                         ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(8),
-                            onTap: isLoading ? null : _validateAndSubmit,
+                            onTap: (isLoading || (widget.isRegistration && !_agreeToTerms))
+                                ? null
+                                : _validateAndSubmit,
                             child: Center(
                               child: isLoading
                                   ? const SizedBox(

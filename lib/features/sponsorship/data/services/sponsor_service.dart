@@ -10,6 +10,9 @@ import '../models/paginated_sponsorship_codes.dart';
 import '../models/sponsorship_tier_comparison.dart';
 import '../models/sponsor_profile.dart';
 import '../models/update_sponsor_profile_request.dart';
+import '../models/sponsor_statistics.dart';
+import '../models/package_statistics.dart';
+import '../models/impact_analytics.dart';
 import 'dart:developer' as developer;
 
 @lazySingleton
@@ -1007,6 +1010,213 @@ class SponsorService {
     } catch (e) {
       developer.log(
         'Unexpected error updating sponsor profile',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Get sponsor statistics
+  /// Endpoint: GET /api/v1/sponsorship/statistics
+  ///
+  /// Returns basic statistics including:
+  /// - Total spent amount
+  /// - Total codes purchased and used
+  /// - Usage rate and unused codes
+  /// - Usage breakdown by tier
+  Future<SponsorStatistics> getStatistics() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching sponsor statistics',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}/sponsorship/statistics',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Sponsor statistics fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "data": {...} }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        return SponsorStatistics.fromJson(responseData['data']);
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load statistics');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get sponsor statistics',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load statistics')
+            : 'Failed to load statistics';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting sponsor statistics',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Get package statistics
+  /// Endpoint: GET /api/v1/sponsorship/package-statistics
+  ///
+  /// Returns detailed package performance metrics including:
+  /// - Overall distribution and redemption rates
+  /// - Individual package breakdowns
+  /// - Tier-based analysis
+  /// - Channel performance metrics
+  Future<PackageStatistics> getPackageStatistics() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching package statistics',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}/sponsorship/package-statistics',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Package statistics fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "data": {...} }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        return PackageStatistics.fromJson(responseData['data']);
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load package statistics');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get package statistics',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load package statistics')
+            : 'Failed to load package statistics';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting package statistics',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Get impact analytics
+  /// Endpoint: GET /api/v1/sponsorship/impact-analytics
+  ///
+  /// Returns farmer reach and crop analysis metrics including:
+  /// - Farmer reach and retention data
+  /// - Crop and disease analysis statistics
+  /// - Geographic distribution data
+  /// - Top cities, crops, and diseases
+  Future<ImpactAnalytics> getImpactAnalytics() async {
+    try {
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('No authentication token available');
+      }
+
+      developer.log(
+        'Fetching impact analytics',
+        name: 'SponsorService',
+      );
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}/sponsorship/impact-analytics',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      developer.log(
+        'Impact analytics fetched successfully',
+        name: 'SponsorService',
+      );
+
+      // API returns: { "success": true, "data": {...} }
+      final responseData = response.data;
+      if (responseData['success'] == true && responseData['data'] != null) {
+        return ImpactAnalytics.fromJson(responseData['data']);
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to load impact analytics');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to get impact analytics',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load impact analytics')
+            : 'Failed to load impact analytics';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error getting impact analytics',
         name: 'SponsorService',
         error: e,
       );

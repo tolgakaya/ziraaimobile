@@ -29,15 +29,17 @@ class SubscriptionService {
         ),
       );
 
-      if (response.data['success'] == true) {
-        final data = response.data['data'];
+      // IMPORTANT: Even if success is false (no active subscription),
+      // we still return the data because it contains useful information
+      final data = response.data['data'];
+      if (data != null) {
         return UsageStatus.fromJson(data);
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to get usage status');
+        throw Exception(response.data['message'] ?? 'No usage status data received');
       }
     } catch (e) {
       print('Error getting usage status: $e');
-      return null;
+      rethrow; // Re-throw so screen can show proper error
     }
   }
 

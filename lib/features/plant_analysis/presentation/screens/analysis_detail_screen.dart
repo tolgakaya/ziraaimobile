@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../../messaging/presentation/bloc/messaging_bloc.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
+import '../../../../core/widgets/farmer_bottom_nav.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
 import '../../data/models/plant_analysis_result.dart';
 import '../blocs/analysis_detail/analysis_detail_bloc.dart';
@@ -86,6 +87,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                   backgroundColor: const Color(0xFF17CF17),
                 )
               : null,
+            bottomNavigationBar: const FarmerBottomNav(currentIndex: 1), // Analizler sekmesi
           );
         },
       ),

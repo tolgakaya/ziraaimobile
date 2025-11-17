@@ -2,7 +2,6 @@ import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/error/failures.dart';
-import '../../../../core/storage/secure_storage_service.dart';
 import '../../domain/repositories/referral_repository.dart';
 import '../models/referral_generate_request.dart';
 import '../models/referral_link_response.dart';
@@ -14,21 +13,9 @@ import '../services/referral_api_service.dart';
 @LazySingleton(as: ReferralRepository)
 class ReferralRepositoryImpl implements ReferralRepository {
   final ReferralApiService _apiService;
-  final SecureStorageService _secureStorage;
 
-  ReferralRepositoryImpl(
-    this._apiService,
-    this._secureStorage,
-  );
-
-  /// Get authorization header with Bearer token
-  Future<String> _getAuthHeader() async {
-    final token = await _secureStorage.read(key: 'auth_token');
-    if (token == null || token.isEmpty) {
-      throw const UnauthorizedFailure();
-    }
-    return 'Bearer $token';
-  }
+  // SecureStorageService no longer needed - Dio interceptor handles auth automatically
+  ReferralRepositoryImpl(this._apiService);
 
   @override
   Future<Either<Failure, ReferralLinkData>> generateReferralLink({
@@ -37,18 +24,14 @@ class ReferralRepositoryImpl implements ReferralRepository {
     String? customMessage,
   }) async {
     try {
-      final authHeader = await _getAuthHeader();
-
       final request = ReferralGenerateRequest(
         deliveryMethod: deliveryMethod,
         phoneNumbers: phoneNumbers,
         customMessage: customMessage,
       );
 
-      final response = await _apiService.generateReferralLink(
-        request,
-        authHeader,
-      );
+      // Authorization header automatically added by Dio interceptor
+      final response = await _apiService.generateReferralLink(request);
 
       if (response.success && response.data != null) {
         return Right(response.data!);
@@ -78,9 +61,8 @@ class ReferralRepositoryImpl implements ReferralRepository {
   @override
   Future<Either<Failure, ReferralStats>> getReferralStats() async {
     try {
-      final authHeader = await _getAuthHeader();
-
-      final response = await _apiService.getReferralStats(authHeader);
+      // Authorization header automatically added by Dio interceptor
+      final response = await _apiService.getReferralStats();
 
       if (response.success && response.data != null) {
         return Right(response.data!);
@@ -110,9 +92,8 @@ class ReferralRepositoryImpl implements ReferralRepository {
   @override
   Future<Either<Failure, CreditBreakdown>> getCreditBreakdown() async {
     try {
-      final authHeader = await _getAuthHeader();
-
-      final response = await _apiService.getCreditBreakdown(authHeader);
+      // Authorization header automatically added by Dio interceptor
+      final response = await _apiService.getCreditBreakdown();
 
       if (response.success && response.data != null) {
         return Right(response.data!);
@@ -142,9 +123,8 @@ class ReferralRepositoryImpl implements ReferralRepository {
   @override
   Future<Either<Failure, List<ReferralReward>>> getReferralRewards() async {
     try {
-      final authHeader = await _getAuthHeader();
-
-      final response = await _apiService.getReferralRewards(authHeader);
+      // Authorization header automatically added by Dio interceptor
+      final response = await _apiService.getReferralRewards();
 
       if (response.success && response.data != null) {
         return Right(response.data!);
