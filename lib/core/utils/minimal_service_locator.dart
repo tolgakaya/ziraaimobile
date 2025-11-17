@@ -105,14 +105,32 @@ Future<void> setupMinimalServiceLocator() async {
     // Add TokenInterceptor for automatic authentication and token refresh
     // Pass dio instance for token refresh API calls
     dio.interceptors.add(_TokenInterceptor(getIt<TokenManager>(), dio));
-    
+
+    // Add response transformer for empty/text responses
+    dio.interceptors.add(InterceptorsWrapper(
+      onResponse: (response, handler) {
+        // Handle empty or non-JSON responses for update endpoints
+        if (response.requestOptions.method == 'PUT' ||
+            response.requestOptions.method == 'PATCH') {
+          if (response.data == null || response.data == '') {
+            // Empty response - treat as success
+            response.data = {'success': true, 'message': 'Updated'};
+          } else if (response.data is String && response.data.toString().trim() == 'Updated') {
+            // Plain text "Updated" response
+            response.data = {'success': true, 'message': 'Updated'};
+          }
+        }
+        handler.next(response);
+      },
+    ));
+
     // Add LogInterceptor for debugging
     dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
       logPrint: (obj) => print('🌐 DIO: $obj'),
     ));
-    
+
     return dio;
   });
   
