@@ -7,6 +7,10 @@ import '../features/authentication/presentation/presentation.dart';
 import '../features/authentication/presentation/bloc/auth_event.dart';
 import '../features/dashboard/presentation/pages/farmer_dashboard_page.dart';
 import '../features/dashboard/presentation/pages/notifications_page.dart';
+import '../features/profile/presentation/screens/farmer_profile_screen.dart';
+import '../features/support/presentation/screens/support_ticket_list_screen.dart';
+import '../features/support/presentation/screens/support_ticket_detail_screen.dart';
+import '../features/support/presentation/screens/about_screen.dart';
 
 class AppRouter {
   static final _getIt = GetIt.instance;
@@ -34,9 +38,33 @@ class AppRouter {
         builder: (context, state) => const NotificationsPage(),
       ),
       GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const FarmerProfileScreen(),
+      ),
+      GoRoute(
         path: '/splash',
         name: 'splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      // Support routes
+      GoRoute(
+        path: '/support-tickets',
+        name: 'support-tickets',
+        builder: (context, state) => const SupportTicketListScreen(),
+      ),
+      GoRoute(
+        path: '/support-ticket-detail',
+        name: 'support-ticket-detail',
+        builder: (context, state) {
+          final ticketId = state.extra as int? ?? 0;
+          return SupportTicketDetailScreen(ticketId: ticketId);
+        },
+      ),
+      GoRoute(
+        path: '/about',
+        name: 'about',
+        builder: (context, state) => const AboutScreen(),
       ),
     ],
     errorBuilder: (context, state) => ErrorScreen(error: state.error),
