@@ -283,59 +283,6 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
     }
   }
 
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.logout, color: Colors.red[600]),
-            const SizedBox(width: 12),
-            const Text('Çıkış Yap'),
-          ],
-        ),
-        content: const Text(
-          'Çıkış yapmak istediğinizden emin misiniz?',
-          style: TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[600],
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              _handleLogout(context);
-            },
-            child: const Text('Çıkış Yap'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _handleLogout(BuildContext context) {
-    // Trigger logout event using GetIt directly
-    GetIt.instance<AuthBloc>().add(const AuthLogoutRequested());
-
-    // Navigate to login screen and remove all previous routes
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => BlocProvider(
-          create: (_) => GetIt.instance<AuthBloc>(),
-          child: const LoginScreen(),
-        ),
-      ),
-      (route) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -382,48 +329,21 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                         const NotificationBellIcon(),
                         const SizedBox(width: 8),
                         // Profile Icon
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.person_outline,
+                            color: Color(0xFF059669), // Green color for profile
+                            size: 28,
                           ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.person_outline,
-                              color: Color(0xFF059669), // Green color for profile
-                              size: 24,
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const FarmerProfileScreen(),
-                                ),
-                              );
-                            },
-                            tooltip: 'Profilim',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Logout Icon
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.logout,
-                              color: Color(0xFFEF4444), // Red color for logout
-                              size: 24,
-                            ),
-                            onPressed: () => _showLogoutDialog(context),
-                            tooltip: 'Çıkış Yap',
-                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const FarmerProfileScreen(),
+                              ),
+                            );
+                          },
+                          tooltip: 'Profilim',
                         ),
                       ],
                     ),

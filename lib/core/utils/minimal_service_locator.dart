@@ -46,6 +46,9 @@ import '../../features/profile/data/services/farmer_profile_api_service.dart';
 import '../../features/profile/data/repositories/farmer_profile_repository_impl.dart';
 import '../../features/profile/domain/repositories/farmer_profile_repository.dart';
 import '../../features/profile/presentation/bloc/farmer_profile_bloc.dart';
+import '../../features/support/domain/repositories/support_ticket_repository.dart';
+import '../../features/support/data/repositories/support_ticket_repository_impl.dart';
+import '../../features/support/presentation/bloc/support_ticket_bloc.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -274,6 +277,17 @@ Future<void> setupMinimalServiceLocator() async {
   );
 
   print('✅ FARMER PROFILE: All profile services registered successfully!');
+
+  // ✅ SUPPORT TICKET - Repository, BLoC
+  getIt.registerLazySingleton<SupportTicketRepository>(
+    () => SupportTicketRepositoryImpl(),
+  );
+
+  getIt.registerFactory<SupportTicketBloc>(
+    () => SupportTicketBloc(repository: getIt<SupportTicketRepository>()),
+  );
+
+  print('✅ SUPPORT TICKET: All support services registered successfully!');
 
   // ✅ DEALER INVITATION API SERVICE
   getIt.registerLazySingleton<DealerApiService>(

@@ -7,6 +7,8 @@ import '../bloc/farmer_profile_state.dart';
 import '../../domain/entities/farmer_profile.dart';
 import '../../../../core/widgets/farmer_bottom_nav.dart';
 import 'package:intl/intl.dart';
+import '../../../support/presentation/screens/support_ticket_list_screen.dart';
+import '../../../support/presentation/screens/about_screen.dart';
 
 /// Farmer Profile Screen
 /// Displays and allows editing of farmer profile information
@@ -236,6 +238,13 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
 
                     // Save Button (visible only in edit mode)
                     if (_isEditMode) _buildSaveButton(context, state),
+
+                    const SizedBox(height: 24),
+
+                    // Support and Info Section
+                    _buildSectionTitle('Destek ve Bilgi'),
+                    const SizedBox(height: 12),
+                    _buildSupportInfoCard(context),
 
                     const SizedBox(height: 80), // Space for bottom nav
                   ],
@@ -569,6 +578,127 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSupportInfoCard(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        children: [
+          // Support Tickets
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF059669).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.support_agent,
+                color: Color(0xFF059669),
+              ),
+            ),
+            title: const Text(
+              'Destek Talepleri',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            subtitle: const Text('Yardım alın ve taleplerinizi takip edin'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SupportTicketListScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          // About
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B82F6).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.info_outline,
+                color: Color(0xFF3B82F6),
+              ),
+            ),
+            title: const Text(
+              'Hakkımızda',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            subtitle: const Text('Uygulama ve şirket bilgileri'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AboutScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          // Logout
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.logout,
+                color: Colors.red,
+              ),
+            ),
+            title: const Text(
+              'Çıkış Yap',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.red,
+              ),
+            ),
+            onTap: () => _showLogoutDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Çıkış Yap'),
+          content: const Text('Hesabınızdan çıkış yapmak istediğinize emin misiniz?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('İptal'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Clear auth and navigate to login
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/login',
+                  (route) => false,
+                );
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Çıkış Yap'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
