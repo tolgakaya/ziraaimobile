@@ -147,7 +147,6 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                   mobilePhone: state.mobilePhone,
                   isRegistration: state.isRegistration,
                   referralCode: widget.referralCode,
-                  developmentOtpCode: state.otpCode,
                 ),
               ),
             );

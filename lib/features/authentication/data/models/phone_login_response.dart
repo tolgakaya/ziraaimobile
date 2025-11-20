@@ -4,6 +4,7 @@ part 'phone_login_response.g.dart';
 
 /// Response model for phone login OTP request
 /// API: POST /api/v1/Auth/login-phone
+/// SMS is sent via real SMS service, no OTP code in response
 @JsonSerializable()
 class PhoneLoginResponse {
   @JsonKey(name: 'data')
@@ -25,9 +26,6 @@ class PhoneLoginResponse {
       _$PhoneLoginResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$PhoneLoginResponseToJson(this);
-
-  /// Convenience getter to access OTP code from nested data
-  String? get otpCode => data?.otpCode;
 }
 
 @JsonSerializable()
@@ -36,7 +34,7 @@ class PhoneLoginData {
   final String status;
 
   @JsonKey(name: 'message')
-  final String message; // Format: "SendMobileCodeXXXXXX"
+  final String message;
 
   PhoneLoginData({
     required this.status,
@@ -47,13 +45,4 @@ class PhoneLoginData {
       _$PhoneLoginDataFromJson(json);
 
   Map<String, dynamic> toJson() => _$PhoneLoginDataToJson(this);
-
-  /// Extract OTP code from message
-  /// Message format: "SendMobileCode596920"
-  String? get otpCode {
-    if (message.startsWith('SendMobileCode') && message.length > 14) {
-      return message.substring(14); // Extract code after "SendMobileCode"
-    }
-    return null;
-  }
 }
