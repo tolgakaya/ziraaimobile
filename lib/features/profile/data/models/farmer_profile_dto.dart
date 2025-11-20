@@ -17,7 +17,7 @@ class FarmerProfileDto {
   final String fullName;
 
   @JsonKey(name: 'email')
-  final String email;
+  final String? email;
 
   @JsonKey(name: 'mobilePhones')
   final String mobilePhones;
@@ -68,7 +68,7 @@ class FarmerProfileDto {
     required this.userId,
     this.citizenId,
     required this.fullName,
-    required this.email,
+    this.email,
     required this.mobilePhones,
     this.birthDate,
     this.gender,
