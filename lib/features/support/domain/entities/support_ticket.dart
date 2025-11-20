@@ -6,9 +6,16 @@ class SupportTicket {
   final String description;
   final SupportTicketStatus status;
   final SupportTicketPriority priority;
+  final SupportTicketCategory category;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? resolvedAt;
+  final DateTime? closedAt;
+  final DateTime? lastResponseDate;
+  final String? resolutionNotes;
+  final int? satisfactionRating;
+  final String? satisfactionFeedback;
+  final bool hasUnreadMessages;
   final List<SupportTicketMessage> messages;
 
   const SupportTicket({
@@ -17,14 +24,22 @@ class SupportTicket {
     required this.description,
     required this.status,
     required this.priority,
+    required this.category,
     required this.createdAt,
     this.updatedAt,
     this.resolvedAt,
+    this.closedAt,
+    this.lastResponseDate,
+    this.resolutionNotes,
+    this.satisfactionRating,
+    this.satisfactionFeedback,
+    this.hasUnreadMessages = false,
     this.messages = const [],
   });
 
   bool get isOpen => status == SupportTicketStatus.open || status == SupportTicketStatus.inProgress;
   bool get isClosed => status == SupportTicketStatus.closed || status == SupportTicketStatus.resolved;
+  bool get canRate => (status == SupportTicketStatus.resolved || status == SupportTicketStatus.closed) && satisfactionRating == null;
 }
 
 /// Support Ticket Message
@@ -32,16 +47,18 @@ class SupportTicket {
 class SupportTicketMessage {
   final int id;
   final String content;
-  final bool isFromSupport;
+  final bool isAdminResponse;
   final DateTime createdAt;
-  final String? attachmentUrl;
+  final bool isRead;
+  final DateTime? readDate;
 
   const SupportTicketMessage({
     required this.id,
     required this.content,
-    required this.isFromSupport,
+    required this.isAdminResponse,
     required this.createdAt,
-    this.attachmentUrl,
+    this.isRead = false,
+    this.readDate,
   });
 }
 
@@ -56,9 +73,16 @@ enum SupportTicketStatus {
 /// Support Ticket Priority
 enum SupportTicketPriority {
   low,
-  medium,
+  normal,
   high,
-  urgent,
+}
+
+/// Support Ticket Category
+enum SupportTicketCategory {
+  technical,
+  billing,
+  account,
+  general,
 }
 
 /// Extension methods for SupportTicketStatus
@@ -76,28 +100,28 @@ extension SupportTicketStatusExtension on SupportTicketStatus {
     }
   }
 
-  String get value {
+  String get apiValue {
     switch (this) {
       case SupportTicketStatus.open:
-        return 'open';
+        return 'Open';
       case SupportTicketStatus.inProgress:
-        return 'in_progress';
+        return 'InProgress';
       case SupportTicketStatus.resolved:
-        return 'resolved';
+        return 'Resolved';
       case SupportTicketStatus.closed:
-        return 'closed';
+        return 'Closed';
     }
   }
 
-  static SupportTicketStatus fromString(String value) {
-    switch (value.toLowerCase()) {
-      case 'open':
+  static SupportTicketStatus fromApiString(String value) {
+    switch (value) {
+      case 'Open':
         return SupportTicketStatus.open;
-      case 'in_progress':
+      case 'InProgress':
         return SupportTicketStatus.inProgress;
-      case 'resolved':
+      case 'Resolved':
         return SupportTicketStatus.resolved;
-      case 'closed':
+      case 'Closed':
         return SupportTicketStatus.closed;
       default:
         return SupportTicketStatus.open;
@@ -111,40 +135,78 @@ extension SupportTicketPriorityExtension on SupportTicketPriority {
     switch (this) {
       case SupportTicketPriority.low:
         return 'Düşük';
-      case SupportTicketPriority.medium:
-        return 'Orta';
+      case SupportTicketPriority.normal:
+        return 'Normal';
       case SupportTicketPriority.high:
         return 'Yüksek';
-      case SupportTicketPriority.urgent:
-        return 'Acil';
     }
   }
 
-  String get value {
+  String get apiValue {
     switch (this) {
       case SupportTicketPriority.low:
-        return 'low';
-      case SupportTicketPriority.medium:
-        return 'medium';
+        return 'Low';
+      case SupportTicketPriority.normal:
+        return 'Normal';
       case SupportTicketPriority.high:
-        return 'high';
-      case SupportTicketPriority.urgent:
-        return 'urgent';
+        return 'High';
     }
   }
 
-  static SupportTicketPriority fromString(String value) {
-    switch (value.toLowerCase()) {
-      case 'low':
+  static SupportTicketPriority fromApiString(String value) {
+    switch (value) {
+      case 'Low':
         return SupportTicketPriority.low;
-      case 'medium':
-        return SupportTicketPriority.medium;
-      case 'high':
+      case 'Normal':
+        return SupportTicketPriority.normal;
+      case 'High':
         return SupportTicketPriority.high;
-      case 'urgent':
-        return SupportTicketPriority.urgent;
       default:
-        return SupportTicketPriority.medium;
+        return SupportTicketPriority.normal;
+    }
+  }
+}
+
+/// Extension methods for SupportTicketCategory
+extension SupportTicketCategoryExtension on SupportTicketCategory {
+  String get displayName {
+    switch (this) {
+      case SupportTicketCategory.technical:
+        return 'Teknik';
+      case SupportTicketCategory.billing:
+        return 'Fatura';
+      case SupportTicketCategory.account:
+        return 'Hesap';
+      case SupportTicketCategory.general:
+        return 'Genel';
+    }
+  }
+
+  String get apiValue {
+    switch (this) {
+      case SupportTicketCategory.technical:
+        return 'Technical';
+      case SupportTicketCategory.billing:
+        return 'Billing';
+      case SupportTicketCategory.account:
+        return 'Account';
+      case SupportTicketCategory.general:
+        return 'General';
+    }
+  }
+
+  static SupportTicketCategory fromApiString(String value) {
+    switch (value) {
+      case 'Technical':
+        return SupportTicketCategory.technical;
+      case 'Billing':
+        return SupportTicketCategory.billing;
+      case 'Account':
+        return SupportTicketCategory.account;
+      case 'General':
+        return SupportTicketCategory.general;
+      default:
+        return SupportTicketCategory.general;
     }
   }
 }

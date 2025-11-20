@@ -9,6 +9,7 @@ import '../../../../core/widgets/farmer_bottom_nav.dart';
 import 'package:intl/intl.dart';
 import '../../../support/presentation/screens/support_ticket_list_screen.dart';
 import '../../../support/presentation/screens/about_screen.dart';
+import '../../../authentication/presentation/screens/login_screen.dart';
 
 /// Farmer Profile Screen
 /// Displays and allows editing of farmer profile information
@@ -688,8 +689,8 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
                 // Clear auth and navigate to login
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/login',
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
                   (route) => false,
                 );
               },

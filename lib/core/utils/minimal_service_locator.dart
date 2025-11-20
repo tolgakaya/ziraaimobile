@@ -48,7 +48,9 @@ import '../../features/profile/domain/repositories/farmer_profile_repository.dar
 import '../../features/profile/presentation/bloc/farmer_profile_bloc.dart';
 import '../../features/support/domain/repositories/support_ticket_repository.dart';
 import '../../features/support/data/repositories/support_ticket_repository_impl.dart';
+import '../../features/support/data/services/support_ticket_api_service.dart';
 import '../../features/support/presentation/bloc/support_ticket_bloc.dart';
+import '../../features/support/data/services/app_info_api_service.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -278,9 +280,13 @@ Future<void> setupMinimalServiceLocator() async {
 
   print('✅ FARMER PROFILE: All profile services registered successfully!');
 
-  // ✅ SUPPORT TICKET - Repository, BLoC
+  // ✅ SUPPORT TICKET - API Service, Repository, BLoC
+  getIt.registerLazySingleton<SupportTicketApiService>(
+    () => SupportTicketApiService(getIt<NetworkClient>()),
+  );
+
   getIt.registerLazySingleton<SupportTicketRepository>(
-    () => SupportTicketRepositoryImpl(),
+    () => SupportTicketRepositoryImpl(getIt<SupportTicketApiService>()),
   );
 
   getIt.registerFactory<SupportTicketBloc>(
@@ -288,6 +294,13 @@ Future<void> setupMinimalServiceLocator() async {
   );
 
   print('✅ SUPPORT TICKET: All support services registered successfully!');
+
+  // ✅ APP INFO - API Service for About Us page
+  getIt.registerLazySingleton<AppInfoApiService>(
+    () => AppInfoApiService(getIt<NetworkClient>()),
+  );
+
+  print('✅ APP INFO: App info service registered successfully!');
 
   // ✅ DEALER INVITATION API SERVICE
   getIt.registerLazySingleton<DealerApiService>(
