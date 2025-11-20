@@ -318,9 +318,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             }
           } else if (state is PhoneOtpSent) {
             // OTP resent successfully
-            if (state.otpCode != null) {
-              _autoFillOtp(state.otpCode!);
-            }
+            // No auto-fill since OTP is sent via real SMS service
           } else if (state is AuthError) {
             _showErrorSnackBar(state.message);
           }
@@ -392,25 +390,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-
-                  if (widget.developmentOtpCode != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'DEV: ${widget.developmentOtpCode}',
-                        style: TextStyle(
-                          color: Colors.orange[900],
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
 
                   const SizedBox(height: 48),
 
