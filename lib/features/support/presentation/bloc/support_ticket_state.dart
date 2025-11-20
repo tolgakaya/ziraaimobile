@@ -29,21 +29,27 @@ class SupportTicketDetailLoaded extends SupportTicketState {
 
 /// Ticket created successfully
 class SupportTicketCreated extends SupportTicketState {
-  final SupportTicket ticket;
-  const SupportTicketCreated(this.ticket);
+  final int ticketId;
+  const SupportTicketCreated(this.ticketId);
 }
 
 /// Message added successfully
 class SupportTicketMessageAdded extends SupportTicketState {
   final SupportTicket ticket;
-  final SupportTicketMessage message;
-  const SupportTicketMessageAdded(this.ticket, this.message);
+  const SupportTicketMessageAdded(this.ticket);
 }
 
 /// Ticket closed successfully
 class SupportTicketClosed extends SupportTicketState {
   final int ticketId;
   const SupportTicketClosed(this.ticketId);
+}
+
+/// Ticket rated successfully
+class SupportTicketRated extends SupportTicketState {
+  final int ticketId;
+  final int rating;
+  const SupportTicketRated(this.ticketId, this.rating);
 }
 
 /// Error state

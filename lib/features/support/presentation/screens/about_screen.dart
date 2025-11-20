@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:get_it/get_it.dart';
+import '../../data/services/app_info_api_service.dart';
+import '../../data/models/app_info_dto.dart';
 
 /// About Screen
-/// Displays app and company information
-class AboutScreen extends StatelessWidget {
+/// Displays app and company information from API
+class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  late Future<AppInfoDto> _appInfoFuture;
+  final _appInfoService = GetIt.instance<AppInfoApiService>();
+
+  @override
+  void initState() {
+    super.initState();
+    _appInfoFuture = _appInfoService.getAppInfo();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,34 +33,86 @@ class AboutScreen extends StatelessWidget {
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // App Logo & Version
-            _buildAppInfoCard(),
-            const SizedBox(height: 16),
-            // Company Info
-            _buildCompanyInfoCard(),
-            const SizedBox(height: 16),
-            // Contact Info
-            _buildContactCard(context),
-            const SizedBox(height: 16),
-            // Legal Links
-            _buildLegalCard(context),
-            const SizedBox(height: 16),
-            // Social Media
-            _buildSocialMediaCard(context),
-            const SizedBox(height: 32),
-            // Copyright
-            _buildCopyright(),
-          ],
-        ),
+      body: FutureBuilder<AppInfoDto>(
+        future: _appInfoFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF059669),
+              ),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Bilgiler yüklenemedi',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _appInfoFuture = _appInfoService.getAppInfo();
+                      });
+                    },
+                    child: const Text('Tekrar Dene'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final appInfo = snapshot.data!;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // App Logo & Version
+                _buildAppInfoCard(appInfo),
+                const SizedBox(height: 16),
+                // Company Info
+                _buildCompanyInfoCard(appInfo),
+                const SizedBox(height: 16),
+                // Contact Info
+                if (appInfo.hasContactInfo) ...[
+                  _buildContactCard(context, appInfo),
+                  const SizedBox(height: 16),
+                ],
+                // Legal Links
+                if (appInfo.hasLegalLinks) ...[
+                  _buildLegalCard(context, appInfo),
+                  const SizedBox(height: 16),
+                ],
+                // Social Media
+                if (appInfo.hasSocialMedia) ...[
+                  _buildSocialMediaCard(context, appInfo),
+                  const SizedBox(height: 32),
+                ],
+                // Copyright
+                _buildCopyright(appInfo),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildAppInfoCard() {
+  Widget _buildAppInfoCard(AppInfoDto appInfo) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -53,22 +122,31 @@ class AboutScreen extends StatelessWidget {
           children: [
             // App Logo
             Container(
-              width: 80,
-              height: 80,
+              width: 160,
+              height: 160,
               decoration: BoxDecoration(
-                color: const Color(0xFF059669),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.eco,
-                size: 48,
                 color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(
+                  'assets/logos/ziraai_logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'ZiraAI',
-              style: TextStyle(
+            Text(
+              appInfo.companyName ?? 'ZiraAI',
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF111827),
@@ -89,9 +167,9 @@ class AboutScreen extends StatelessWidget {
                 color: const Color(0xFF059669).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Text(
-                'Versiyon 1.0.0',
-                style: TextStyle(
+              child: Text(
+                'Versiyon ${appInfo.appVersion ?? '1.0.0'}',
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: Color(0xFF059669),
@@ -104,7 +182,7 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCompanyInfoCard() {
+  Widget _buildCompanyInfoCard(AppInfoDto appInfo) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -129,29 +207,30 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'ZiraAI, yapay zeka teknolojilerini kullanarak tarım sektörüne '
-              'yenilikçi çözümler sunan bir teknoloji şirketidir. Amacımız, '
-              'çiftçilerin daha verimli ve sürdürülebilir tarım yapmasına '
-              'yardımcı olmaktır.',
+              appInfo.companyDescription ??
+                  'ZiraAI, yapay zeka teknolojilerini kullanarak tarım sektörüne '
+                      'yenilikçi çözümler sunan bir teknoloji şirketidir.',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade700,
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 16),
-            _buildInfoRow(
-              Icons.location_on,
-              'Adres',
-              'İstanbul, Türkiye',
-            ),
+            if (appInfo.address != null) ...[
+              const SizedBox(height: 16),
+              _buildInfoRow(
+                Icons.location_on,
+                'Adres',
+                appInfo.address!,
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContactCard(BuildContext context) {
+  Widget _buildContactCard(BuildContext context, AppInfoDto appInfo) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -175,67 +254,122 @@ class AboutScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            _buildContactItem(
-              context,
-              Icons.email,
-              'E-posta',
-              'destek@ziraai.com',
-              () => _launchUrl('mailto:destek@ziraai.com'),
-            ),
-            const Divider(height: 24),
-            _buildContactItem(
-              context,
-              Icons.phone,
-              'Telefon',
-              '+90 (212) 555 0000',
-              () => _launchUrl('tel:+902125550000'),
-            ),
-            const Divider(height: 24),
-            _buildContactItem(
-              context,
-              Icons.language,
-              'Web Sitesi',
-              'www.ziraai.com',
-              () => _launchUrl('https://www.ziraai.com'),
-            ),
+            if (appInfo.email != null) ...[
+              _buildContactItem(
+                context,
+                Icons.email,
+                'E-posta',
+                appInfo.email!,
+                () => _launchUrl('mailto:${appInfo.email}'),
+              ),
+              if (appInfo.phone != null || appInfo.websiteUrl != null)
+                const Divider(height: 24),
+            ],
+            if (appInfo.phone != null) ...[
+              _buildContactItem(
+                context,
+                Icons.phone,
+                'Telefon',
+                appInfo.phone!,
+                () => _launchUrl('tel:${appInfo.phone?.replaceAll(' ', '').replaceAll('(', '').replaceAll(')', '')}'),
+              ),
+              if (appInfo.websiteUrl != null) const Divider(height: 24),
+            ],
+            if (appInfo.websiteUrl != null)
+              _buildContactItem(
+                context,
+                Icons.language,
+                'Web Sitesi',
+                appInfo.websiteUrl!.replaceFirst('https://', '').replaceFirst('http://', ''),
+                () => _launchUrl(appInfo.websiteUrl!),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLegalCard(BuildContext context) {
+  Widget _buildLegalCard(BuildContext context, AppInfoDto appInfo) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          ListTile(
-            leading: const Icon(Icons.description, color: Color(0xFF059669)),
-            title: const Text('Kullanım Koşulları'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _launchUrl('https://www.ziraai.com/terms'),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.privacy_tip, color: Color(0xFF059669)),
-            title: const Text('Gizlilik Politikası'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _launchUrl('https://www.ziraai.com/privacy'),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.cookie, color: Color(0xFF059669)),
-            title: const Text('Çerez Politikası'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _launchUrl('https://www.ziraai.com/cookies'),
-          ),
+          if (appInfo.termsOfServiceUrl != null)
+            ListTile(
+              leading: const Icon(Icons.description, color: Color(0xFF059669)),
+              title: const Text('Kullanım Koşulları'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _launchUrl(appInfo.termsOfServiceUrl!),
+            ),
+          if (appInfo.termsOfServiceUrl != null &&
+              (appInfo.privacyPolicyUrl != null || appInfo.cookiePolicyUrl != null))
+            const Divider(height: 1),
+          if (appInfo.privacyPolicyUrl != null)
+            ListTile(
+              leading: const Icon(Icons.privacy_tip, color: Color(0xFF059669)),
+              title: const Text('Gizlilik Politikası'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _launchUrl(appInfo.privacyPolicyUrl!),
+            ),
+          if (appInfo.privacyPolicyUrl != null && appInfo.cookiePolicyUrl != null)
+            const Divider(height: 1),
+          if (appInfo.cookiePolicyUrl != null)
+            ListTile(
+              leading: const Icon(Icons.cookie, color: Color(0xFF059669)),
+              title: const Text('Çerez Politikası'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _launchUrl(appInfo.cookiePolicyUrl!),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildSocialMediaCard(BuildContext context) {
+  Widget _buildSocialMediaCard(BuildContext context, AppInfoDto appInfo) {
+    final socialButtons = <Widget>[];
+
+    if (appInfo.facebookUrl != null) {
+      socialButtons.add(_buildSocialButton(
+        Icons.facebook,
+        'Facebook',
+        Colors.blue.shade700,
+        () => _launchUrl(appInfo.facebookUrl!),
+      ));
+    }
+    if (appInfo.instagramUrl != null) {
+      socialButtons.add(_buildSocialButton(
+        Icons.camera_alt,
+        'Instagram',
+        Colors.pink.shade600,
+        () => _launchUrl(appInfo.instagramUrl!),
+      ));
+    }
+    if (appInfo.youTubeUrl != null) {
+      socialButtons.add(_buildSocialButton(
+        Icons.play_circle_fill,
+        'YouTube',
+        Colors.red.shade600,
+        () => _launchUrl(appInfo.youTubeUrl!),
+      ));
+    }
+    if (appInfo.twitterUrl != null) {
+      socialButtons.add(_buildSocialButton(
+        Icons.flutter_dash,
+        'Twitter',
+        Colors.blue.shade400,
+        () => _launchUrl(appInfo.twitterUrl!),
+      ));
+    }
+    if (appInfo.linkedInUrl != null) {
+      socialButtons.add(_buildSocialButton(
+        Icons.work,
+        'LinkedIn',
+        Colors.blue.shade800,
+        () => _launchUrl(appInfo.linkedInUrl!),
+      ));
+    }
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -261,26 +395,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildSocialButton(
-                  Icons.facebook,
-                  'Facebook',
-                  Colors.blue.shade700,
-                  () => _launchUrl('https://facebook.com/ziraai'),
-                ),
-                _buildSocialButton(
-                  Icons.camera_alt,
-                  'Instagram',
-                  Colors.pink.shade600,
-                  () => _launchUrl('https://instagram.com/ziraai'),
-                ),
-                _buildSocialButton(
-                  Icons.play_circle_fill,
-                  'YouTube',
-                  Colors.red.shade600,
-                  () => _launchUrl('https://youtube.com/@ziraai'),
-                ),
-              ],
+              children: socialButtons,
             ),
           ],
         ),
@@ -323,9 +438,9 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCopyright() {
+  Widget _buildCopyright(AppInfoDto appInfo) {
     return Text(
-      '© ${DateTime.now().year} ZiraAI. Tüm hakları saklıdır.',
+      '© ${DateTime.now().year} ${appInfo.companyName ?? 'ZiraAI'}. Tüm hakları saklıdır.',
       style: TextStyle(
         fontSize: 12,
         color: Colors.grey.shade500,
@@ -336,28 +451,33 @@ class AboutScreen extends StatelessWidget {
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 20, color: Colors.grey.shade500),
         const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade500,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
               ),
-            ),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF111827),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF111827),
+                ),
+                softWrap: true,
+                overflow: TextOverflow.visible,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

@@ -18,76 +18,80 @@ class SupportTicketListScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => GetIt.instance<SupportTicketBloc>()
         ..add(const LoadSupportTickets()),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF9FAFB),
-        appBar: AppBar(
-          title: const Text('Destek Talepleri'),
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF111827),
-          elevation: 0,
-        ),
-        body: BlocConsumer<SupportTicketBloc, SupportTicketState>(
-          listener: (context, state) {
-            if (state is SupportTicketCreated) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Destek talebi oluşturuldu'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              // Reload tickets
-              context.read<SupportTicketBloc>().add(const LoadSupportTickets());
-            } else if (state is SupportTicketError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            if (state is SupportTicketLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (state is SupportTicketListLoaded) {
-              if (state.tickets.isEmpty) {
-                return _buildEmptyState(context);
-              }
-              return _buildTicketList(context, state.tickets);
-            }
-
-            if (state is SupportTicketError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
-                    const SizedBox(height: 16),
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        context.read<SupportTicketBloc>().add(const LoadSupportTickets());
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Tekrar Dene'),
+      child: Builder(
+        builder: (context) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF9FAFB),
+            appBar: AppBar(
+              title: const Text('Destek Talepleri'),
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF111827),
+              elevation: 0,
+            ),
+            body: BlocConsumer<SupportTicketBloc, SupportTicketState>(
+              listener: (context, state) {
+                if (state is SupportTicketCreated) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Destek talebi oluşturuldu'),
+                      backgroundColor: Colors.green,
                     ),
-                  ],
-                ),
-              );
-            }
+                  );
+                  // Reload tickets
+                  context.read<SupportTicketBloc>().add(const LoadSupportTickets());
+                } else if (state is SupportTicketError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is SupportTicketLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-            return const SizedBox.shrink();
-          },
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showCreateTicketDialog(context),
-          backgroundColor: const Color(0xFF059669),
-          icon: const Icon(Icons.add),
-          label: const Text('Yeni Talep'),
-        ),
+                if (state is SupportTicketListLoaded) {
+                  if (state.tickets.isEmpty) {
+                    return _buildEmptyState(context);
+                  }
+                  return _buildTicketList(context, state.tickets);
+                }
+
+                if (state is SupportTicketError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+                        const SizedBox(height: 16),
+                        Text(state.message, textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            context.read<SupportTicketBloc>().add(const LoadSupportTickets());
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Tekrar Dene'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return const SizedBox.shrink();
+              },
+            ),
+            floatingActionButton: FloatingActionButton.extended(
+              onPressed: () => _showCreateTicketDialog(context),
+              backgroundColor: const Color(0xFF059669),
+              icon: const Icon(Icons.add),
+              label: const Text('Yeni Talep'),
+            ),
+          );
+        },
       ),
     );
   }
@@ -278,14 +282,11 @@ class SupportTicketListScreen extends StatelessWidget {
       case SupportTicketPriority.low:
         color = Colors.grey;
         break;
-      case SupportTicketPriority.medium:
+      case SupportTicketPriority.normal:
         color = Colors.blue;
         break;
       case SupportTicketPriority.high:
         color = Colors.orange;
-        break;
-      case SupportTicketPriority.urgent:
-        color = Colors.red;
         break;
     }
 
@@ -332,101 +333,388 @@ class SupportTicketListScreen extends StatelessWidget {
   void _showCreateTicketDialog(BuildContext context) {
     final subjectController = TextEditingController();
     final descriptionController = TextEditingController();
-    SupportTicketPriority selectedPriority = SupportTicketPriority.medium;
+    SupportTicketCategory selectedCategory = SupportTicketCategory.general;
+    SupportTicketPriority selectedPriority = SupportTicketPriority.normal;
 
-    showDialog(
+    // Get bloc from parent context before showing dialog
+    final bloc = context.read<SupportTicketBloc>();
+
+    showModalBottomSheet(
       context: context,
-      builder: (dialogContext) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Yeni Destek Talebi'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: subjectController,
-                      decoration: const InputDecoration(
-                        labelText: 'Konu',
-                        hintText: 'Sorununuzu kısaca açıklayın',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: descriptionController,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: 'Açıklama',
-                        hintText: 'Detaylı açıklama yazın',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<SupportTicketPriority>(
-                      value: selectedPriority,
-                      decoration: const InputDecoration(
-                        labelText: 'Öncelik',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: SupportTicketPriority.values.map((priority) {
-                        return DropdownMenuItem(
-                          value: priority,
-                          child: Text(priority.displayName),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedPriority = value ?? SupportTicketPriority.medium;
-                        });
-                      },
-                    ),
-                  ],
+          builder: (builderContext, setState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('İptal'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (subjectController.text.trim().isEmpty ||
-                        descriptionController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Lütfen tüm alanları doldurun'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-
-                    // Get the bloc from the parent context
-                    final bloc = BlocProvider.of<SupportTicketBloc>(
-                      context,
-                      listen: false,
-                    );
-
-                    bloc.add(CreateSupportTicket(
-                      subject: subjectController.text.trim(),
-                      description: descriptionController.text.trim(),
-                      priority: selectedPriority,
-                    ));
-
-                    Navigator.of(dialogContext).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF059669),
+              child: Column(
+                children: [
+                  // Handle bar
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  child: const Text('Oluştur'),
-                ),
-              ],
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.support_agent,
+                            color: Color(0xFF059669),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Yeni Destek Talebi',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Size en kısa sürede yardımcı olacağız',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          icon: Icon(
+                            Icons.close,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // Form content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Subject field
+                          _buildFormLabel('Konu', Icons.title),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: subjectController,
+                            decoration: InputDecoration(
+                              hintText: 'Sorununuzu kısaca açıklayın',
+                              hintStyle: TextStyle(color: Colors.grey.shade400),
+                              filled: true,
+                              fillColor: const Color(0xFFF9FAFB),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.shade200),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.shade200),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: Color(0xFF059669), width: 2),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Description field
+                          _buildFormLabel('Açıklama', Icons.description),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: descriptionController,
+                            maxLines: 5,
+                            decoration: InputDecoration(
+                              hintText: 'Sorununuzu detaylı bir şekilde açıklayın...',
+                              hintStyle: TextStyle(color: Colors.grey.shade400),
+                              filled: true,
+                              fillColor: const Color(0xFFF9FAFB),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.shade200),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: Colors.grey.shade200),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: Color(0xFF059669), width: 2),
+                              ),
+                              contentPadding: const EdgeInsets.all(16),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Category and Priority in row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFormLabel('Kategori', Icons.category),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF9FAFB),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: DropdownButtonFormField<SupportTicketCategory>(
+                                        value: selectedCategory,
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                                        ),
+                                        icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+                                        items: SupportTicketCategory.values.map((category) {
+                                          return DropdownMenuItem(
+                                            value: category,
+                                            child: Text(
+                                              category.displayName,
+                                              style: const TextStyle(fontSize: 14),
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            selectedCategory = value ?? SupportTicketCategory.general;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildFormLabel('Öncelik', Icons.flag),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF9FAFB),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: DropdownButtonFormField<SupportTicketPriority>(
+                                        value: selectedPriority,
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                                        ),
+                                        icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+                                        items: SupportTicketPriority.values.map((priority) {
+                                          return DropdownMenuItem(
+                                            value: priority,
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 8,
+                                                  height: 8,
+                                                  decoration: BoxDecoration(
+                                                    color: _getPriorityColor(priority),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  priority.displayName,
+                                                  style: const TextStyle(fontSize: 14),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            selectedPriority = value ?? SupportTicketPriority.normal;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Bottom action buttons
+                  Container(
+                    padding: EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      top: 16,
+                      bottom: MediaQuery.of(context).padding.bottom + 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'İptal',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (subjectController.text.trim().isEmpty ||
+                                  descriptionController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                  SnackBar(
+                                    content: const Row(
+                                      children: [
+                                        Icon(Icons.warning_amber, color: Colors.white, size: 20),
+                                        SizedBox(width: 8),
+                                        Text('Lütfen tüm alanları doldurun'),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.red.shade400,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              bloc.add(CreateSupportTicket(
+                                subject: subjectController.text.trim(),
+                                description: descriptionController.text.trim(),
+                                category: selectedCategory,
+                                priority: selectedPriority,
+                              ));
+
+                              Navigator.of(sheetContext).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF059669),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.send, size: 18),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Talep Oluştur',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         );
       },
     );
+  }
+
+  Widget _buildFormLabel(String label, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF6B7280)),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getPriorityColor(SupportTicketPriority priority) {
+    switch (priority) {
+      case SupportTicketPriority.low:
+        return Colors.grey;
+      case SupportTicketPriority.normal:
+        return Colors.blue;
+      case SupportTicketPriority.high:
+        return Colors.orange;
+    }
   }
 }

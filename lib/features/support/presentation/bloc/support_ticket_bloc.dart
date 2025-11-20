@@ -14,6 +14,7 @@ class SupportTicketBloc extends Bloc<SupportTicketEvent, SupportTicketState> {
     on<CreateSupportTicket>(_onCreateTicket);
     on<AddTicketMessage>(_onAddMessage);
     on<CloseSupportTicket>(_onCloseTicket);
+    on<RateSupportTicket>(_onRateTicket);
   }
 
   Future<void> _onLoadTickets(
@@ -22,7 +23,10 @@ class SupportTicketBloc extends Bloc<SupportTicketEvent, SupportTicketState> {
   ) async {
     emit(const SupportTicketLoading());
     try {
-      final tickets = await repository.getTickets();
+      final tickets = await repository.getTickets(
+        status: event.status,
+        category: event.category,
+      );
       emit(SupportTicketListLoaded(tickets));
     } catch (e) {
       emit(SupportTicketError('Destek talepleri yüklenemedi: $e'));
@@ -48,12 +52,13 @@ class SupportTicketBloc extends Bloc<SupportTicketEvent, SupportTicketState> {
   ) async {
     emit(const SupportTicketLoading());
     try {
-      final ticket = await repository.createTicket(
+      final ticketId = await repository.createTicket(
         subject: event.subject,
         description: event.description,
+        category: event.category,
         priority: event.priority,
       );
-      emit(SupportTicketCreated(ticket));
+      emit(SupportTicketCreated(ticketId));
     } catch (e) {
       emit(SupportTicketError('Destek talebi oluşturulamadı: $e'));
     }
@@ -64,12 +69,12 @@ class SupportTicketBloc extends Bloc<SupportTicketEvent, SupportTicketState> {
     Emitter<SupportTicketState> emit,
   ) async {
     try {
-      final message = await repository.addMessage(
+      await repository.addMessage(
         ticketId: event.ticketId,
         content: event.content,
       );
       final ticket = await repository.getTicketById(event.ticketId);
-      emit(SupportTicketMessageAdded(ticket, message));
+      emit(SupportTicketMessageAdded(ticket));
     } catch (e) {
       emit(SupportTicketError('Mesaj gönderilemedi: $e'));
     }
@@ -84,6 +89,22 @@ class SupportTicketBloc extends Bloc<SupportTicketEvent, SupportTicketState> {
       emit(SupportTicketClosed(event.ticketId));
     } catch (e) {
       emit(SupportTicketError('Destek talebi kapatılamadı: $e'));
+    }
+  }
+
+  Future<void> _onRateTicket(
+    RateSupportTicket event,
+    Emitter<SupportTicketState> emit,
+  ) async {
+    try {
+      await repository.rateTicket(
+        ticketId: event.ticketId,
+        rating: event.rating,
+        feedback: event.feedback,
+      );
+      emit(SupportTicketRated(event.ticketId, event.rating));
+    } catch (e) {
+      emit(SupportTicketError('Değerlendirme gönderilemedi: $e'));
     }
   }
 }

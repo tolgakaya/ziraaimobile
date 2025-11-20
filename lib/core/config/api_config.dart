@@ -85,6 +85,9 @@ class ApiConfig {
   static const String dealerInvitationDetails = '/sponsorship/dealer/invitation-details';
   static const String dealerInvitationAccept = '/sponsorship/dealer/accept-invitation';
 
+  // App Info Endpoints
+  static const String appInfo = '/appinfo';
+
   // SignalR Hub Endpoint
   static String get signalRHubUrl => '$baseUrl/hubs/plantanalysis';
 

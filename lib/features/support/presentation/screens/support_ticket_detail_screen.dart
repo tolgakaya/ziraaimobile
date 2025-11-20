@@ -97,6 +97,15 @@ class _SupportTicketDetailScreenState extends State<SupportTicketDetailScreen> {
                 ),
               );
               Navigator.pop(context);
+            } else if (state is SupportTicketRated) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Değerlendirmeniz kaydedildi'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              // Reload ticket to update UI
+              context.read<SupportTicketBloc>().add(LoadSupportTicketDetail(widget.ticketId));
             } else if (state is SupportTicketError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -126,6 +135,8 @@ class _SupportTicketDetailScreenState extends State<SupportTicketDetailScreen> {
               children: [
                 // Ticket Info Header
                 _buildTicketHeader(ticket),
+                // Rating section (for resolved/closed tickets without rating)
+                if (ticket.canRate) _buildRatingSection(context, ticket),
                 // Messages List
                 Expanded(
                   child: _buildMessagesList(ticket),
@@ -183,6 +194,132 @@ class _SupportTicketDetailScreenState extends State<SupportTicketDetailScreen> {
     );
   }
 
+  Widget _buildRatingSection(BuildContext context, SupportTicket ticket) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(top: 1),
+      color: Colors.amber.shade50,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.star, color: Colors.amber.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Hizmetimizi Değerlendirin',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.amber.shade900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (index) {
+              return GestureDetector(
+                onTap: () => _showRatingDialog(context, index + 1),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(
+                    Icons.star_border,
+                    color: Colors.amber.shade600,
+                    size: 36,
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRatingDialog(BuildContext context, int initialRating) {
+    int selectedRating = initialRating;
+    final feedbackController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Değerlendirme'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Destek hizmetimizi nasıl buldunuz?',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedRating = index + 1;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(
+                            index < selectedRating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 32,
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: feedbackController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Geri bildirim (opsiyonel)',
+                      hintText: 'Görüşlerinizi paylaşın...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('İptal'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    context.read<SupportTicketBloc>().add(
+                          RateSupportTicket(
+                            ticketId: widget.ticketId,
+                            rating: selectedRating,
+                            feedback: feedbackController.text.trim().isEmpty
+                                ? null
+                                : feedbackController.text.trim(),
+                          ),
+                        );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                  ),
+                  child: const Text('Gönder'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildMessagesList(SupportTicket ticket) {
     if (ticket.messages.isEmpty) {
       return Center(
@@ -205,7 +342,7 @@ class _SupportTicketDetailScreenState extends State<SupportTicketDetailScreen> {
   }
 
   Widget _buildMessageBubble(SupportTicketMessage message) {
-    final isFromSupport = message.isFromSupport;
+    final isFromSupport = message.isAdminResponse;
 
     return Align(
       alignment: isFromSupport ? Alignment.centerLeft : Alignment.centerRight,
@@ -396,14 +533,11 @@ class _SupportTicketDetailScreenState extends State<SupportTicketDetailScreen> {
       case SupportTicketPriority.low:
         color = Colors.grey;
         break;
-      case SupportTicketPriority.medium:
+      case SupportTicketPriority.normal:
         color = Colors.blue;
         break;
       case SupportTicketPriority.high:
         color = Colors.orange;
-        break;
-      case SupportTicketPriority.urgent:
-        color = Colors.red;
         break;
     }
 

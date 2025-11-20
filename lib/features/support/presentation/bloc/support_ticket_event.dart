@@ -5,9 +5,15 @@ abstract class SupportTicketEvent {
   const SupportTicketEvent();
 }
 
-/// Load all support tickets
+/// Load all support tickets with optional filters
 class LoadSupportTickets extends SupportTicketEvent {
-  const LoadSupportTickets();
+  final SupportTicketStatus? status;
+  final SupportTicketCategory? category;
+
+  const LoadSupportTickets({
+    this.status,
+    this.category,
+  });
 }
 
 /// Load a specific ticket by ID
@@ -20,12 +26,14 @@ class LoadSupportTicketDetail extends SupportTicketEvent {
 class CreateSupportTicket extends SupportTicketEvent {
   final String subject;
   final String description;
+  final SupportTicketCategory category;
   final SupportTicketPriority priority;
 
   const CreateSupportTicket({
     required this.subject,
     required this.description,
-    this.priority = SupportTicketPriority.medium,
+    required this.category,
+    this.priority = SupportTicketPriority.normal,
   });
 }
 
@@ -44,4 +52,17 @@ class AddTicketMessage extends SupportTicketEvent {
 class CloseSupportTicket extends SupportTicketEvent {
   final int ticketId;
   const CloseSupportTicket(this.ticketId);
+}
+
+/// Rate a resolved/closed ticket
+class RateSupportTicket extends SupportTicketEvent {
+  final int ticketId;
+  final int rating;
+  final String? feedback;
+
+  const RateSupportTicket({
+    required this.ticketId,
+    required this.rating,
+    this.feedback,
+  });
 }
