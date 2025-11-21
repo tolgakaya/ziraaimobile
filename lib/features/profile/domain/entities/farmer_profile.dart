@@ -6,7 +6,7 @@ class FarmerProfile extends Equatable {
   final int userId;
   final int? citizenId;
   final String fullName;
-  final String email;
+  final String? email;
   final String mobilePhones;
   final DateTime? birthDate;
   final int? gender; // 0=Unspecified, 1=Male, 2=Female
@@ -27,7 +27,7 @@ class FarmerProfile extends Equatable {
     required this.userId,
     this.citizenId,
     required this.fullName,
-    required this.email,
+    this.email,
     required this.mobilePhones,
     this.birthDate,
     this.gender,

@@ -129,12 +129,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthError(message: failure.message ?? 'Failed to send OTP'));
       },
       (otpCode) {
-        // OTP sent successfully
-        // In dev environment, otpCode will contain the actual code
-        // In production, it will be 'OTP_SENT'
+        // OTP sent successfully via real SMS service
+        // No OTP code in response (always 'OTP_SENT')
         emit(PhoneOtpSent(
           mobilePhone: event.mobilePhone,
-          otpCode: otpCode == 'OTP_SENT' ? null : otpCode,
+          otpCode: null,
           isRegistration: false,
         ));
       },
@@ -178,10 +177,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthError(message: failure.message ?? 'Failed to send OTP'));
       },
       (otpCode) {
-        // OTP sent successfully
+        // OTP sent successfully via real SMS service
+        // No OTP code in response (always 'OTP_SENT')
         emit(PhoneOtpSent(
           mobilePhone: event.mobilePhone,
-          otpCode: otpCode == 'OTP_SENT' ? null : otpCode,
+          otpCode: null,
           isRegistration: true,
         ));
       },

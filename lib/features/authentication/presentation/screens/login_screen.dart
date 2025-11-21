@@ -251,7 +251,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: OtpVerificationScreen(
                   mobilePhone: state.mobilePhone,
                   isRegistration: state.isRegistration,
-                  developmentOtpCode: state.otpCode,
                 ),
               ),
             ),

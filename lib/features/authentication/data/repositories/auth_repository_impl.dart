@@ -404,15 +404,9 @@ class AuthRepositoryImpl implements AuthRepository {
       final response = await _phoneAuthApiService.requestLoginOtp(request);
 
       if (response.success) {
-        // Extract OTP code from message
-        // In dev: "SendMobileCode123456"
-        final otpCode = response.otpCode;
-        if (otpCode != null) {
-          return Right(otpCode);
-        } else {
-          // In production, OTP is sent via SMS
-          return const Right('OTP_SENT');
-        }
+        // OTP is sent via real SMS service
+        // No OTP code in response anymore
+        return const Right('OTP_SENT');
       } else {
         return Left(ServerFailure(
           message: response.message ?? 'Failed to request OTP',
@@ -502,15 +496,9 @@ class AuthRepositoryImpl implements AuthRepository {
       final response = await _phoneAuthApiService.requestRegisterOtp(request);
 
       if (response.success) {
-        // Extract OTP code from message
-        // In dev: "Register SendMobileCode for Phone:+90XXXXXXXXXX, Code:123456"
-        final otpCode = response.otpCode;
-        if (otpCode != null) {
-          return Right(otpCode);
-        } else {
-          // In production, OTP is sent via SMS
-          return const Right('OTP_SENT');
-        }
+        // OTP is sent via real SMS service
+        // No OTP code in response anymore
+        return const Right('OTP_SENT');
       } else {
         return Left(ServerFailure(
           message: response.message ?? 'Failed to request registration OTP',

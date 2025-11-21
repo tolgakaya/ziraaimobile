@@ -46,7 +46,7 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
 
   void _populateForm(FarmerProfile profile) {
     _fullNameController.text = profile.fullName;
-    _emailController.text = profile.email;
+    _emailController.text = profile.email ?? '';
     _mobilePhoneController.text = profile.mobilePhones;
     _addressController.text = profile.address ?? '';
     _notesController.text = profile.notes ?? '';

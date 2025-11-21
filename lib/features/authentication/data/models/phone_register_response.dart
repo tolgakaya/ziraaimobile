@@ -4,14 +4,14 @@ part 'phone_register_response.g.dart';
 
 /// Response model for phone registration OTP request
 /// API: POST /api/v1/Auth/register-phone
-/// NOTE: This endpoint does NOT return a 'data' field, only success and message
+/// SMS is sent via real SMS service, no OTP code in response
 @JsonSerializable()
 class PhoneRegisterResponse {
   @JsonKey(name: 'success')
   final bool success;
 
   @JsonKey(name: 'message')
-  final String message; // Format: "OTP sent to 05321111120. Code: 409024 (dev mode)"
+  final String message;
 
   PhoneRegisterResponse({
     required this.success,
@@ -22,17 +22,4 @@ class PhoneRegisterResponse {
       _$PhoneRegisterResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$PhoneRegisterResponseToJson(this);
-
-  /// Extract OTP code from message (development mode only)
-  /// Message format: "OTP sent to 05321111120. Code: 409024 (dev mode)"
-  String? get otpCode {
-    final codeMatch = RegExp(r'Code:\s*(\d{6})').firstMatch(message);
-    return codeMatch?.group(1);
-  }
-
-  /// Extract phone number from message
-  String? get phoneNumber {
-    final phoneMatch = RegExp(r'to\s*(05\d{9})').firstMatch(message);
-    return phoneMatch?.group(1);
-  }
 }

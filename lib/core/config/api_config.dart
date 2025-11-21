@@ -8,7 +8,7 @@ class ApiConfig {
   
   // Base URLs for different environments
   static const Map<Environment, String> _baseUrls = {
-    Environment.production: 'https://ziraai-api-prod.up.railway.app',
+    Environment.production: 'https://api.ziraai.com',
     Environment.staging: 'https://ziraai-api-sit.up.railway.app', 
     Environment.development: 'https://api.ziraai.com',
     Environment.local: 'https://localhost:5001',

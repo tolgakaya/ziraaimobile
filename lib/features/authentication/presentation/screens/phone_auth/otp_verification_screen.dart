@@ -22,14 +22,12 @@ class OtpVerificationScreen extends StatefulWidget {
   final String mobilePhone;
   final bool isRegistration;
   final String? referralCode;
-  final String? developmentOtpCode; // For development environment
 
   const OtpVerificationScreen({
     super.key,
     required this.mobilePhone,
     required this.isRegistration,
     this.referralCode,
-    this.developmentOtpCode,
   });
 
   @override
@@ -51,13 +49,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void initState() {
     super.initState();
     _startResendCountdown();
-
-    // Auto-fill OTP in development
-    if (widget.developmentOtpCode != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _autoFillOtp(widget.developmentOtpCode!);
-      });
-    }
   }
 
   @override
@@ -69,14 +60,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       node.dispose();
     }
     super.dispose();
-  }
-
-  void _autoFillOtp(String otp) {
-    if (otp.length == 6) {
-      for (int i = 0; i < 6; i++) {
-        _otpControllers[i].text = otp[i];
-      }
-    }
   }
 
   void _startResendCountdown() {
@@ -335,9 +318,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             }
           } else if (state is PhoneOtpSent) {
             // OTP resent successfully
-            if (state.otpCode != null) {
-              _autoFillOtp(state.otpCode!);
-            }
+            // No auto-fill since OTP is sent via real SMS service
           } else if (state is AuthError) {
             _showErrorSnackBar(state.message);
           }
@@ -409,25 +390,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-
-                  if (widget.developmentOtpCode != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'DEV: ${widget.developmentOtpCode}',
-                        style: TextStyle(
-                          color: Colors.orange[900],
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
 
                   const SizedBox(height: 48),
 

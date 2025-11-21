@@ -51,7 +51,7 @@ class AuthFailure extends AuthState {
 
 class PhoneOtpSent extends AuthState {
   final String mobilePhone;
-  final String? otpCode; // In dev environment, OTP is returned in response
+  final String? otpCode; // Always null - SMS sent via real service
   final bool isRegistration; // true for registration, false for login
 
   const PhoneOtpSent({
