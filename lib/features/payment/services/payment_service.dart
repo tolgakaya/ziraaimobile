@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../data/models/payment_models.dart';
 import '../../../core/storage/secure_storage_service.dart';
@@ -20,54 +19,80 @@ class PaymentService {
   /// Get stored access token
   Future<String?> _getAccessToken() async {
     try {
-      return await _secureStorage.read(key: 'access_token');
+      // Use 'auth_token' key - same as TokenManager
+      final token = await _secureStorage.read(key: 'auth_token');
+      print('💳 Payment: Token check - ${token != null ? "Token exists" : "No token found"}');
+      if (token != null) {
+        print('💳 Payment: Token length: ${token.length}');
+      }
+      return token;
     } catch (e) {
+      print('❌ Payment: Failed to read token from secure storage: $e');
       throw PaymentException('Failed to get access token: $e');
     }
   }
 
-  /// Get common headers with authorization
-  Future<Map<String, String>> _getHeaders() async {
+  /// Verify user is authenticated before making payment requests
+  Future<void> _verifyAuthenticated() async {
+    print('💳 Payment: Verifying authentication...');
     final token = await _getAccessToken();
-
-    if (token == null) {
+    if (token == null || token.isEmpty) {
+      print('❌ Payment: No valid token found - user not authenticated');
       throw PaymentException('User not authenticated');
     }
-
-    return {
-      'Content-Type': 'application/json',
-      'x-dev-arch-version': '1.0',
-      'Authorization': 'Bearer $token',
-    };
+    print('✅ Payment: Authentication verified, token exists');
   }
 
   /// Initialize payment for sponsor bulk purchase
   ///
   /// [subscriptionTierId] - Tier ID (1-4)
   /// [quantity] - Number of codes to purchase (10-10000)
+  /// [companyName] - Company name for invoice (optional)
+  /// [taxNumber] - Tax number for invoice (optional)
+  /// [invoiceAddress] - Invoice address (optional)
   /// [currency] - Currency code (default: TRY)
   Future<PaymentInitializeResponse> initializeSponsorPayment({
     required int subscriptionTierId,
     required int quantity,
+    String? companyName,
+    String? taxNumber,
+    String? invoiceAddress,
     String currency = 'TRY',
   }) async {
     try {
-      final headers = await _getHeaders();
-      final url = '$baseUrl/api/v1/payments/initialize';
+      await _verifyAuthenticated();
+      final url = '$baseUrl/payments/initialize';
+
+      final Map<String, dynamic> flowData = {
+        'subscriptionTierId': subscriptionTierId,
+        'quantity': quantity,
+      };
+
+      // Add invoice fields if provided
+      if (companyName != null && companyName.trim().isNotEmpty) {
+        flowData['companyName'] = companyName.trim();
+      }
+      if (taxNumber != null && taxNumber.trim().isNotEmpty) {
+        flowData['taxNumber'] = taxNumber.trim();
+      }
+      if (invoiceAddress != null && invoiceAddress.trim().isNotEmpty) {
+        flowData['invoiceAddress'] = invoiceAddress.trim();
+      }
 
       final body = {
         'flowType': 'SponsorBulkPurchase',
-        'flowData': {
-          'subscriptionTierId': subscriptionTierId,
-          'quantity': quantity,
-        },
+        'flowData': flowData,
         'currency': currency,
       };
 
+      print('💳 Payment: Initializing sponsor payment...');
+      print('💳 Payment: URL: $url');
+      print('💳 Payment: Body: $body');
+      print('💳 Payment: Invoice fields: ${flowData.containsKey("companyName") ? "✅ Included" : "❌ Not included"}');
+
       final response = await _dio.post(
         url,
-        data: jsonEncode(body),
-        options: Options(headers: headers),
+        data: body,  // Don't use jsonEncode, let Dio handle it
       );
 
       if (response.statusCode == 200) {
@@ -109,8 +134,8 @@ class PaymentService {
     String currency = 'TRY',
   }) async {
     try {
-      final headers = await _getHeaders();
-      final url = '$baseUrl/api/v1/payments/initialize';
+      await _verifyAuthenticated();
+      final url = '$baseUrl/payments/initialize';
 
       final body = {
         'flowType': 'FarmerSubscription',
@@ -121,10 +146,13 @@ class PaymentService {
         'currency': currency,
       };
 
+      print('💳 Payment: Initializing farmer payment...');
+      print('💳 Payment: URL: $url');
+      print('💳 Payment: Body: $body');
+
       final response = await _dio.post(
         url,
-        data: jsonEncode(body),
-        options: Options(headers: headers),
+        data: body,  // Don't use jsonEncode, let Dio handle it
       );
 
       if (response.statusCode == 200) {
@@ -160,17 +188,19 @@ class PaymentService {
   /// [paymentToken] - Payment token from initialize response or deep link
   Future<PaymentVerifyResponse> verifyPayment(String paymentToken) async {
     try {
-      final headers = await _getHeaders();
-      final url = '$baseUrl/api/v1/payments/verify';
+      await _verifyAuthenticated();
+      final url = '$baseUrl/payments/verify';
 
       final body = {
         'paymentToken': paymentToken,
       };
 
+      print('💳 Payment: Verifying payment...');
+      print('💳 Payment: Token: $paymentToken');
+
       final response = await _dio.post(
         url,
-        data: jsonEncode(body),
-        options: Options(headers: headers),
+        data: body,  // Don't use jsonEncode, let Dio handle it
       );
 
       if (response.statusCode == 200) {
@@ -209,13 +239,13 @@ class PaymentService {
   /// [paymentToken] - Payment token to query
   Future<PaymentVerifyResponse> getPaymentStatus(String paymentToken) async {
     try {
-      final headers = await _getHeaders();
-      final url = '$baseUrl/api/v1/payments/status/$paymentToken';
+      await _verifyAuthenticated();
+      final url = '$baseUrl/payments/status/$paymentToken';
 
-      final response = await _dio.get(
-        url,
-        options: Options(headers: headers),
-      );
+      print('💳 Payment: Getting payment status...');
+      print('💳 Payment: Token: $paymentToken');
+
+      final response = await _dio.get(url);
 
       if (response.statusCode == 200) {
         final data = response.data;

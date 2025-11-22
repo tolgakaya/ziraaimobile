@@ -7,7 +7,7 @@ import 'payment_webview_screen.dart';
 /// Sponsor Payment Screen for bulk subscription code purchases
 ///
 /// Flow:
-/// 1. Initialize payment with tier and quantity
+/// 1. Initialize payment with tier, quantity, and invoice data
 /// 2. Open WebView with payment URL
 /// 3. Handle payment callback
 /// 4. Verify payment
@@ -16,12 +16,18 @@ class SponsorPaymentScreen extends StatefulWidget {
   final int subscriptionTierId;
   final int quantity;
   final String currency;
+  final String? companyName;
+  final String? taxNumber;
+  final String? invoiceAddress;
 
   const SponsorPaymentScreen({
     super.key,
     required this.subscriptionTierId,
     required this.quantity,
     this.currency = 'TRY',
+    this.companyName,
+    this.taxNumber,
+    this.invoiceAddress,
   });
 
   @override
@@ -50,10 +56,18 @@ class _SponsorPaymentScreenState extends State<SponsorPaymentScreen> {
 
     try {
       // Initialize payment with sponsor bulk purchase flow
+      print('💳 Payment: Initializing with invoice data...');
+      print('💳 Payment: Company: ${widget.companyName}');
+      print('💳 Payment: Tax Number: ${widget.taxNumber}');
+      print('💳 Payment: Address: ${widget.invoiceAddress}');
+
       final response = await _paymentService.initializeSponsorPayment(
         subscriptionTierId: widget.subscriptionTierId,
         quantity: widget.quantity,
         currency: widget.currency,
+        companyName: widget.companyName,
+        taxNumber: widget.taxNumber,
+        invoiceAddress: widget.invoiceAddress,
       );
 
       if (!mounted) return;

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
 import '../../data/models/sponsorship_tier_comparison.dart';
-import '../../data/services/sponsor_service.dart';
 import 'purchase_success_screen.dart';
+import '../../../payment/presentation/screens/sponsor_payment_screen.dart';
 
 /// Order confirmation screen for sponsor package purchase
 /// Step 4: Final review and purchase completion
@@ -30,7 +29,6 @@ class OrderConfirmationScreen extends StatefulWidget {
 }
 
 class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
-  final _sponsorService = GetIt.instance<SponsorService>();
   bool _acceptTerms = false;
   bool _isProcessing = false;
 
@@ -50,56 +48,77 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
     });
 
     try {
-      // Call real purchase endpoint
-      final result = await _sponsorService.purchasePackage(
-        tierId: widget.tier.id,
-        quantity: widget.quantity,
-        totalAmount: widget.totalAmount,
-        paymentMethod: 'CreditCard',
-        paymentReference: 'MOCK-${DateTime.now().millisecondsSinceEpoch}',
-        companyName: widget.companyName,
-        taxNumber: widget.taxNumber,
-        invoiceAddress: widget.invoiceAddress,
+      print('💳 Real Payment: Opening SponsorPaymentScreen');
+      print('💳 Real Payment: Invoice - Company: ${widget.companyName}');
+      print('💳 Real Payment: Invoice - Tax: ${widget.taxNumber}');
+      print('💳 Real Payment: Invoice - Address: ${widget.invoiceAddress}');
+
+      // Open real iyzico payment screen with invoice data
+      final paymentResult = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SponsorPaymentScreen(
+            subscriptionTierId: widget.tier.id,
+            quantity: widget.quantity,
+            currency: widget.tier.currency,
+            companyName: widget.companyName,
+            taxNumber: widget.taxNumber,
+            invoiceAddress: widget.invoiceAddress,
+          ),
+        ),
       );
 
-      if (mounted) {
-        // Check if purchase was successful
-        if (result['success'] == true) {
-          // Navigate to success screen
-          await Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => PurchaseSuccessScreen(
-                tier: widget.tier,
-                quantity: widget.quantity,
-                totalAmount: widget.totalAmount,
-              ),
-            ),
-            (route) => route.isFirst, // Keep only the first route (dashboard)
-          );
+      if (!mounted) return;
 
-          // Return 'refresh' signal to dashboard
-          if (mounted) {
-            Navigator.of(context).pop('refresh');
-          }
-        } else {
-          // Handle API error response
-          throw Exception(result['message'] ?? 'Sipariş oluşturulamadı');
+      if (paymentResult == true) {
+        print('✅ Real Payment: Payment successful');
+
+        // Navigate to success screen
+        await Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => PurchaseSuccessScreen(
+              tier: widget.tier,
+              quantity: widget.quantity,
+              totalAmount: widget.totalAmount,
+            ),
+          ),
+          (route) => route.isFirst, // Keep only the first route (dashboard)
+        );
+
+        // Return 'refresh' signal to dashboard
+        if (mounted) {
+          Navigator.of(context).pop('refresh');
+        }
+      } else {
+        print('❌ Real Payment: Payment cancelled or failed');
+
+        // Show cancelled/failed message
+        if (mounted) {
+          setState(() => _isProcessing = false);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ödeme iptal edildi veya başarısız oldu'),
+              backgroundColor: Colors.orange,
+            ),
+          );
         }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
+      print('❌ Real Payment: Error occurred - $e');
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sipariş oluşturulamadı: $e'),
-            backgroundColor: const Color(0xFFEF4444),
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
+      if (!mounted) return;
+
+      setState(() => _isProcessing = false);
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ödeme işlemi sırasında bir hata oluştu: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+          duration: const Duration(seconds: 5),
+        ),
+      );
     }
   }
 
@@ -393,15 +412,15 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
+                color: const Color(0xFFDEF7EC),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(
-                    Icons.info_outline,
-                    color: Color(0xFF92400E),
+                    Icons.security,
+                    color: Color(0xFF065F46),
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -410,19 +429,19 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          'Ödeme Bilgisi',
+                          'Güvenli Ödeme',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF92400E),
+                            color: Color(0xFF065F46),
                           ),
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Şu anda test modundasınız. Gerçek ödeme işlemi yapılmayacaktır. Kodlarınız anında oluşturulacaktır.',
+                          'Ödemeniz iyzico güvencesi ile 3D Secure teknolojisi kullanılarak güvenli bir şekilde işlenir.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Color(0xFF78350F),
+                            color: Color(0xFF047857),
                           ),
                         ),
                       ],

@@ -42,6 +42,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
+            print('💳 WebView: Page started - $url');
             setState(() {
               _isLoading = true;
             });
@@ -52,19 +53,20 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
             });
           },
           onPageFinished: (String url) {
+            print('💳 WebView: Page finished - $url');
             setState(() {
               _isLoading = false;
             });
+
+            // Check for iyzico error page
+            _checkForIyzicoError();
           },
           onNavigationRequest: (NavigationRequest request) {
-            // Detect deep link callback
-            if (request.url.startsWith('ziraai://payment-callback')) {
-              _handlePaymentCallback(request.url);
-              return NavigationDecision.prevent;
-            }
+            print('💳 WebView: Navigation request - ${request.url}');
 
-            // Detect HTTP callback URL
-            if (request.url.contains(widget.callbackUrl)) {
+            // Detect deep link callback (SUCCESS case)
+            if (request.url.startsWith('ziraai://payment-callback')) {
+              print('💳 WebView: Deep link callback detected');
               _handlePaymentCallback(request.url);
               return NavigationDecision.prevent;
             }
@@ -72,6 +74,7 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
             return NavigationDecision.navigate;
           },
           onWebResourceError: (WebResourceError error) {
+            print('❌ WebView: Resource error - ${error.description}');
             _showErrorDialog(
               'Sayfa Yüklenemedi',
               'Ödeme sayfası yüklenirken bir hata oluştu. Lütfen tekrar deneyin.',
@@ -80,6 +83,56 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
         ),
       )
       ..loadRequest(Uri.parse(widget.paymentPageUrl));
+  }
+
+  /// Check if current page shows iyzico error
+  Future<void> _checkForIyzicoError() async {
+    try {
+      // Inject JavaScript to read page content
+      final pageContent = await _controller.runJavaScriptReturningResult(
+        'document.body.innerText',
+      ) as String;
+
+      print('💳 WebView: Page content check - ${pageContent.substring(0, pageContent.length > 100 ? 100 : pageContent.length)}');
+
+      // Check for error indicators in page content
+      if (pageContent.contains('"status":"failure"') ||
+          pageContent.contains('errorCode') ||
+          pageContent.contains('Gecersiz') ||
+          pageContent.contains('başarısız')) {
+
+        print('❌ WebView: Error detected in page content');
+
+        // Try to extract error details
+        String errorMessage = 'Ödeme işlemi başarısız oldu';
+
+        if (pageContent.contains('errorMessage')) {
+          // Parse JSON error
+          try {
+            final errorStart = pageContent.indexOf('"errorMessage"');
+            if (errorStart != -1) {
+              final errorEnd = pageContent.indexOf('"', errorStart + 17);
+              if (errorEnd != -1) {
+                errorMessage = pageContent.substring(errorStart + 17, errorEnd);
+              }
+            }
+          } catch (e) {
+            print('❌ WebView: Failed to parse error message - $e');
+          }
+        }
+
+        // Close WebView with error result
+        if (mounted) {
+          Navigator.of(context).pop({
+            'success': false,
+            'error': errorMessage,
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ WebView: Failed to check page content - $e');
+      // Don't show error, just log it - page might be loading normally
+    }
   }
 
   void _handlePaymentCallback(String url) {
