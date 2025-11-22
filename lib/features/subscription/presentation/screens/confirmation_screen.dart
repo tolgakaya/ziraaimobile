@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/subscription_tier.dart';
-import '../../services/mock_payment_service.dart';
-import '../../services/subscription_service.dart';
-import '../../../../core/utils/minimal_service_locator.dart';
 import 'result_screen.dart';
+import '../../../payment/presentation/screens/farmer_payment_screen.dart';
 
 class ConfirmationScreen extends StatefulWidget {
   final SubscriptionTier tier;
@@ -366,98 +364,78 @@ class _ConfirmationScreenState extends State<ConfirmationScreen> {
   Future<void> _confirmPayment() async {
     setState(() => _isProcessing = true);
 
-    PaymentResult result;
-
     try {
-      print('🔵 Hybrid Payment: Step 1 - Mock payment processing');
+      print('💳 Real Payment: Opening FarmerPaymentScreen');
 
-      // Step 1: Mock payment processing (UI flow testing)
-      final mockPaymentResult = await MockPaymentService.processPayment(
-        cardNumber: widget.cardNumber,
-        cardHolder: widget.cardHolder,
-        expiryDate: '12/25', // Mock expiry date
-        cvv: '123', // Mock CVV
-        amount: widget.totalAmount,
-        currency: 'TRY',
-        tierId: widget.tier.id,
+      // Open real iyzico payment screen
+      final paymentResult = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FarmerPaymentScreen(
+            subscriptionTierId: widget.tier.id,
+            durationMonths: 1,
+            currency: 'TRY',
+          ),
+        ),
       );
 
-      if (mockPaymentResult.success) {
-        print('✅ Hybrid Payment: Step 1 completed - Mock payment successful');
-        print('🔵 Hybrid Payment: Step 2 - Real subscription upgrade');
+      if (!mounted) return;
 
-        // Step 2: Real subscription upgrade via API
-        final subscriptionService = getIt<SubscriptionService>();
-        await subscriptionService.subscribeTo(
-          widget.tier.id,
-          durationMonths: 1,
-          autoRenew: true,
-          paymentMethod: 'CreditCard',
-          paymentReference: mockPaymentResult.transactionId ?? 'MOCK_${DateTime.now().millisecondsSinceEpoch}',
-          paidAmount: widget.totalAmount,
-          currency: 'TRY',
+      if (paymentResult == true) {
+        print('✅ Real Payment: Payment successful');
+
+        // Navigate to success screen
+        final success = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ResultScreen(
+              isSuccess: true,
+              message: 'Abonelik başarıyla oluşturuldu!',
+              transactionId: null, // Will be shown in FarmerPaymentScreen success dialog
+              invoiceUrl: null,
+              tier: widget.tier,
+              amount: widget.totalAmount,
+            ),
+          ),
         );
 
-        print('✅ Hybrid Payment: Step 2 completed - Real subscription successful');
-        // Create success result combining both steps
-        result = PaymentResult(
-          success: true,
-          message: 'Abonelik başarıyla yükseltildi!',
-          transactionId: mockPaymentResult.transactionId,
-          invoiceUrl: mockPaymentResult.invoiceUrl,
-        );
+        if (mounted) {
+          setState(() => _isProcessing = false);
+
+          if (success == true) {
+            // Close all payment screens and return to dashboard
+            Navigator.pop(context, true);
+          }
+        }
       } else {
-        print('❌ Hybrid Payment: Step 1 failed - Mock payment failed');
-        // Mock payment failed, return mock result
-        result = mockPaymentResult;
-      }
+        print('❌ Real Payment: Payment cancelled or failed');
 
+        // Show cancelled/failed message
+        if (mounted) {
+          setState(() => _isProcessing = false);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ödeme iptal edildi veya başarısız oldu'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
     } catch (e) {
-      print('❌ Hybrid Payment: Error occurred - $e');
+      print('❌ Real Payment: Error occurred - $e');
 
-      // Check if it's the "already has subscription" error from backend
-      final errorMessage = e.toString();
-      if (errorMessage.contains('already have an active subscription')) {
-        // This is a backend issue - should allow upgrades
-        result = PaymentResult(
-          success: false,
-          message: 'Zaten aktif aboneliğiniz var. Abonelik yükseltme işlemi backend tarafında henüz desteklenmiyor. Destek ekibi ile iletişime geçin.',
-          errorCode: 'UPGRADE_NOT_SUPPORTED',
-        );
-      } else {
-        // Other errors
-        result = PaymentResult(
-          success: false,
-          message: 'Ödeme işlemi sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
-          errorCode: 'PAYMENT_ERROR',
-        );
-      }
-    }
+      if (!mounted) return;
 
-    if (!mounted) return;
-    
-    // Navigate to result screen
-    final success = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ResultScreen(
-          isSuccess: result.success,
-          message: result.message,
-          transactionId: result.transactionId,
-          invoiceUrl: result.invoiceUrl,
-          tier: widget.tier,
-          amount: widget.totalAmount,
-        ),
-      ),
-    );
-    
-    if (mounted) {
       setState(() => _isProcessing = false);
-      
-      if (success == true) {
-        // Close all payment screens and return to dashboard
-        Navigator.pop(context, true);
-      }
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ödeme işlemi sırasında bir hata oluştu: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

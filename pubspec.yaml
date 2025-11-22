@@ -74,6 +74,9 @@ dependencies:
   telephony: ^0.2.0               # SMS reading for deferred deep linking
   url_launcher: ^6.3.0            # Opening external URLs (privacy policy, etc.)
 
+  # Payment WebView
+  webview_flutter: ^4.9.0         # WebView for iyzico payment pages
+
   # Internationalization
   intl: ^0.20.2                   # Date formatting and localization
   flutter_chat_ui: 2.9.0        # Chat UI with stable API

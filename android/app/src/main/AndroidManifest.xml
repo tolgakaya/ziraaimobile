@@ -93,6 +93,18 @@
 
                 <data android:scheme="ziraai"/>
             </intent-filter>
+
+            <!-- Deep linking for payment callback - iyzico integration -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+
+                <!-- Payment callback deep link -->
+                <data
+                    android:scheme="ziraai"
+                    android:host="payment-callback"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

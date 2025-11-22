@@ -15,6 +15,7 @@ import '../../features/plant_analysis/data/repositories/plant_analysis_repositor
 import '../../features/plant_analysis/data/services/plant_analysis_api_service.dart';
 import '../services/auth_service.dart';
 import '../../features/subscription/services/subscription_service.dart';
+import '../../features/payment/services/payment_service.dart';
 import '../../features/dashboard/presentation/bloc/notification_bloc.dart';
 import '../../features/authentication/data/services/phone_auth_api_service.dart';
 import '../../features/referral/data/services/referral_api_service.dart';
@@ -186,6 +187,15 @@ Future<void> setupMinimalServiceLocator() async {
     () => SubscriptionService(
       getIt<NetworkClient>(),
       getIt<SecureStorageService>(),
+    ),
+  );
+
+  // Payment service - iyzico integration
+  getIt.registerLazySingleton<PaymentService>(
+    () => PaymentService(
+      dio: getIt<Dio>(),
+      secureStorage: getIt<SecureStorageService>(),
+      baseUrl: ApiConfig.apiBaseUrl,
     ),
   );
 
