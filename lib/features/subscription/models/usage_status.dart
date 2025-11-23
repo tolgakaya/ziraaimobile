@@ -35,9 +35,11 @@ class UsageStatus {
       monthlyLimit: json['monthlyLimit'] ?? 0,
       monthlyUsed: json['monthlyUsed'] ?? 0,
       monthlyRemaining: json['monthlyRemaining'] ?? 0,
-      subscriptionTier: json['subscriptionTier'] ?? 'Ücretsiz',
+      // Backend sends 'tierName' not 'subscriptionTier'
+      subscriptionTier: json['subscriptionTier'] ?? json['tierName'] ?? 'Ücretsiz',
       subscriptionStatus: json['subscriptionStatus'] ?? 'Abonelik yok',
-      nextRenewalDate: json['nextRenewalDate'] ?? '',
+      // Backend sends 'subscriptionEndDate' not 'nextRenewalDate'
+      nextRenewalDate: json['nextRenewalDate'] ?? json['subscriptionEndDate'] ?? '',
       hasActiveSubscription: json['hasActiveSubscription'] ?? false,
     );
   }
@@ -101,6 +103,12 @@ class UsageStatus {
       actions.addAll(['wait_tomorrow', 'upgrade', 'sponsor_code']);
     } else if (isMonthlyQuotaExceeded) {
       actions.addAll(['upgrade', 'sponsor_code']);
+    } else if (hasActiveSubscription && subscriptionTier.toLowerCase() == 'trial') {
+      // Trial users can upgrade even when they have available quota
+      actions.addAll(['upgrade', 'sponsor_code']);
+    } else {
+      // Paid subscription users with available quota - only show sponsor code option
+      actions.add('sponsor_code');
     }
 
     return actions;

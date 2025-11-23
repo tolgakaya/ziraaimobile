@@ -44,6 +44,10 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
   bool _hasSponsorRole = false;
 
   void _refreshDashboard() {
+    // Trigger token refresh to get updated user info (including new subscription)
+    context.read<AuthBloc>().add(const AuthCheckStatusRequested());
+
+    // Refresh UI widgets
     setState(() {
       _subscriptionCardKey = UniqueKey();
       _recentAnalysesKey = UniqueKey();
