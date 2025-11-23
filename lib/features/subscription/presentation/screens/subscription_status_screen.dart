@@ -6,7 +6,7 @@ import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/error/subscription_exceptions.dart';
 import '../../../../core/widgets/farmer_bottom_nav.dart';
 import 'sponsor_request_screen.dart';
-import 'payment_screen.dart';
+import '../../../payment/presentation/screens/farmer_payment_screen.dart';
 
 /// Enhanced 403 error screen with smart usage status display
 class SubscriptionStatusScreen extends StatefulWidget {
@@ -918,7 +918,10 @@ class _UpgradeOptionsSheetState extends State<_UpgradeOptionsSheet> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PaymentScreen(selectedTier: tier),
+        builder: (context) => FarmerPaymentScreen(
+          subscriptionTierId: tier.id,
+          durationMonths: 1,
+        ),
       ),
     );
 

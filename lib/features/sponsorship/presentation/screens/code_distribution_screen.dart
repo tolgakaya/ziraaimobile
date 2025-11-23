@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../data/models/sponsorship_code.dart';
 import '../../data/models/code_package.dart';
 import '../../data/models/code_recipient.dart';
@@ -1147,10 +1148,10 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
   Future<void> _pickContactsFromPhone() async {
     try {
-      // Request permission using flutter_contacts (avoids conflict with telephony package)
-      final permissionGranted = await FlutterContacts.requestPermission();
+      // Request permission using permission_handler to avoid conflict with telephony package
+      final status = await Permission.contacts.request();
 
-      if (!permissionGranted) {
+      if (!status.isGranted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1162,7 +1163,7 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
         return;
       }
 
-      // Fetch contacts
+      // Fetch contacts using flutter_contacts after permission granted
       final contacts = await FlutterContacts.getContacts(
         withProperties: true,
         withPhoto: false,
