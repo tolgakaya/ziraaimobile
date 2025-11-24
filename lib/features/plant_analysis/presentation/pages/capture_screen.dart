@@ -35,7 +35,28 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return;
       }
 
-      // Use image_picker only after permission is granted
+      // CRITICAL FIX: Add delay after permission grant to let app state stabilize
+      // This prevents crash when permission dialog closes and activity resumes
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Double-check permission is still granted before using camera
+      final isStillGranted = await _permissionService.isCameraGranted();
+      if (!isStillGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Kamera izni alınamadı'),
+              backgroundColor: Color(0xFFEF4444),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Verify widget is still mounted before proceeding
+      if (!mounted) return;
+
+      // Use image_picker only after permission is granted and verified
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 80,
@@ -43,7 +64,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         maxHeight: 1024,
       );
 
-      if (image != null) {
+      if (image != null && mounted) {
         setState(() {
           _selectedImage = File(image.path);
         });
@@ -79,7 +100,27 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return;
       }
 
-      // Use image_picker only after permission is granted
+      // CRITICAL FIX: Add delay after permission grant to let app state stabilize
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Double-check permission is still granted
+      final isStillGranted = await _permissionService.isStorageGranted();
+      if (!isStillGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Galeri izni alınamadı'),
+              backgroundColor: Color(0xFFEF4444),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Verify widget is still mounted before proceeding
+      if (!mounted) return;
+
+      // Use image_picker only after permission is granted and verified
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 80,
@@ -87,7 +128,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         maxHeight: 1024,
       );
 
-      if (image != null) {
+      if (image != null && mounted) {
         setState(() {
           _selectedImage = File(image.path);
         });

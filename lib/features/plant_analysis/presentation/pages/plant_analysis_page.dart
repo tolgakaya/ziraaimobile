@@ -34,7 +34,24 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
         return;
       }
 
-      // Use image_picker only after permission is granted
+      // CRITICAL FIX: Add delay after permission grant to let app state stabilize
+      // This prevents crash when permission dialog closes and activity resumes
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Double-check permission is still granted before using camera
+      final isStillGranted = await _permissionService.isCameraGranted();
+      if (!isStillGranted) {
+        print('❌ Camera permission lost after grant');
+        setState(() {
+          _statusMessage = 'Kamera izni alınamadı';
+        });
+        return;
+      }
+
+      // Verify widget is still mounted before proceeding
+      if (!mounted) return;
+
+      // Use image_picker only after permission is granted and verified
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 80,
@@ -42,7 +59,7 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
         maxHeight: 1024,
       );
 
-      if (image != null) {
+      if (image != null && mounted) {
         setState(() {
           _selectedImage = File(image.path);
           _analysisResult = null;
@@ -54,9 +71,11 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
       }
     } catch (e) {
       print('❌ Camera error: $e');
-      setState(() {
-        _statusMessage = 'Kamera hatası: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Kamera hatası: $e';
+        });
+      }
     }
   }
 
@@ -74,7 +93,23 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
         return;
       }
 
-      // Use image_picker only after permission is granted
+      // CRITICAL FIX: Add delay after permission grant to let app state stabilize
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Double-check permission is still granted
+      final isStillGranted = await _permissionService.isStorageGranted();
+      if (!isStillGranted) {
+        print('❌ Storage permission lost after grant');
+        setState(() {
+          _statusMessage = 'Galeri izni alınamadı';
+        });
+        return;
+      }
+
+      // Verify widget is still mounted before proceeding
+      if (!mounted) return;
+
+      // Use image_picker only after permission is granted and verified
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 80,
@@ -82,7 +117,7 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
         maxHeight: 1024,
       );
 
-      if (image != null) {
+      if (image != null && mounted) {
         setState(() {
           _selectedImage = File(image.path);
           _analysisResult = null;
@@ -94,9 +129,11 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
       }
     } catch (e) {
       print('❌ Gallery error: $e');
-      setState(() {
-        _statusMessage = 'Galeri hatası: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Galeri hatası: $e';
+        });
+      }
     }
   }
 
