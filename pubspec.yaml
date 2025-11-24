@@ -71,7 +71,7 @@ dependencies:
   # Deep linking
   app_links: ^6.3.4               # Deep link and App Link handling (replaces uni_links)
   # install_referrer: ^1.2.1      # REMOVED - incompatible, using SMS solution instead
-  telephony: ^0.2.0               # SMS reading for deferred deep linking
+  # telephony: ^0.2.0             # REMOVED - causes camera permission crash, SMS not currently used
   url_launcher: ^6.3.0            # Opening external URLs (privacy policy, etc.)
 
   # Payment WebView
