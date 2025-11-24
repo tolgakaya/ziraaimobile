@@ -17,6 +17,14 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 /// - 7-day inbox scan for codes received before app install
 /// - Auto-navigation for logged-in users
 /// - Local notifications for immediate user awareness
+/// - Duplicate prevention: Processed codes are tracked to prevent re-notifications
+///
+/// Duplicate Prevention Strategy:
+/// - Each processed code is stored in local SharedPreferences list
+/// - Before showing notification, code is checked against processed list
+/// - Once code is shown/used, it's marked as processed
+/// - Prevents duplicate notifications on app restart or SMS re-scan
+/// - Use clearProcessedCodes() for debugging/testing to reset list
 class SponsorshipSmsListener {
   final Telephony telephony = Telephony.instance;
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
@@ -32,6 +40,7 @@ class SponsorshipSmsListener {
   // Storage keys
   static const String _storageKeyCode = 'pending_sponsorship_code';
   static const String _storageKeyTimestamp = 'pending_sponsorship_code_timestamp';
+  static const String _processedCodesKey = 'processed_sponsorship_codes';
 
   /// Initialize SMS listener
   /// Call this on app startup
@@ -91,6 +100,9 @@ class SponsorshipSmsListener {
       }
 
       print('[SponsorshipSMS] 🎯 Notification tapped, navigating with code: $code');
+
+      // Mark as processed (if not already) to prevent duplicate navigation
+      await _markCodeAsProcessed(code);
 
       // Navigate using NavigationService
       final navigationService = GetIt.instance<NavigationService>();
@@ -240,6 +252,13 @@ class SponsorshipSmsListener {
     final code = match.group(0)!;
     print('[SponsorshipSMS] ✅ Sponsorship code extracted: $code');
 
+    // Check if code has already been processed
+    final isProcessed = await _isCodeProcessed(code);
+    if (isProcessed) {
+      print('[SponsorshipSMS] ⏭️ Skipping already processed code: $code');
+      return;
+    }
+
     // Save to persistent storage
     await _savePendingCode(code);
 
@@ -250,8 +269,12 @@ class SponsorshipSmsListener {
       // Show notification - user can tap to open redemption screen
       print('[SponsorshipSMS] 👤 User logged in - showing notification');
       await _showCodeNotification(code);
+
+      // Mark code as processed after showing notification
+      await _markCodeAsProcessed(code);
     } else {
       print('[SponsorshipSMS] 👤 User not logged in - code saved for after login');
+      // Don't mark as processed yet - will be processed after login
     }
   }
 
@@ -287,6 +310,53 @@ class SponsorshipSmsListener {
     } catch (e) {
       print('[SponsorshipSMS] ❌ Error checking login status: $e');
       return false;
+    }
+  }
+
+  /// Check if sponsorship code has already been processed
+  /// Returns true if code was already processed (notification shown or redeemed)
+  static Future<bool> _isCodeProcessed(String code) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final processedCodes = prefs.getStringList(_processedCodesKey) ?? [];
+      final isProcessed = processedCodes.contains(code);
+
+      if (isProcessed) {
+        print('[SponsorshipSMS] 🔍 Code already processed: $code');
+      }
+
+      return isProcessed;
+    } catch (e) {
+      print('[SponsorshipSMS] ❌ Error checking processed codes: $e');
+      return false; // Fail-safe: if error, allow processing
+    }
+  }
+
+  /// Mark sponsorship code as processed to prevent duplicate notifications
+  /// Call this after showing notification or navigating to redemption screen
+  static Future<void> _markCodeAsProcessed(String code) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final processedCodes = prefs.getStringList(_processedCodesKey) ?? [];
+
+      if (!processedCodes.contains(code)) {
+        processedCodes.add(code);
+        await prefs.setStringList(_processedCodesKey, processedCodes);
+        print('[SponsorshipSMS] ✅ Code marked as processed: $code');
+      }
+    } catch (e) {
+      print('[SponsorshipSMS] ❌ Error marking code as processed: $e');
+    }
+  }
+
+  /// Clear all processed codes (for debugging/testing or user request)
+  static Future<void> clearProcessedCodes() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_processedCodesKey);
+      print('[SponsorshipSMS] 🗑️ All processed codes cleared');
+    } catch (e) {
+      print('[SponsorshipSMS] ❌ Error clearing processed codes: $e');
     }
   }
 
@@ -337,7 +407,7 @@ class SponsorshipSmsListener {
 
 
   /// Public method: Check for pending code after login
-  /// Returns code if found and not too old (7 days max)
+  /// Returns code if found and not too old (7 days max) and not already processed
   static Future<String?> checkPendingCode() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -346,6 +416,14 @@ class SponsorshipSmsListener {
 
       if (code == null || timestamp == null) {
         print('[SponsorshipSMS] ℹ️ No pending code found');
+        return null;
+      }
+
+      // Check if code has already been processed
+      final isProcessed = await _isCodeProcessed(code);
+      if (isProcessed) {
+        print('[SponsorshipSMS] ⏭️ Pending code already processed: $code');
+        await clearPendingCode(); // Clear from pending storage
         return null;
       }
 
@@ -360,6 +438,10 @@ class SponsorshipSmsListener {
       }
 
       print('[SponsorshipSMS] ✅ Found pending code: $code (${age.inHours}h old)');
+
+      // Mark as processed since we're returning it for redemption
+      await _markCodeAsProcessed(code);
+
       return code;
     } catch (e) {
       print('[SponsorshipSMS] ❌ Error checking pending code: $e');
