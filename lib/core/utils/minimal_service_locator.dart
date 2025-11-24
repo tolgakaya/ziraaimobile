@@ -43,6 +43,7 @@ import '../../features/dealer/data/dealer_api_service.dart';
 import '../../features/dealer/presentation/screens/pending_invitations_screen.dart';
 import '../services/notification_signalr_service.dart';
 import '../services/navigation_service.dart';
+import '../services/permission_service.dart';
 import '../../features/profile/data/services/farmer_profile_api_service.dart';
 import '../../features/profile/data/repositories/farmer_profile_repository_impl.dart';
 import '../../features/profile/domain/repositories/farmer_profile_repository.dart';
@@ -75,6 +76,13 @@ Future<void> setupMinimalServiceLocator() async {
   getIt.registerLazySingleton<SecureStorageService>(
     () => SecureStorageService(),
   );
+
+  // ✅ PERMISSION SERVICE - Centralized permission management to prevent crashes
+  getIt.registerLazySingleton<PermissionService>(
+    () => PermissionService(),
+  );
+
+  print('✅ PERMISSIONS: PermissionService registered successfully!');
 
   // Deferred Deep Linking Services
   // Install Referrer TEMPORARILY DISABLED - using SMS solution instead

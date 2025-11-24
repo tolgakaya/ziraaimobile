@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
+import '../../../../core/services/permission_service.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
 
 class PlantAnalysisPage extends StatefulWidget {
   const PlantAnalysisPage({super.key});
@@ -17,14 +18,15 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
   Map<String, dynamic>? _analysisResult;
   String _statusMessage = '';
   final ImagePicker _picker = ImagePicker();
+  final PermissionService _permissionService = getIt<PermissionService>();
 
   Future<void> _selectFromCamera() async {
     print('🎯 Camera selection started');
     try {
-      // Request camera permission using permission_handler to avoid conflict with telephony package
-      final status = await Permission.camera.request();
+      // Use centralized permission service to prevent crashes
+      final granted = await _permissionService.requestCameraPermission();
 
-      if (!status.isGranted) {
+      if (!granted) {
         print('❌ Camera permission denied');
         setState(() {
           _statusMessage = 'Kamera izni gerekli';
@@ -61,10 +63,10 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
   Future<void> _selectFromGallery() async {
     print('🎯 Gallery selection started');
     try {
-      // Request photos permission using permission_handler to avoid conflict with telephony package
-      final status = await Permission.photos.request();
+      // Use centralized permission service to prevent crashes
+      final granted = await _permissionService.requestStoragePermission();
 
-      if (!status.isGranted) {
+      if (!granted) {
         print('❌ Photos permission denied');
         setState(() {
           _statusMessage = 'Galeri izni gerekli';

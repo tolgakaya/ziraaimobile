@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../data/models/sponsorship_code.dart';
+import '../../../../core/services/permission_service.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
 import '../../data/models/code_package.dart';
 import '../../data/models/code_recipient.dart';
 import '../../data/models/send_link_response.dart';
@@ -37,6 +38,7 @@ enum CodeSourceMode {
 class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
   final SponsorService _sponsorService = GetIt.instance<SponsorService>();
   final DealerApiService _dealerApiService = GetIt.instance<DealerApiService>();
+  final PermissionService _permissionService = getIt<PermissionService>();
 
   List<SponsorshipCode> _allCodes = [];
   List<CodePackage> _packages = [];
@@ -1148,10 +1150,10 @@ class _CodeDistributionScreenState extends State<CodeDistributionScreen> {
 
   Future<void> _pickContactsFromPhone() async {
     try {
-      // Request permission using permission_handler to avoid conflict with telephony package
-      final status = await Permission.contacts.request();
+      // Use centralized permission service to prevent crashes
+      final granted = await _permissionService.requestContactsPermission();
 
-      if (!status.isGranted) {
+      if (!granted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

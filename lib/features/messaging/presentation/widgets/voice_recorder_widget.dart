@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import '../../../../core/services/permission_service.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
 
 /// Voice recorder widget with waveform visualization
 /// Allows recording, canceling, and sending voice messages
@@ -23,6 +24,7 @@ class VoiceRecorderWidget extends StatefulWidget {
 
 class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
   final AudioRecorder _recorder = AudioRecorder();
+  final PermissionService _permissionService = getIt<PermissionService>();
   bool _isRecording = false;
   int _recordDuration = 0;
   Timer? _timer;
@@ -44,11 +46,10 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
 
   Future<void> _startRecording() async {
     try {
-      // Request microphone permission explicitly using permission_handler
-      // This prevents conflicts with telephony package's permission handling
-      final microphonePermission = await Permission.microphone.request();
+      // Use centralized permission service to prevent crashes
+      final granted = await _permissionService.requestMicrophonePermission();
 
-      if (!microphonePermission.isGranted) {
+      if (!granted) {
         widget.onCancel();
         _showPermissionDeniedDialog();
         return;

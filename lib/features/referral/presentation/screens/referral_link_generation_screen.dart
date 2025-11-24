@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/widgets/farmer_bottom_nav.dart';
+import '../../../../core/services/permission_service.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
 import '../bloc/referral_bloc.dart';
 import '../bloc/referral_event.dart';
 import '../bloc/referral_state.dart';
@@ -20,6 +21,7 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
   final _formKey = GlobalKey<FormState>();
   final List<TextEditingController> _phoneControllers = [TextEditingController()];
   final _messageController = TextEditingController();
+  final PermissionService _permissionService = getIt<PermissionService>();
 
   DeliveryMethod _selectedMethod = DeliveryMethod.both;
 
@@ -135,11 +137,11 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
   }
 
   Future<void> _pickContactsFromPhone() async {
-    final permissionStatus = await Permission.contacts.status;
+    try {
+      // Use centralized permission service to prevent crashes
+      final granted = await _permissionService.requestContactsPermission();
 
-    if (permissionStatus.isDenied) {
-      final result = await Permission.contacts.request();
-      if (!result.isGranted) {
+      if (!granted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -150,9 +152,6 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
         }
         return;
       }
-    }
-
-    try {
       final contacts = await FlutterContacts.getContacts(
         withProperties: true,
         withPhoto: false,

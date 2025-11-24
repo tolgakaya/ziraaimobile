@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'analysis_options_screen.dart';
 import '../../../../core/widgets/farmer_bottom_nav.dart';
+import '../../../../core/services/permission_service.dart';
+import '../../../../core/utils/minimal_service_locator.dart';
 
 class CaptureScreen extends StatefulWidget {
   const CaptureScreen({super.key});
@@ -15,13 +16,14 @@ class CaptureScreen extends StatefulWidget {
 class _CaptureScreenState extends State<CaptureScreen> {
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
+  final PermissionService _permissionService = getIt<PermissionService>();
 
   Future<void> _selectFromCamera() async {
     try {
-      // Request camera permission using permission_handler to avoid conflict with telephony package
-      final status = await Permission.camera.request();
+      // Use centralized permission service to prevent crashes
+      final granted = await _permissionService.requestCameraPermission();
 
-      if (!status.isGranted) {
+      if (!granted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -62,10 +64,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   Future<void> _selectFromGallery() async {
     try {
-      // Request photos permission using permission_handler to avoid conflict with telephony package
-      final status = await Permission.photos.request();
+      // Use centralized permission service to prevent crashes
+      final granted = await _permissionService.requestStoragePermission();
 
-      if (!status.isGranted) {
+      if (!granted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

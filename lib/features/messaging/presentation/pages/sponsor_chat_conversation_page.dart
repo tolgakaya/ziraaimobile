@@ -5,8 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart' as chat_ui;
 import 'package:flutter_chat_core/flutter_chat_core.dart' as chat_core;
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/permission_service.dart';
 import '../../../../core/services/signalr_service.dart';
 import '../../../../core/models/message_notification.dart'; // ✅ Import for SignalR real-time messaging
 import '../../../../core/di/injection.dart';
@@ -50,6 +50,7 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
 
   // JWT token for secure file access
   final AuthService _authService = getIt<AuthService>();
+  final PermissionService _permissionService = getIt<PermissionService>();
   String? _jwtToken;
 
   // ✅ SignalR service for real-time message updates
@@ -557,9 +558,10 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
   /// Pick image from camera
   Future<void> _pickFromCamera() async {
     try {
-      final cameraPermission = await Permission.camera.request();
+      // Use centralized permission service to prevent crashes
+      final granted = await _permissionService.requestCameraPermission();
 
-      if (!cameraPermission.isGranted) {
+      if (!granted) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Kamera izni gerekli')),
