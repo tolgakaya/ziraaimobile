@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'analysis_options_screen.dart';
 import '../../../../core/widgets/farmer_bottom_nav.dart';
@@ -17,6 +18,22 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   Future<void> _selectFromCamera() async {
     try {
+      // Request camera permission using permission_handler to avoid conflict with telephony package
+      final status = await Permission.camera.request();
+
+      if (!status.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Kamera izni gerekli'),
+              backgroundColor: Color(0xFFEF4444),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Use image_picker only after permission is granted
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 80,
@@ -32,11 +49,35 @@ class _CaptureScreenState extends State<CaptureScreen> {
       }
     } catch (e) {
       print('Camera error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kamera hatası: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _selectFromGallery() async {
     try {
+      // Request photos permission using permission_handler to avoid conflict with telephony package
+      final status = await Permission.photos.request();
+
+      if (!status.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Galeri izni gerekli'),
+              backgroundColor: Color(0xFFEF4444),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Use image_picker only after permission is granted
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 80,
@@ -52,6 +93,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
       }
     } catch (e) {
       print('Gallery error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Galeri hatası: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 
