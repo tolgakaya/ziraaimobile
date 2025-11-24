@@ -84,7 +84,21 @@ class SponsorshipSmsListener {
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
 
-      print('[SponsorshipSMS] ✅ Local notifications initialized');
+      // Create Android notification channel (required for Android 8.0+)
+      const androidChannel = AndroidNotificationChannel(
+        'sponsorship_codes',
+        'Sponsorluk Kodları',
+        description: 'Sponsorluk kodu bildirimleri',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+      );
+
+      await _notificationsPlugin
+          ?.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(androidChannel);
+
+      print('[SponsorshipSMS] ✅ Local notifications initialized with channel');
     } catch (e) {
       print('[SponsorshipSMS] ⚠️ Failed to initialize notifications: $e');
     }
