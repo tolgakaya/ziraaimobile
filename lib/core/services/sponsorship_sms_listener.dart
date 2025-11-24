@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import '../services/navigation_service.dart';
 import '../services/auth_service.dart';
 import '../../features/sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// SMS-based automatic sponsorship code redemption service
 /// Listens for incoming SMS with sponsorship codes and auto-fills redemption screen
@@ -15,8 +16,10 @@ import '../../features/sponsorship/presentation/screens/farmer/sponsorship_redem
 /// - Persistent storage for deferred deep linking
 /// - 7-day inbox scan for codes received before app install
 /// - Auto-navigation for logged-in users
+/// - Local notifications for immediate user awareness
 class SponsorshipSmsListener {
   final Telephony telephony = Telephony.instance;
+  static FlutterLocalNotificationsPlugin? _notificationsPlugin;
 
   // Regex to match sponsorship codes
   // Format: AGRI-XXXX-XXXXXXXX or SPONSOR-XXXX-XXXXXXXX
@@ -35,6 +38,9 @@ class SponsorshipSmsListener {
   Future<void> initialize() async {
     print('[SponsorshipSMS] 🚀 Initializing sponsorship SMS listener...');
 
+    // Initialize local notifications
+    await _initializeNotifications();
+
     // Request SMS permission
     final hasPermission = await _requestSmsPermission();
     if (!hasPermission) {
@@ -49,6 +55,58 @@ class SponsorshipSmsListener {
     await _checkRecentSms();
 
     print('[SponsorshipSMS] ✅ Sponsorship SMS listener initialized successfully');
+  }
+
+  /// Initialize local notifications
+  static Future<void> _initializeNotifications() async {
+    try {
+      _notificationsPlugin = FlutterLocalNotificationsPlugin();
+
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosSettings = DarwinInitializationSettings();
+
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      await _notificationsPlugin?.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: _onNotificationTapped,
+      );
+
+      print('[SponsorshipSMS] ✅ Local notifications initialized');
+    } catch (e) {
+      print('[SponsorshipSMS] ⚠️ Failed to initialize notifications: $e');
+    }
+  }
+
+  /// Handle notification tap - navigate to redemption screen
+  static void _onNotificationTapped(NotificationResponse response) async {
+    try {
+      final code = response.payload;
+      if (code == null || code.isEmpty) {
+        print('[SponsorshipSMS] ⚠️ No code in notification payload');
+        return;
+      }
+
+      print('[SponsorshipSMS] 🎯 Notification tapped, navigating with code: $code');
+
+      // Navigate using NavigationService
+      final navigationService = GetIt.instance<NavigationService>();
+      if (navigationService.isReady) {
+        await navigationService.navigateTo(
+          SponsorshipRedemptionScreen(autoFilledCode: code),
+        );
+
+        // Clear pending code after navigation
+        await clearPendingCode();
+      } else {
+        print('[SponsorshipSMS] ⚠️ Navigation not ready, code remains in storage');
+      }
+    } catch (e) {
+      print('[SponsorshipSMS] ❌ Error handling notification tap: $e');
+    }
   }
 
   /// Request SMS permission from user using Telephony package
@@ -189,10 +247,9 @@ class SponsorshipSmsListener {
     final isLoggedIn = await _isUserLoggedIn();
 
     if (isLoggedIn) {
-      // Show notification and navigate
+      // Show notification - user can tap to open redemption screen
       print('[SponsorshipSMS] 👤 User logged in - showing notification');
       await _showCodeNotification(code);
-      _navigateToRedemption(code);
     } else {
       print('[SponsorshipSMS] 👤 User not logged in - code saved for after login');
     }
@@ -234,46 +291,50 @@ class SponsorshipSmsListener {
   }
 
   /// Show notification to user about received code
-  Future<void> _showCodeNotification(String code) async {
-    // TODO: Implement with flutter_local_notifications if needed
-    // For now, using simple print
-    print('[SponsorshipSMS] 🎁 Notification: Sponsorship code $code received!');
-  }
-
-  /// Navigate to sponsorship redemption screen using global navigation service
-  void _navigateToRedemption(String code, {int retryCount = 0}) {
+  static Future<void> _showCodeNotification(String code) async {
     try {
-      print('[SponsorshipSMS] 🧭 Attempting to navigate to redemption screen with code: $code (retry: $retryCount)');
-
-      // Get navigation service from GetIt
-      final navigationService = GetIt.instance<NavigationService>();
-
-      if (!navigationService.isReady) {
-        // Navigation context not ready yet - retry after delay
-        if (retryCount < 5) {
-          final delayMs = 500 * (retryCount + 1); // Increasing delay: 500ms, 1000ms, 1500ms...
-          print('[SponsorshipSMS] ⚠️ Navigation service not ready - retrying in ${delayMs}ms (attempt ${retryCount + 1}/5)');
-
-          Future.delayed(Duration(milliseconds: delayMs), () {
-            _navigateToRedemption(code, retryCount: retryCount + 1);
-          });
-        } else {
-          print('[SponsorshipSMS] ⚠️ Navigation service not ready after 5 retries - code saved for later');
-        }
+      if (_notificationsPlugin == null) {
+        print('[SponsorshipSMS] ⚠️ Notifications not initialized');
         return;
       }
 
-      // Navigate to redemption screen with auto-filled code
-      navigationService.navigateTo(
-        SponsorshipRedemptionScreen(autoFilledCode: code),
+      const androidDetails = AndroidNotificationDetails(
+        'sponsorship_codes',
+        'Sponsorluk Kodları',
+        channelDescription: 'Sponsorluk kodu bildirimleri',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        enableVibration: true,
+        playSound: true,
+        icon: '@mipmap/ic_launcher',
       );
 
-      print('[SponsorshipSMS] ✅ Successfully navigated to redemption screen');
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _notificationsPlugin?.show(
+        0, // notification id
+        '🎁 Sponsorluk Kodu Alındı!',
+        'Kod: $code - Kullanmak için tıklayın',
+        notificationDetails,
+        payload: code, // Pass code to notification tap handler
+      );
+
+      print('[SponsorshipSMS] 🎁 Notification shown for code: $code');
     } catch (e) {
-      print('[SponsorshipSMS] ❌ Navigation error: $e');
-      print('[SponsorshipSMS] 💾 Code is saved in storage and will be available after login');
+      print('[SponsorshipSMS] ❌ Failed to show notification: $e');
     }
   }
+
 
   /// Public method: Check for pending code after login
   /// Returns code if found and not too old (7 days max)
