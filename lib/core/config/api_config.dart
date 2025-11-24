@@ -65,6 +65,9 @@ class ApiConfig {
   static const String getSponsorProfile = '/sponsorship/profile';
   static const String sponsorDashboardSummary = '/sponsorship/dashboard-summary';
 
+  // Farmer Inbox Endpoints
+  static const String farmerInbox = '/sponsorship/farmer-inbox';
+
   // Code Distribution Endpoints
   static const String sponsorshipCodes = '/sponsorship/codes';
   static const String sendSponsorshipLink = '/sponsorship/send-link';

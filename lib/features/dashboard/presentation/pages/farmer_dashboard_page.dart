@@ -20,9 +20,12 @@ import '../../../../core/security/token_manager.dart';
 import 'sponsor_dashboard_page.dart';
 import 'package:flutter/scheduler.dart';
 import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
+import '../../../sponsorship/presentation/screens/farmer/sponsorship_inbox_screen.dart';
 import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../../../profile/presentation/screens/farmer_profile_screen.dart';
 import '../../../../core/services/sponsorship_sms_listener.dart';
+import '../../../sponsorship/data/services/sponsor_service.dart';
+import '../../../sponsorship/data/models/sponsorship_inbox_item.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   final String? pendingSponsorshipCode;
@@ -43,10 +46,14 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
   Key _subscriptionCardKey = UniqueKey();
   Key _recentAnalysesKey = UniqueKey();
   bool _hasSponsorRole = false;
+  int _activeOffersCount = 0; // Track active sponsorship offers
 
   void _refreshDashboard() {
     // Trigger token refresh to get updated user info (including new subscription)
     context.read<AuthBloc>().add(const AuthCheckStatusRequested());
+
+    // Re-check active offers (in case user redeemed a code)
+    _checkActiveOffers();
 
     // Refresh UI widgets
     setState(() {
@@ -112,6 +119,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkSponsorRole();
+    _checkActiveOffers(); // Check for active sponsorship offers
 
     // Handle pending sponsorship code navigation
     if (widget.pendingSponsorshipCode != null) {
@@ -207,6 +215,45 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
     }
   }
 
+  /// Check for active sponsorship offers
+  /// Only shows inbox card if there are active (unused, non-expired) offers
+  Future<void> _checkActiveOffers() async {
+    try {
+      print('📬 FarmerDashboard: Checking for active sponsorship offers...');
+      final sponsorService = GetIt.instance<SponsorService>();
+
+      // Fetch inbox with only active codes (no used, no expired)
+      final response = await sponsorService.fetchInbox(
+        includeUsed: false,
+        includeExpired: false,
+      );
+
+      // Convert to model objects
+      final items = response
+          .map((json) => SponsorshipInboxItem.fromJson(json))
+          .toList();
+
+      // Count active offers
+      final activeCount = items.where((item) => item.isActive).length;
+
+      if (mounted) {
+        setState(() {
+          _activeOffersCount = activeCount;
+        });
+      }
+
+      print('✅ FarmerDashboard: Found $activeCount active offers');
+    } catch (e) {
+      print('⚠️ FarmerDashboard: Error checking active offers: $e');
+      // On error, hide the card by setting count to 0
+      if (mounted) {
+        setState(() {
+          _activeOffersCount = 0;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -216,12 +263,15 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
-      print('[Dashboard] 📱 App resumed - checking for pending sponsorship code');
+      print('[Dashboard] 📱 App resumed - refreshing dashboard state');
 
       // Force refresh subscription card when app resumes
       setState(() {
         _subscriptionCardKey = UniqueKey();
       });
+
+      // Check for active sponsorship offers (in case new codes arrived)
+      _checkActiveOffers();
 
       // Check for pending sponsorship code from SMS
       await _checkPendingSponsorshipCode();
@@ -253,7 +303,8 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
   void _onItemTapped(int index) {
     // Navigate to screens based on tab
     if (index == 0) {
-      // Ana Sayfa - Already on dashboard, do nothing or refresh
+      // Ana Sayfa - Already on dashboard, refresh offers check
+      _checkActiveOffers(); // Check for new offers when user returns to home
       setState(() {
         _selectedIndex = 0;
       });
@@ -265,7 +316,8 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
           builder: (context) => const AnalysisHistoryScreen(),
         ),
       ).then((_) {
-        // Reset selection when returning
+        // Reset selection when returning and check for new offers
+        _checkActiveOffers();
         setState(() {
           _selectedIndex = 0;
         });
@@ -280,7 +332,8 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
           ),
         ),
       ).then((_) {
-        // Reset selection when returning
+        // Reset selection when returning and check for new offers
+        _checkActiveOffers();
         setState(() {
           _selectedIndex = 0;
         });
@@ -293,6 +346,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
           builder: (context) => const CaptureScreen(),
         ),
       ).then((_) {
+        _checkActiveOffers();
         setState(() {
           _selectedIndex = 0;
         });
@@ -308,6 +362,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
           ),
         ),
       ).then((_) {
+        _checkActiveOffers();
         setState(() {
           _selectedIndex = 0;
         });
@@ -373,7 +428,10 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                               MaterialPageRoute(
                                 builder: (context) => const FarmerProfileScreen(),
                               ),
-                            );
+                            ).then((_) {
+                              // Check for new offers when returning from profile
+                              _checkActiveOffers();
+                            });
                           },
                           tooltip: 'Profilim',
                         ),
@@ -409,7 +467,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                           builder: (context) => const SubscriptionStatusScreen(),
                         ),
                       );
-                      
+
                       // Refresh dashboard if subscription was updated
                       if (result == true && mounted) {
                         _refreshDashboard();
@@ -417,7 +475,13 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                     },
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+
+                  // Sponsorship Inbox Card (only show if there are active offers)
+                  if (_activeOffersCount > 0) ...[
+                    _buildSponsorshipInboxCard(),
+                    const SizedBox(height: 24),
+                  ],
 
                   // Recent Analyses Section
                   const Text(
@@ -441,6 +505,91 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
       bottomNavigationBar: DashboardBottomNavigation(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+      ),
+    );
+  }
+
+  /// Build Sponsorship Inbox Card
+  /// Shows inbox entry point with active code count
+  Widget _buildSponsorshipInboxCard() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 0),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: () async {
+          // Navigate to inbox and await result
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SponsorshipInboxScreen(),
+            ),
+          );
+
+          // If user redeemed a code, refresh dashboard
+          if (result == true && mounted) {
+            print('📬 Dashboard: User returned from inbox, refreshing...');
+            _checkActiveOffers();
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF22C55E).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.inbox,
+                  color: Color(0xFF22C55E),
+                  size: 24,
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Text content
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ziraat Firmanız gönderdi, tıklayın',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Size gönderilen kodları görüntüleyin',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow icon
+              const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF9CA3AF),
+                size: 24,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
