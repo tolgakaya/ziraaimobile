@@ -1223,4 +1223,100 @@ class SponsorService {
       throw Exception('Unexpected error: $e');
     }
   }
+
+  /// Fetch farmer's sponsorship inbox
+  /// Returns list of codes sent to farmer's phone number
+  /// Requires JWT authentication - phone number extracted from token by backend
+  Future<List<Map<String, dynamic>>> fetchInbox({
+    bool includeUsed = false,
+    bool includeExpired = false,
+  }) async {
+    try {
+      // Get JWT token for authentication
+      final token = await _authService.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('Kullanıcı kimliği doğrulanamadı');
+      }
+
+      developer.log(
+        'Fetching inbox (includeUsed: $includeUsed, includeExpired: $includeExpired)',
+        name: 'SponsorService',
+      );
+
+      // Build query parameters (phone removed - backend gets it from JWT)
+      final queryParams = {
+        if (includeUsed) 'includeUsed': includeUsed.toString(),
+        if (includeExpired) 'includeExpired': includeExpired.toString(),
+      };
+
+      final response = await _dio.get(
+        '${ApiConfig.apiBaseUrl}${ApiConfig.farmerInbox}',
+        queryParameters: queryParams,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+
+        if (data['success'] == true) {
+          final items = data['data'] as List<dynamic>;
+
+          developer.log(
+            'Inbox fetched successfully: ${items.length} items',
+            name: 'SponsorService',
+          );
+
+          return items.cast<Map<String, dynamic>>();
+        } else {
+          final message = data['message'] ?? 'Failed to fetch inbox';
+          throw Exception(message);
+        }
+      } else {
+        throw Exception('Invalid response from server');
+      }
+    } on DioException catch (e) {
+      developer.log(
+        'Failed to fetch inbox',
+        name: 'SponsorService',
+        error: e,
+      );
+
+      if (e.response != null) {
+        // Handle specific error codes
+        if (e.response!.statusCode == 401) {
+          throw Exception('Kullanıcı kimliği doğrulanamadı');
+        }
+
+        if (e.response!.statusCode == 400) {
+          // User has no phone number registered
+          final errorData = e.response?.data;
+          final errorMessage = errorData is Map
+              ? (errorData['message'] ?? 'Kullanıcı telefon numarası bulunamadı')
+              : 'Kullanıcı telefon numarası bulunamadı';
+          throw Exception(errorMessage);
+        }
+
+        final errorData = e.response?.data;
+        final errorMessage = errorData is Map
+            ? (errorData['message'] ?? 'Failed to load inbox')
+            : 'Failed to load inbox';
+        throw Exception(errorMessage);
+      }
+
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      developer.log(
+        'Unexpected error fetching inbox',
+        name: 'SponsorService',
+        error: e,
+      );
+      throw Exception('Unexpected error: $e');
+    }
+  }
 }
