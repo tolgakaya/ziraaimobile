@@ -192,6 +192,13 @@ class SponsorshipSmsListener {
       final code = match.group(0)!;
       print('[SponsorshipSMS] ✅ Background code extracted: $code');
 
+      // Check if code has already been processed
+      final isProcessed = await _isCodeProcessed(code);
+      if (isProcessed) {
+        print('[SponsorshipSMS] ⏭️ Background: Code already processed, skipping: $code');
+        return;
+      }
+
       // Save to SharedPreferences
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -201,8 +208,22 @@ class SponsorshipSmsListener {
           DateTime.now().millisecondsSinceEpoch,
         );
         print('[SponsorshipSMS] 💾 Background code saved: $code');
+
+        // Show notification in background too!
+        // Initialize notifications if not already done
+        if (_notificationsPlugin == null) {
+          await _initializeNotifications();
+        }
+
+        // Show notification to user
+        await _showCodeNotification(code);
+
+        // Mark code as processed after notification
+        await _markCodeAsProcessed(code);
+
+        print('[SponsorshipSMS] ✅ Background: Notification shown and code marked as processed');
       } catch (e) {
-        print('[SponsorshipSMS] ❌ Background save error: $e');
+        print('[SponsorshipSMS] ❌ Background processing error: $e');
       }
     }
   }
