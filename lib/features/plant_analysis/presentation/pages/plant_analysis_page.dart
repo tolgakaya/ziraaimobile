@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
 
@@ -20,6 +21,18 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
   Future<void> _selectFromCamera() async {
     print('🎯 Camera selection started');
     try {
+      // Request camera permission using permission_handler to avoid conflict with telephony package
+      final status = await Permission.camera.request();
+
+      if (!status.isGranted) {
+        print('❌ Camera permission denied');
+        setState(() {
+          _statusMessage = 'Kamera izni gerekli';
+        });
+        return;
+      }
+
+      // Use image_picker only after permission is granted
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 80,
@@ -48,6 +61,18 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
   Future<void> _selectFromGallery() async {
     print('🎯 Gallery selection started');
     try {
+      // Request photos permission using permission_handler to avoid conflict with telephony package
+      final status = await Permission.photos.request();
+
+      if (!status.isGranted) {
+        print('❌ Photos permission denied');
+        setState(() {
+          _statusMessage = 'Galeri izni gerekli';
+        });
+        return;
+      }
+
+      // Use image_picker only after permission is granted
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 80,

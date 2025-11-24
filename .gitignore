@@ -56,3 +56,6 @@ app.*.map.json
 .env.production
 .env.staging
 nul
+
+# Staging configuration files (keep local, don't commit)
+claudedocs/staging_env.ini
