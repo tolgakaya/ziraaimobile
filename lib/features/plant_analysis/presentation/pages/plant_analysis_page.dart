@@ -23,35 +23,67 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
   Future<void> _selectFromCamera() async {
     print('🎯 Camera selection started');
     try {
-      // Use centralized permission service to prevent crashes
+      // Check if already granted to skip dialog entirely
+      final alreadyGranted = await _permissionService.isCameraGranted();
+
+      if (alreadyGranted) {
+        print('✅ Camera permission already granted, opening camera directly');
+        await _openCamera();
+        return;
+      }
+
+      // Request permission if not granted
+      print('🔐 Requesting camera permission...');
       final granted = await _permissionService.requestCameraPermission();
 
       if (!granted) {
         print('❌ Camera permission denied');
-        setState(() {
-          _statusMessage = 'Kamera izni gerekli';
-        });
+        if (mounted) {
+          setState(() {
+            _statusMessage = 'Kamera izni gerekli';
+          });
+        }
         return;
       }
 
-      // CRITICAL FIX: Add delay after permission grant to let app state stabilize
-      // This prevents crash when permission dialog closes and activity resumes
-      await Future.delayed(const Duration(milliseconds: 300));
+      print('✅ Camera permission granted, waiting for app to stabilize...');
+
+      // CRITICAL FIX: Longer delay after permission grant (increased from 300ms to 1000ms)
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // Verify widget is still mounted before proceeding
+      if (!mounted) {
+        print('⚠️ Widget disposed during permission request');
+        return;
+      }
 
       // Double-check permission is still granted before using camera
       final isStillGranted = await _permissionService.isCameraGranted();
       if (!isStillGranted) {
         print('❌ Camera permission lost after grant');
-        setState(() {
-          _statusMessage = 'Kamera izni alınamadı';
-        });
+        if (mounted) {
+          setState(() {
+            _statusMessage = 'Kamera izni alınamadı';
+          });
+        }
         return;
       }
 
-      // Verify widget is still mounted before proceeding
-      if (!mounted) return;
+      print('🎥 Opening camera...');
+      await _openCamera();
+    } catch (e, stackTrace) {
+      print('❌ Camera error: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Kamera hatası: $e';
+        });
+      }
+    }
+  }
 
-      // Use image_picker only after permission is granted and verified
+  Future<void> _openCamera() async {
+    try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 80,
@@ -69,47 +101,77 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
       } else {
         print('❌ No image selected from camera');
       }
-    } catch (e) {
-      print('❌ Camera error: $e');
-      if (mounted) {
-        setState(() {
-          _statusMessage = 'Kamera hatası: $e';
-        });
-      }
+    } catch (e, stackTrace) {
+      print('❌ ImagePicker camera error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
   Future<void> _selectFromGallery() async {
     print('🎯 Gallery selection started');
     try {
-      // Use centralized permission service to prevent crashes
-      final granted = await _permissionService.requestStoragePermission();
+      // Check if already granted to skip dialog entirely
+      final alreadyGranted = await _permissionService.isStorageGranted();
 
-      if (!granted) {
-        print('❌ Photos permission denied');
-        setState(() {
-          _statusMessage = 'Galeri izni gerekli';
-        });
+      if (alreadyGranted) {
+        print('✅ Gallery permission already granted, opening gallery directly');
+        await _openGallery();
         return;
       }
 
-      // CRITICAL FIX: Add delay after permission grant to let app state stabilize
-      await Future.delayed(const Duration(milliseconds: 300));
+      // Request permission if not granted
+      print('🔐 Requesting gallery permission...');
+      final granted = await _permissionService.requestStoragePermission();
+
+      if (!granted) {
+        print('❌ Gallery permission denied');
+        if (mounted) {
+          setState(() {
+            _statusMessage = 'Galeri izni gerekli';
+          });
+        }
+        return;
+      }
+
+      print('✅ Gallery permission granted, waiting for app to stabilize...');
+
+      // CRITICAL FIX: Longer delay after permission grant (increased from 300ms to 1000ms)
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // Verify widget is still mounted before proceeding
+      if (!mounted) {
+        print('⚠️ Widget disposed during permission request');
+        return;
+      }
 
       // Double-check permission is still granted
       final isStillGranted = await _permissionService.isStorageGranted();
       if (!isStillGranted) {
-        print('❌ Storage permission lost after grant');
-        setState(() {
-          _statusMessage = 'Galeri izni alınamadı';
-        });
+        print('❌ Gallery permission lost after grant');
+        if (mounted) {
+          setState(() {
+            _statusMessage = 'Galeri izni alınamadı';
+          });
+        }
         return;
       }
 
-      // Verify widget is still mounted before proceeding
-      if (!mounted) return;
+      print('📸 Opening gallery...');
+      await _openGallery();
+    } catch (e, stackTrace) {
+      print('❌ Gallery error: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Galeri hatası: $e';
+        });
+      }
+    }
+  }
 
-      // Use image_picker only after permission is granted and verified
+  Future<void> _openGallery() async {
+    try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 80,
@@ -127,13 +189,10 @@ class _PlantAnalysisPageState extends State<PlantAnalysisPage> {
       } else {
         print('❌ No image selected from gallery');
       }
-    } catch (e) {
-      print('❌ Gallery error: $e');
-      if (mounted) {
-        setState(() {
-          _statusMessage = 'Galeri hatası: $e';
-        });
-      }
+    } catch (e, stackTrace) {
+      print('❌ ImagePicker gallery error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 

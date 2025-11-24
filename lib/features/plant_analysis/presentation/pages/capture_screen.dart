@@ -20,10 +20,22 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   Future<void> _selectFromCamera() async {
     try {
-      // Use centralized permission service to prevent crashes
+      // Check if already granted to skip dialog entirely
+      final alreadyGranted = await _permissionService.isCameraGranted();
+
+      if (alreadyGranted) {
+        // Permission already granted, directly open camera
+        print('✅ Camera permission already granted, opening camera directly');
+        await _openCamera();
+        return;
+      }
+
+      // Request permission if not granted
+      print('🔐 Requesting camera permission...');
       final granted = await _permissionService.requestCameraPermission();
 
       if (!granted) {
+        print('❌ Camera permission denied');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -35,13 +47,22 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return;
       }
 
-      // CRITICAL FIX: Add delay after permission grant to let app state stabilize
+      print('✅ Camera permission granted, waiting for app to stabilize...');
+
+      // CRITICAL FIX: Longer delay after permission grant (increased from 300ms to 1000ms)
       // This prevents crash when permission dialog closes and activity resumes
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // Verify widget is still mounted before proceeding
+      if (!mounted) {
+        print('⚠️ Widget disposed during permission request');
+        return;
+      }
 
       // Double-check permission is still granted before using camera
       final isStillGranted = await _permissionService.isCameraGranted();
       if (!isStillGranted) {
+        print('❌ Camera permission lost after grant');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -53,9 +74,24 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return;
       }
 
-      // Verify widget is still mounted before proceeding
-      if (!mounted) return;
+      print('🎥 Opening camera...');
+      await _openCamera();
+    } catch (e, stackTrace) {
+      print('❌ Camera error: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kamera hatası: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
 
+  Future<void> _openCamera() async {
+    try {
       // Use image_picker only after permission is granted and verified
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
@@ -70,25 +106,31 @@ class _CaptureScreenState extends State<CaptureScreen> {
         });
         _navigateToAnalysisOptions();
       }
-    } catch (e) {
-      print('Camera error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Kamera hatası: $e'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
+    } catch (e, stackTrace) {
+      print('❌ ImagePicker error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
   Future<void> _selectFromGallery() async {
     try {
-      // Use centralized permission service to prevent crashes
+      // Check if already granted to skip dialog entirely
+      final alreadyGranted = await _permissionService.isStorageGranted();
+
+      if (alreadyGranted) {
+        // Permission already granted, directly open gallery
+        print('✅ Gallery permission already granted, opening gallery directly');
+        await _openGallery();
+        return;
+      }
+
+      // Request permission if not granted
+      print('🔐 Requesting gallery permission...');
       final granted = await _permissionService.requestStoragePermission();
 
       if (!granted) {
+        print('❌ Gallery permission denied');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -100,12 +142,21 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return;
       }
 
-      // CRITICAL FIX: Add delay after permission grant to let app state stabilize
-      await Future.delayed(const Duration(milliseconds: 300));
+      print('✅ Gallery permission granted, waiting for app to stabilize...');
+
+      // CRITICAL FIX: Longer delay after permission grant (increased from 300ms to 1000ms)
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // Verify widget is still mounted before proceeding
+      if (!mounted) {
+        print('⚠️ Widget disposed during permission request');
+        return;
+      }
 
       // Double-check permission is still granted
       final isStillGranted = await _permissionService.isStorageGranted();
       if (!isStillGranted) {
+        print('❌ Gallery permission lost after grant');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -117,9 +168,24 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return;
       }
 
-      // Verify widget is still mounted before proceeding
-      if (!mounted) return;
+      print('📸 Opening gallery...');
+      await _openGallery();
+    } catch (e, stackTrace) {
+      print('❌ Gallery error: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Galeri hatası: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
 
+  Future<void> _openGallery() async {
+    try {
       // Use image_picker only after permission is granted and verified
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -134,16 +200,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
         });
         _navigateToAnalysisOptions();
       }
-    } catch (e) {
-      print('Gallery error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Galeri hatası: $e'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
+    } catch (e, stackTrace) {
+      print('❌ ImagePicker gallery error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
