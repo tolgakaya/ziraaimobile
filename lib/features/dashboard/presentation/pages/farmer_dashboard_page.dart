@@ -22,6 +22,7 @@ import 'package:flutter/scheduler.dart';
 import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../../../profile/presentation/screens/farmer_profile_screen.dart';
+import '../../../../core/services/sponsorship_sms_listener.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   final String? pendingSponsorshipCode;
@@ -213,12 +214,39 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
+      print('[Dashboard] 📱 App resumed - checking for pending sponsorship code');
+
       // Force refresh subscription card when app resumes
       setState(() {
         _subscriptionCardKey = UniqueKey();
       });
+
+      // Check for pending sponsorship code from SMS
+      await _checkPendingSponsorshipCode();
+    }
+  }
+
+  /// Check for pending sponsorship code and navigate to redemption if found
+  Future<void> _checkPendingSponsorshipCode() async {
+    try {
+      // Check for pending sponsorship code from SMS listener
+      final pendingCode = await SponsorshipSmsListener.checkPendingCode();
+
+      if (pendingCode != null && mounted) {
+        print('[Dashboard] ✅ Found pending sponsorship code from SMS: $pendingCode');
+
+        // Clear the pending code from storage before navigation
+        await SponsorshipSmsListener.clearPendingCode();
+
+        // Navigate to redemption screen
+        _navigateToSponsorshipRedemption(pendingCode);
+      } else {
+        print('[Dashboard] ℹ️ No pending sponsorship code found');
+      }
+    } catch (e) {
+      print('[Dashboard] ❌ Error checking pending sponsorship code: $e');
     }
   }
 
