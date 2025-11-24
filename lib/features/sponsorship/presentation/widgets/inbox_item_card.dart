@@ -106,7 +106,7 @@ class InboxItemCard extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: onRedeemTap,
                   icon: const Icon(Icons.redeem),
-                  label: const Text('Kodu Kullan'),
+                  label: const Text('Abonelik kodunu kullan'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF22C55E),
                     foregroundColor: Colors.white,

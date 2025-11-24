@@ -99,7 +99,7 @@ class _SponsorshipInboxScreenState extends State<SponsorshipInboxScreen> {
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         title: const Text(
-          'Sponsorluk Teklifleri',
+          'Size gelen abonelikler',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Color(0xFF111827),

@@ -562,7 +562,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Sponsorluk Teklifleri',
+                      'Ziraat Firmanız gönderdi, tıklayın',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
