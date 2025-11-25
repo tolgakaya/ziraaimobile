@@ -20,17 +20,16 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   Future<void> _selectFromCamera() async {
     try {
-      // Check if already granted to skip dialog entirely
+      // Check if already granted
       final alreadyGranted = await _permissionService.isCameraGranted();
 
       if (alreadyGranted) {
-        // Permission already granted, directly open camera
-        print('✅ Camera permission already granted, opening camera directly');
+        print('✅ Camera permission already granted');
         await _openCamera();
         return;
       }
 
-      // Request permission if not granted
+      // Request permission - MainActivity now handles the telephony conflict
       print('🔐 Requesting camera permission...');
       final granted = await _permissionService.requestCameraPermission();
 
@@ -47,34 +46,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
         return;
       }
 
-      print('✅ Camera permission granted, waiting for app to stabilize...');
-
-      // CRITICAL FIX: Longer delay after permission grant (increased from 300ms to 1000ms)
-      // This prevents crash when permission dialog closes and activity resumes
-      await Future.delayed(const Duration(milliseconds: 1000));
-
-      // Verify widget is still mounted before proceeding
-      if (!mounted) {
-        print('⚠️ Widget disposed during permission request');
-        return;
-      }
-
-      // Double-check permission is still granted before using camera
-      final isStillGranted = await _permissionService.isCameraGranted();
-      if (!isStillGranted) {
-        print('❌ Camera permission lost after grant');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Kamera izni alınamadı'),
-              backgroundColor: Color(0xFFEF4444),
-            ),
-          );
-        }
-        return;
-      }
-
-      print('🎥 Opening camera...');
+      print('✅ Camera permission granted');
       await _openCamera();
     } catch (e, stackTrace) {
       print('❌ Camera error: $e');

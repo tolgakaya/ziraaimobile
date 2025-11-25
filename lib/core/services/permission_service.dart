@@ -1,3 +1,4 @@
+import 'package:permission_handler/permission_handler.dart' as permission_handler;
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:developer' as developer;
 
@@ -135,7 +136,7 @@ class PermissionService {
   Future<bool> openAppSettings() async {
     try {
       developer.log('Opening app settings...', name: 'PermissionService');
-      return await openAppSettings();
+      return await permission_handler.openAppSettings();
     } catch (e, stackTrace) {
       developer.log(
         'Error opening app settings: $e',
