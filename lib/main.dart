@@ -7,6 +7,7 @@ import 'core/utils/minimal_service_locator.dart';
 import 'features/authentication/presentation/bloc/auth_bloc.dart';
 import 'features/authentication/presentation/screens/splash_screen.dart';
 import 'features/authentication/presentation/screens/phone_auth/phone_number_screen.dart';
+import 'features/sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 import 'core/services/signalr_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/navigation_service.dart';
@@ -200,13 +201,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
     });
 
-    // Listen to sponsorship code stream (NOT IMPLEMENTED YET - navigation handled in login_screen.dart)
-    // Sponsorship codes are handled via post-login hook, not direct navigation
-    // This stream can be used for real-time notifications if needed
+    // Listen to sponsorship code stream for deep link redemption
     _deepLinkService.sponsorshipCodeStream.listen((sponsorshipCode) {
       print('📱 Main: Sponsorship code received from deep link: $sponsorshipCode');
-      // Note: Actual navigation happens in login_screen.dart post-login hook
-      // This is just for logging/monitoring purposes
+      if (mounted) {
+        _handleSponsorshipCode(sponsorshipCode);
+      }
     });
 
     // Listen to dealer invitation token stream
@@ -253,6 +253,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         builder: (_) => PhoneNumberScreen(
           isRegistration: true,
           referralCode: referralCode,
+        ),
+      ),
+    );
+  }
+
+  /// Handle received sponsorship code from deep link
+  void _handleSponsorshipCode(String sponsorshipCode) {
+    print('📱 Main: Sponsorship code received from deep link: $sponsorshipCode');
+
+    // Use navigator key to access context
+    final context = navigatorKey.currentContext;
+    if (context == null || !mounted) {
+      print('⚠️ Navigator context not ready, will retry after delay');
+
+      // Retry after a short delay to give MaterialApp time to initialize
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _handleSponsorshipCode(sponsorshipCode);
+        }
+      });
+      return;
+    }
+
+    // Navigate directly to sponsorship redemption screen with code pre-filled
+    print('🎯 Navigating to redemption screen with sponsorship code: $sponsorshipCode');
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SponsorshipRedemptionScreen(
+          autoFilledCode: sponsorshipCode,
         ),
       ),
     );
