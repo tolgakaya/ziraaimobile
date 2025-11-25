@@ -28,6 +28,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 class SponsorshipSmsListener {
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
   StreamSubscription<AndroidSMSMessage>? _smsSubscription;
+  Timer? _healthCheckTimer;
 
   // Regex to match sponsorship codes
   // Format: AGRI-XXXX-XXXXXXXX or SPONSOR-XXXX-XXXXXXXX
@@ -46,29 +47,58 @@ class SponsorshipSmsListener {
   /// Call this on app startup
   Future<void> initialize() async {
     print('[SponsorshipSMS] 🚀 Initializing sponsorship SMS listener...');
+    print('[SponsorshipSMS] 🔍 DEBUG: Initialize method called');
 
     // Initialize local notifications
+    print('[SponsorshipSMS] 🔍 DEBUG: Step 1/4 - Initializing notifications');
     await _initializeNotifications();
 
     // Request SMS permission
+    print('[SponsorshipSMS] 🔍 DEBUG: Step 2/4 - Requesting SMS permission');
     final hasPermission = await _requestSmsPermission();
     if (!hasPermission) {
       print('[SponsorshipSMS] ⚠️ SMS permission denied - manual entry required');
+      print('[SponsorshipSMS] 🚨 CRITICAL: Initialization aborted due to missing permission');
       return;
     }
 
     // Start listening for incoming SMS
+    print('[SponsorshipSMS] 🔍 DEBUG: Step 3/4 - Starting SMS stream listener');
     await _startListening();
 
     // Check for pending codes from previous SMS (deferred deep linking)
+    print('[SponsorshipSMS] 🔍 DEBUG: Step 4/4 - Checking recent SMS');
     await _checkRecentSms();
 
+    // Start periodic health check (every 30 seconds)
+    print('[SponsorshipSMS] 🔍 DEBUG: Starting periodic health check timer');
+    _startHealthCheck();
+
     print('[SponsorshipSMS] ✅ Sponsorship SMS listener initialized successfully');
+    print('[SponsorshipSMS] 🔍 DEBUG: Full initialization complete - listener should be active');
+  }
+
+  /// Start periodic health check to verify stream is still active
+  void _startHealthCheck() {
+    _healthCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      final isActive = _smsSubscription != null && !(_smsSubscription?.isPaused ?? true);
+      print('[SponsorshipSMS] 🏥 Health Check: Stream subscription active = $isActive');
+
+      if (!isActive) {
+        print('[SponsorshipSMS] 🚨 CRITICAL: Stream subscription is not active!');
+        print('[SponsorshipSMS] 🚨 Subscription null: ${_smsSubscription == null}');
+        print('[SponsorshipSMS] 🚨 Subscription paused: ${_smsSubscription?.isPaused}');
+      } else {
+        print('[SponsorshipSMS] ✅ Health Check: Listener is healthy and active');
+      }
+    });
   }
 
   /// Dispose resources
   void dispose() {
+    _healthCheckTimer?.cancel();
     _smsSubscription?.cancel();
+    print('[SponsorshipSMS] 🧹 Resources disposed (subscription and health check timer cancelled)');
   }
 
   /// Initialize local notifications
@@ -145,19 +175,24 @@ class SponsorshipSmsListener {
   Future<bool> _requestSmsPermission() async {
     try {
       print('[SponsorshipSMS] 📋 Checking SMS permission...');
+      print('[SponsorshipSMS] 🔍 DEBUG: About to call AndroidSMSReader.requestPermissions()');
 
       // Request permissions using android_sms_reader's isolated permission system
       final hasPermission = await AndroidSMSReader.requestPermissions();
+
+      print('[SponsorshipSMS] 🔍 DEBUG: requestPermissions() returned: $hasPermission');
 
       if (hasPermission) {
         print('[SponsorshipSMS] ✅ SMS permission granted');
         return true;
       } else {
         print('[SponsorshipSMS] ⚠️ SMS permission not granted - skipping listener');
+        print('[SponsorshipSMS] 🚨 CRITICAL: User denied SMS permission or permission not available');
         return false;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('[SponsorshipSMS] ❌ Permission error (silently ignored): $e');
+      print('[SponsorshipSMS] 🔍 DEBUG: Stack trace: $stackTrace');
       // Silently fail to prevent crash
       return false;
     }
@@ -167,22 +202,32 @@ class SponsorshipSmsListener {
   Future<void> _startListening() async {
     try {
       print('[SponsorshipSMS] 🎧 Setting up SMS listener using stream...');
+      print('[SponsorshipSMS] 🔍 DEBUG: About to call AndroidSMSReader.observeIncomingMessages()');
 
       // Use android_sms_reader's streaming API for real-time SMS
       _smsSubscription = AndroidSMSReader.observeIncomingMessages().listen(
         (AndroidSMSMessage message) async {
           print('[SponsorshipSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.address}');
           print('[SponsorshipSMS] 📱🔔 Message body: ${message.body}');
+          print('[SponsorshipSMS] 🔍 DEBUG: Processing SMS in listener callback');
           await _processSmsMessage(message.body);
         },
-        onError: (error) {
+        onError: (error, stackTrace) {
           print('[SponsorshipSMS] ❌ SMS stream error: $error');
+          print('[SponsorshipSMS] 🔍 DEBUG: Error stack trace: $stackTrace');
         },
+        onDone: () {
+          print('[SponsorshipSMS] ⚠️ SMS stream closed/completed unexpectedly');
+        },
+        cancelOnError: false, // Keep listening even if there's an error
       );
 
       print('[SponsorshipSMS] 👂 SMS stream listener started successfully');
-    } catch (e) {
+      print('[SponsorshipSMS] 🔍 DEBUG: Stream subscription created: ${_smsSubscription != null}');
+      print('[SponsorshipSMS] 🔍 DEBUG: Stream subscription is active: ${_smsSubscription?.isPaused == false}');
+    } catch (e, stackTrace) {
       print('[SponsorshipSMS] ❌ Failed to start SMS listener: $e');
+      print('[SponsorshipSMS] 🔍 DEBUG: Stack trace: $stackTrace');
     }
   }
 
