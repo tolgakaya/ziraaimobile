@@ -42,16 +42,58 @@ class PermissionService {
   }
 
   /// Request storage/photos permission with proper error handling
+  /// Android 13+ (API 33+): Uses Permission.photos (READ_MEDIA_IMAGES)
+  /// Android 12 and below: Uses Permission.storage (READ_EXTERNAL_STORAGE)
   /// Returns true if permission is granted, false otherwise
   Future<bool> requestStoragePermission() async {
     try {
-      developer.log('Requesting storage permission...', name: 'PermissionService');
-      
-      final status = await Permission.photos.request();
-      _permissionCache[Permission.photos] = status;
-      
-      developer.log('Storage permission status: $status', name: 'PermissionService');
-      return status.isGranted;
+      developer.log('Requesting storage/photos permission...', name: 'PermissionService');
+
+      // Try photos permission first (Android 13+ / API 33+)
+      developer.log('Checking photos permission status...', name: 'PermissionService');
+      final photosStatus = await Permission.photos.status;
+
+      if (photosStatus.isGranted) {
+        developer.log('Photos permission already granted (Android 13+)', name: 'PermissionService');
+        _permissionCache[Permission.photos] = photosStatus;
+        return true;
+      }
+
+      // If photos permission is not granted, try requesting it (Android 13+)
+      if (!photosStatus.isPermanentlyDenied) {
+        developer.log('Requesting photos permission (Android 13+)...', name: 'PermissionService');
+        final requestedPhotosStatus = await Permission.photos.request();
+        _permissionCache[Permission.photos] = requestedPhotosStatus;
+
+        if (requestedPhotosStatus.isGranted) {
+          developer.log('Photos permission granted (Android 13+)', name: 'PermissionService');
+          return true;
+        }
+      }
+
+      // Fallback to storage permission (Android 12 and below / API 32 and below)
+      developer.log('Checking storage permission status (Android 12 and below)...', name: 'PermissionService');
+      final storageStatus = await Permission.storage.status;
+
+      if (storageStatus.isGranted) {
+        developer.log('Storage permission already granted (Android 12 and below)', name: 'PermissionService');
+        _permissionCache[Permission.storage] = storageStatus;
+        return true;
+      }
+
+      if (!storageStatus.isPermanentlyDenied) {
+        developer.log('Requesting storage permission (Android 12 and below)...', name: 'PermissionService');
+        final requestedStorageStatus = await Permission.storage.request();
+        _permissionCache[Permission.storage] = requestedStorageStatus;
+
+        if (requestedStorageStatus.isGranted) {
+          developer.log('Storage permission granted (Android 12 and below)', name: 'PermissionService');
+          return true;
+        }
+      }
+
+      developer.log('Gallery/storage permission not granted', name: 'PermissionService');
+      return false;
     } catch (e, stackTrace) {
       developer.log(
         'Error requesting storage permission: $e',
@@ -172,9 +214,17 @@ class PermissionService {
     return status.isGranted;
   }
 
-  /// Check if storage permission is granted (cached)
+  /// Check if storage/photos permission is granted (cached)
+  /// Checks both Permission.photos (Android 13+) and Permission.storage (Android 12 and below)
   Future<bool> isStorageGranted() async {
-    final status = await checkPermissionStatus(Permission.photos);
-    return status.isGranted;
+    // Try photos permission first (Android 13+)
+    final photosStatus = await checkPermissionStatus(Permission.photos);
+    if (photosStatus.isGranted) {
+      return true;
+    }
+
+    // Fallback to storage permission (Android 12 and below)
+    final storageStatus = await checkPermissionStatus(Permission.storage);
+    return storageStatus.isGranted;
   }
 }
