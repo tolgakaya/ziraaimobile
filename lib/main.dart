@@ -155,9 +155,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   /// This enables automatic code detection from SMS messages
   /// DELAYED: Start after 3 seconds to avoid permission conflicts
   Future<void> _initializeSponsorshipSmsListener() async {
-    // CRITICAL FIX: Delay SMS listener to avoid permission conflicts with FlutterContacts
-    // This prevents "Reply already submitted" crash when using phone contacts picker
-    await Future.delayed(const Duration(seconds: 3));
+    // CRITICAL FIX: Delay SMS listener to avoid permission conflicts
+    // - FlutterContacts: Prevents "Reply already submitted" crash with phone contacts picker
+    // - SmsReferralService: Avoids race condition when both request SMS permission simultaneously
+    // Wait 5 seconds to ensure SplashScreen's SMS check completes first
+    await Future.delayed(const Duration(seconds: 5));
 
     try {
       print('🎁 Main: Initializing sponsorship SMS listener (delayed)...');

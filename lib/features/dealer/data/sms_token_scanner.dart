@@ -1,21 +1,88 @@
-// TELEPHONY PLUGIN REMOVED - Causes camera permission crash
-// SMS token scanner feature temporarily disabled
-// import 'package:telephony/telephony.dart';
+import 'package:android_sms_reader/android_sms_reader.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// SMS Token Scanner Service
-/// TEMPORARILY DISABLED - telephony plugin removed to fix camera permission crash
+///
+/// Scans SMS inbox for dealer invitation tokens and extracts them
+///
+/// Pattern: DEALER-{32-char-hex-token}
+/// Example: "DEALER-7fc679cd040c44509f961f2b9fb0f7b4"
 class SmsTokenScanner {
-  /// Scan SMS inbox for dealer invitation tokens - DISABLED
-  Future<String?> scanForInvitationToken() async {
-    print('[SmsTokenScanner] ⚠️ SMS scanning temporarily disabled');
-    print('[SmsTokenScanner] ℹ️ Telephony plugin removed to fix camera permission crash');
-    print('[SmsTokenScanner] ℹ️ Please use deep links or manual token entry');
-    return null;
+
+  /// Scan SMS inbox for dealer invitation tokens
+  ///
+  /// Returns list of unique tokens found in SMS messages
+  /// Only returns tokens that match the valid pattern
+  Future<List<String>> scanForDealerTokens() async {
+    try {
+      // Request SMS permission if not granted
+      final smsStatus = await Permission.sms.status;
+
+      bool hasPermission = smsStatus.isGranted;
+
+      // If not granted, request it
+      if (!hasPermission && !smsStatus.isPermanentlyDenied) {
+        final newStatus = await Permission.sms.request();
+        hasPermission = newStatus.isGranted;
+      }
+
+      if (!hasPermission) {
+        print('[SmsTokenScanner] ❌ SMS permission not granted');
+        return [];
+      }
+
+      print('[SmsTokenScanner] 🔍 Scanning SMS inbox for dealer tokens...');
+
+      // Get all SMS messages (fetching 200 should be enough)
+      List<AndroidSMSMessage> messages = await AndroidSMSReader.fetchMessages(
+        type: AndroidSMSType.inbox,
+        count: 200,
+      );
+
+      print('[SmsTokenScanner] Found ${messages.length} SMS messages');
+
+      // Extract tokens using regex
+      final tokenPattern = RegExp(r'DEALER-([a-f0-9]{32})', caseSensitive: false);
+      final Set<String> tokens = {};
+
+      for (var message in messages) {
+        final match = tokenPattern.firstMatch(message.body);
+        if (match != null) {
+          final fullToken = match.group(0)!; // DEALER-abc123...
+          final token = match.group(1)!; // abc123...
+
+          tokens.add(token.toLowerCase());
+          print('[SmsTokenScanner] Found token: ${token.substring(0, 8)}... in SMS from ${message.address}');
+        }
+      }
+
+      print('[SmsTokenScanner] ✅ Extracted ${tokens.length} unique dealer tokens');
+      return tokens.toList();
+    } catch (e) {
+      print('[SmsTokenScanner] ❌ Error scanning SMS: $e');
+      return [];
+    }
   }
 
-  /// Extract token from SMS body - DISABLED
-  String? extractTokenFromSms(String smsBody) {
-    print('[SmsTokenScanner] ⚠️ Token extraction temporarily disabled');
-    return null;
+  /// Check if SMS permission is granted
+  Future<bool> hasPermission() async {
+    try {
+      final status = await Permission.sms.status;
+      return status.isGranted;
+    } catch (e) {
+      print('[SmsTokenScanner] Error checking permission: $e');
+      return false;
+    }
+  }
+
+  /// Request SMS permission from user
+  Future<bool> requestPermission() async {
+    try {
+      final status = await Permission.sms.request();
+      return status.isGranted;
+    } catch (e) {
+      print('[SmsTokenScanner] Error requesting permission: $e');
+      return false;
+    }
   }
 }
