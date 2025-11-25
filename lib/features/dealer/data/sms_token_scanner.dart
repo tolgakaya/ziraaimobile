@@ -37,13 +37,13 @@ class SmsTokenScanner {
       final Set<String> tokens = {};
 
       for (var message in messages) {
-        final match = tokenPattern.firstMatch(message.body ?? '');
+        final match = tokenPattern.firstMatch(message.body);
         if (match != null) {
           final fullToken = match.group(0)!; // DEALER-abc123...
           final token = match.group(1)!; // abc123...
 
           tokens.add(token.toLowerCase());
-          print('[SmsTokenScanner] Found token: ${token.substring(0, 8)}... in SMS from ${message.sender}');
+          print('[SmsTokenScanner] Found token: ${token.substring(0, 8)}... in SMS from ${message.address}');
         }
       }
 

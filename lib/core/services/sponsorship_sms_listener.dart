@@ -171,9 +171,9 @@ class SponsorshipSmsListener {
       // Use android_sms_reader's streaming API for real-time SMS
       _smsSubscription = AndroidSMSReader.observeIncomingMessages().listen(
         (AndroidSMSMessage message) async {
-          print('[SponsorshipSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.sender}');
+          print('[SponsorshipSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.address}');
           print('[SponsorshipSMS] 📱🔔 Message body: ${message.body}');
-          await _processSmsMessage(message.body ?? '');
+          await _processSmsMessage(message.body);
         },
         onError: (error) {
           print('[SponsorshipSMS] ❌ SMS stream error: $error');
@@ -201,13 +201,13 @@ class SponsorshipSmsListener {
 
       // Filter by date (last 7 days)
       final recentMessages = messages.where(
-        (msg) => msg.timestamp >= cutoffDate.millisecondsSinceEpoch
+        (msg) => msg.date >= cutoffDate.millisecondsSinceEpoch
       ).toList();
 
       print('[SponsorshipSMS] 🔍 Checking ${recentMessages.length} recent SMS (last 7 days)');
 
       for (var message in recentMessages) {
-        final body = message.body ?? '';
+        final body = message.body;
 
         // Check if message contains sponsorship code
         if (_containsSponsorshipKeywords(body)) {
@@ -470,12 +470,12 @@ class SponsorshipSmsListener {
       print('[SponsorshipSMS] 📱 Debug: Recent SMS (${messages.length} total)');
       for (var i = 0; i < messages.length; i++) {
         final msg = messages[i];
-        final preview = msg.body?.substring(0, msg.body!.length > 50 ? 50 : msg.body!.length) ?? '';
-        print('  ${i + 1}. ${msg.sender}: $preview...');
+        final preview = msg.body.substring(0, msg.body.length > 50 ? 50 : msg.body.length);
+        print('  ${i + 1}. ${msg.address}: $preview...');
 
         // Check if contains code
-        if (_codeRegex.hasMatch(msg.body ?? '')) {
-          final code = _codeRegex.firstMatch(msg.body!)?.group(0);
+        if (_codeRegex.hasMatch(msg.body)) {
+          final code = _codeRegex.firstMatch(msg.body)?.group(0);
           print('     ✅ Contains code: $code');
         }
       }

@@ -30,13 +30,13 @@ class SmsReferralService {
       // 4. Her SMS'i kontrol et
       for (var message in messages) {
         // Tarih kontrolü (24 saatten eski mesajları atla)
-        // message.timestamp is int (milliseconds since epoch)
-        if (message.timestamp < yesterdayTimestamp) {
+        // message.date is int (milliseconds since epoch)
+        if (message.date < yesterdayTimestamp) {
           print('ℹ️ 24 saatten eski mesajlara ulaşıldı, durduruldu');
           break;
         }
 
-        final body = message.body ?? '';
+        final body = message.body;
 
         // ZIRA formatını ara (regex)
         final regex = RegExp(r'ZIRA-[A-Z0-9]+');
@@ -47,8 +47,8 @@ class SmsReferralService {
 
           print('✅ SMS\'den referral kod bulundu!');
           print('   Kod: $referralCode');
-          print('   Gönderen: ${message.sender ?? "Bilinmiyor"}');
-          print('   Tarih: ${message.timestamp}');
+          print('   Gönderen: ${message.address}');
+          print('   Tarih: ${message.date}');
           print('   Mesaj önizleme: ${body.substring(0, body.length > 50 ? 50 : body.length)}...');
 
           return referralCode;
@@ -97,7 +97,7 @@ class SmsReferralService {
       print('📱 Son ${messages.length} SMS:');
       for (var i = 0; i < messages.length; i++) {
         final msg = messages[i];
-        print('  ${i + 1}. ${msg.sender}: ${msg.body?.substring(0, 30)}...');
+        print('  ${i + 1}. ${msg.address}: ${msg.body.substring(0, msg.body.length > 30 ? 30 : msg.body.length)}...');
       }
     } catch (e) {
       print('❌ Debug SMS listesi hatası: $e');

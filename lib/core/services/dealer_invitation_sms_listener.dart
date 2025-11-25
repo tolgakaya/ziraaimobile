@@ -90,9 +90,9 @@ class DealerInvitationSmsListener {
       // Use android_sms_reader's streaming API for real-time SMS
       _smsSubscription = AndroidSMSReader.observeIncomingMessages().listen(
         (AndroidSMSMessage message) async {
-          print('[DealerInvitationSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.sender}');
+          print('[DealerInvitationSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.address}');
           print('[DealerInvitationSMS] 📱🔔 Message body: ${message.body}');
-          await _processSmsMessage(message.body ?? '');
+          await _processSmsMessage(message.body);
         },
         onError: (error) {
           print('[DealerInvitationSMS] ❌ SMS stream error: $error');
@@ -120,13 +120,13 @@ class DealerInvitationSmsListener {
 
       // Filter by date (last 7 days)
       final recentMessages = messages.where(
-        (msg) => msg.timestamp >= cutoffDate.millisecondsSinceEpoch
+        (msg) => msg.date >= cutoffDate.millisecondsSinceEpoch
       ).toList();
 
       print('[DealerInvitationSMS] 🔍 Checking ${recentMessages.length} recent SMS (last 7 days)');
 
       for (var message in recentMessages) {
-        final body = message.body ?? '';
+        final body = message.body;
 
         // Check if message contains dealer invitation keywords
         if (_containsDealerInvitationKeywords(body)) {
@@ -317,12 +317,12 @@ class DealerInvitationSmsListener {
       print('[DealerInvitationSMS] 📱 Debug: Recent SMS (${messages.length} total)');
       for (var i = 0; i < messages.length; i++) {
         final msg = messages[i];
-        final preview = msg.body?.substring(0, msg.body!.length > 50 ? 50 : msg.body!.length) ?? '';
-        print('  ${i + 1}. ${msg.sender}: $preview...');
+        final preview = msg.body.substring(0, msg.body.length > 50 ? 50 : msg.body.length);
+        print('  ${i + 1}. ${msg.address}: $preview...');
 
         // Check if contains token
-        if (_tokenRegex.hasMatch(msg.body ?? '')) {
-          final token = _tokenRegex.firstMatch(msg.body!)?.group(1);
+        if (_tokenRegex.hasMatch(msg.body)) {
+          final token = _tokenRegex.firstMatch(msg.body)?.group(1);
           print('     ✅ Contains token: $token');
         }
       }
