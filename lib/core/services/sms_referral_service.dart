@@ -3,7 +3,6 @@ import 'package:android_sms_reader/android_sms_reader.dart';
 /// SMS'lerden referral kodu çıkarmak için servis
 /// İlk uygulama açılışında kullanılır (deferred deep linking)
 class SmsReferralService {
-  final SmsReader _smsReader = SmsReader();
 
   /// SMS'lerden ZIRA referral kodunu bul
   /// Son 24 saat içindeki mesajları tarar
@@ -20,8 +19,8 @@ class SmsReferralService {
       print('📱 SMS\'ler taranıyor (son 24 saat)...');
 
       // 2. SMS'leri al (son 20 mesaj yeterli)
-      final messages = await _smsReader.fetchMessages(
-        type: SmsType.inbox,
+      final messages = await AndroidSMSReader.fetchMessages(
+        type: AndroidSMSType.inbox,
         count: 20,
       );
 
@@ -72,7 +71,7 @@ class SmsReferralService {
       print('📋 SMS izni isteniyor...');
 
       // Use android_sms_reader's permission request
-      final hasPermission = await _smsReader.requestPermissions();
+      final hasPermission = await AndroidSMSReader.requestPermissions();
 
       if (hasPermission) {
         print('✅ SMS izni verildi');
@@ -90,8 +89,8 @@ class SmsReferralService {
   /// Test için: Son SMS'leri listele (debug)
   Future<void> debugListRecentSms() async {
     try {
-      final messages = await _smsReader.fetchMessages(
-        type: SmsType.inbox,
+      final messages = await AndroidSMSReader.fetchMessages(
+        type: AndroidSMSType.inbox,
         count: 5,
       );
 

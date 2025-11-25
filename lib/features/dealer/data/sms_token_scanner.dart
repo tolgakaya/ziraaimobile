@@ -7,7 +7,6 @@ import 'package:android_sms_reader/android_sms_reader.dart';
 /// Pattern: DEALER-{32-char-hex-token}
 /// Example: "DEALER-7fc679cd040c44509f961f2b9fb0f7b4"
 class SmsTokenScanner {
-  final SmsReader _smsReader = SmsReader();
 
   /// Scan SMS inbox for dealer invitation tokens
   ///
@@ -16,7 +15,7 @@ class SmsTokenScanner {
   Future<List<String>> scanForDealerTokens() async {
     try {
       // Request SMS permission if not granted
-      bool hasPermission = await _smsReader.requestPermissions();
+      bool hasPermission = await AndroidSMSReader.requestPermissions();
 
       if (!hasPermission) {
         print('[SmsTokenScanner] ❌ SMS permission not granted');
@@ -26,8 +25,8 @@ class SmsTokenScanner {
       print('[SmsTokenScanner] 🔍 Scanning SMS inbox for dealer tokens...');
 
       // Get all SMS messages (fetching 200 should be enough)
-      List<SmsMessage> messages = await _smsReader.fetchMessages(
-        type: SmsType.inbox,
+      List<AndroidSMSMessage> messages = await AndroidSMSReader.fetchMessages(
+        type: AndroidSMSType.inbox,
         count: 200,
       );
 
@@ -59,7 +58,7 @@ class SmsTokenScanner {
   /// Check if SMS permission is granted
   Future<bool> hasPermission() async {
     try {
-      bool hasPermission = await _smsReader.requestPermissions();
+      bool hasPermission = await AndroidSMSReader.requestPermissions();
       return hasPermission;
     } catch (e) {
       print('[SmsTokenScanner] Error checking permission: $e');
@@ -70,7 +69,7 @@ class SmsTokenScanner {
   /// Request SMS permission from user
   Future<bool> requestPermission() async {
     try {
-      bool granted = await _smsReader.requestPermissions();
+      bool granted = await AndroidSMSReader.requestPermissions();
       return granted;
     } catch (e) {
       print('[SmsTokenScanner] Error requesting permission: $e');

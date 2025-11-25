@@ -26,9 +26,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 /// - Prevents duplicate notifications on app restart or SMS re-scan
 /// - Use clearProcessedCodes() for debugging/testing to reset list
 class SponsorshipSmsListener {
-  final SmsReader _smsReader = SmsReader();
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
-  StreamSubscription<SmsMessage>? _smsSubscription;
+  StreamSubscription<AndroidSMSMessage>? _smsSubscription;
 
   // Regex to match sponsorship codes
   // Format: AGRI-XXXX-XXXXXXXX or SPONSOR-XXXX-XXXXXXXX
@@ -148,7 +147,7 @@ class SponsorshipSmsListener {
       print('[SponsorshipSMS] 📋 Checking SMS permission...');
 
       // Request permissions using android_sms_reader's isolated permission system
-      final hasPermission = await _smsReader.requestPermissions();
+      final hasPermission = await AndroidSMSReader.requestPermissions();
 
       if (hasPermission) {
         print('[SponsorshipSMS] ✅ SMS permission granted');
@@ -170,8 +169,8 @@ class SponsorshipSmsListener {
       print('[SponsorshipSMS] 🎧 Setting up SMS listener using stream...');
 
       // Use android_sms_reader's streaming API for real-time SMS
-      _smsSubscription = _smsReader.observeIncomingMessages().listen(
-        (SmsMessage message) async {
+      _smsSubscription = AndroidSMSReader.observeIncomingMessages().listen(
+        (AndroidSMSMessage message) async {
           print('[SponsorshipSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.sender}');
           print('[SponsorshipSMS] 📱🔔 Message body: ${message.body}');
           await _processSmsMessage(message.body ?? '');
@@ -195,8 +194,8 @@ class SponsorshipSmsListener {
       final cutoffDate = DateTime.now().subtract(const Duration(days: 7));
 
       // Fetch recent messages (last 100 should be enough for 7 days)
-      final messages = await _smsReader.fetchMessages(
-        type: SmsType.inbox,
+      final messages = await AndroidSMSReader.fetchMessages(
+        type: AndroidSMSType.inbox,
         count: 100,
       );
 
@@ -463,8 +462,8 @@ class SponsorshipSmsListener {
   /// Debug: List recent SMS messages
   Future<void> debugListRecentSms() async {
     try {
-      final messages = await _smsReader.fetchMessages(
-        type: SmsType.inbox,
+      final messages = await AndroidSMSReader.fetchMessages(
+        type: AndroidSMSType.inbox,
         count: 10,
       );
 

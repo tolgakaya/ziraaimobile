@@ -18,8 +18,7 @@ import '../../features/dealer/presentation/screens/dealer_invitation_screen.dart
 ///
 /// Pattern: Exactly same as SponsorshipSmsListener
 class DealerInvitationSmsListener {
-  final SmsReader _smsReader = SmsReader();
-  StreamSubscription<SmsMessage>? _smsSubscription;
+  StreamSubscription<AndroidSMSMessage>? _smsSubscription;
 
   // Regex to match dealer invitation tokens
   // Format: DEALER-{32-char-hex-lowercase}
@@ -67,7 +66,7 @@ class DealerInvitationSmsListener {
       print('[DealerInvitationSMS] 📋 Checking SMS permission...');
 
       // Request permissions using android_sms_reader's isolated permission system
-      final hasPermission = await _smsReader.requestPermissions();
+      final hasPermission = await AndroidSMSReader.requestPermissions();
 
       if (hasPermission) {
         print('[DealerInvitationSMS] ✅ SMS permission granted');
@@ -89,8 +88,8 @@ class DealerInvitationSmsListener {
       print('[DealerInvitationSMS] 🎧 Setting up SMS listener using stream...');
 
       // Use android_sms_reader's streaming API for real-time SMS
-      _smsSubscription = _smsReader.observeIncomingMessages().listen(
-        (SmsMessage message) async {
+      _smsSubscription = AndroidSMSReader.observeIncomingMessages().listen(
+        (AndroidSMSMessage message) async {
           print('[DealerInvitationSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.sender}');
           print('[DealerInvitationSMS] 📱🔔 Message body: ${message.body}');
           await _processSmsMessage(message.body ?? '');
@@ -114,8 +113,8 @@ class DealerInvitationSmsListener {
       final cutoffDate = DateTime.now().subtract(const Duration(days: 7));
 
       // Fetch recent messages (last 100 should be enough for 7 days)
-      final messages = await _smsReader.fetchMessages(
-        type: SmsType.inbox,
+      final messages = await AndroidSMSReader.fetchMessages(
+        type: AndroidSMSType.inbox,
         count: 100,
       );
 
@@ -310,8 +309,8 @@ class DealerInvitationSmsListener {
   /// Debug: List recent SMS messages
   Future<void> debugListRecentSms() async {
     try {
-      final messages = await _smsReader.fetchMessages(
-        type: SmsType.inbox,
+      final messages = await AndroidSMSReader.fetchMessages(
+        type: AndroidSMSType.inbox,
         count: 10,
       );
 
