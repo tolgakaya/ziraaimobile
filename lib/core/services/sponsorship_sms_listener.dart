@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:android_sms_reader/android_sms_reader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get_it/get_it.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/navigation_service.dart';
 import '../services/auth_service.dart';
 import '../../features/sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
@@ -170,26 +171,48 @@ class SponsorshipSmsListener {
     }
   }
 
-  /// Request SMS permission from user using android_sms_reader package
-  /// IMPORTANT: Silent check - don't prompt if not already granted
+  /// Request SMS permission from user using permission_handler
+  /// This will show the system permission dialog if not granted
   Future<bool> _requestSmsPermission() async {
     try {
       print('[SponsorshipSMS] 📋 Checking SMS permission...');
-      print('[SponsorshipSMS] 🔍 DEBUG: About to call AndroidSMSReader.requestPermissions()');
+      print('[SponsorshipSMS] 🔍 DEBUG: Checking current SMS permission status');
 
-      // Request permissions using android_sms_reader's isolated permission system
-      final hasPermission = await AndroidSMSReader.requestPermissions();
+      // Check current permission status
+      final smsStatus = await Permission.sms.status;
+      print('[SponsorshipSMS] 🔍 DEBUG: Current SMS permission status: $smsStatus');
 
-      print('[SponsorshipSMS] 🔍 DEBUG: requestPermissions() returned: $hasPermission');
-
-      if (hasPermission) {
-        print('[SponsorshipSMS] ✅ SMS permission granted');
+      // If already granted, return true
+      if (smsStatus.isGranted) {
+        print('[SponsorshipSMS] ✅ SMS permission already granted');
         return true;
-      } else {
-        print('[SponsorshipSMS] ⚠️ SMS permission not granted - skipping listener');
-        print('[SponsorshipSMS] 🚨 CRITICAL: User denied SMS permission or permission not available');
+      }
+
+      // If permanently denied, can't request again
+      if (smsStatus.isPermanentlyDenied) {
+        print('[SponsorshipSMS] 🚨 CRITICAL: SMS permission permanently denied by user');
+        print('[SponsorshipSMS] ℹ️ User must enable SMS permission in Settings manually');
         return false;
       }
+
+      // Request permission - this will show dialog
+      print('[SponsorshipSMS] 🔍 DEBUG: Requesting SMS permission from user (will show dialog)');
+      final newStatus = await Permission.sms.request();
+      print('[SponsorshipSMS] 🔍 DEBUG: Permission request result: $newStatus');
+
+      if (newStatus.isGranted) {
+        print('[SponsorshipSMS] ✅ SMS permission granted by user');
+        return true;
+      } else if (newStatus.isDenied) {
+        print('[SponsorshipSMS] ⚠️ User denied SMS permission');
+        return false;
+      } else if (newStatus.isPermanentlyDenied) {
+        print('[SponsorshipSMS] 🚨 User permanently denied SMS permission');
+        return false;
+      }
+
+      print('[SponsorshipSMS] ⚠️ SMS permission not granted - skipping listener');
+      return false;
     } catch (e, stackTrace) {
       print('[SponsorshipSMS] ❌ Permission error (silently ignored): $e');
       print('[SponsorshipSMS] 🔍 DEBUG: Stack trace: $stackTrace');

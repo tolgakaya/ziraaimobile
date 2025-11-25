@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:android_sms_reader/android_sms_reader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get_it/get_it.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/navigation_service.dart';
 import '../services/auth_service.dart';
 import '../../features/dealer/presentation/screens/dealer_invitation_screen.dart';
@@ -59,22 +60,40 @@ class DealerInvitationSmsListener {
     _smsSubscription?.cancel();
   }
 
-  /// Request SMS permission from user using android_sms_reader package
-  /// IMPORTANT: Silent check - don't prompt if not already granted
+  /// Request SMS permission from user using permission_handler
+  /// This will show the system permission dialog if not granted
   Future<bool> _requestSmsPermission() async {
     try {
       print('[DealerInvitationSMS] 📋 Checking SMS permission...');
 
-      // Request permissions using android_sms_reader's isolated permission system
-      final hasPermission = await AndroidSMSReader.requestPermissions();
+      // Check current permission status
+      final smsStatus = await Permission.sms.status;
+      print('[DealerInvitationSMS] 🔍 DEBUG: Current SMS permission status: $smsStatus');
 
-      if (hasPermission) {
-        print('[DealerInvitationSMS] ✅ SMS permission granted');
+      // If already granted, return true
+      if (smsStatus.isGranted) {
+        print('[DealerInvitationSMS] ✅ SMS permission already granted');
         return true;
-      } else {
-        print('[DealerInvitationSMS] ⚠️ SMS permission not granted - skipping listener');
+      }
+
+      // If permanently denied, can't request again
+      if (smsStatus.isPermanentlyDenied) {
+        print('[DealerInvitationSMS] 🚨 CRITICAL: SMS permission permanently denied');
         return false;
       }
+
+      // Request permission - this will show dialog
+      print('[DealerInvitationSMS] 🔍 DEBUG: Requesting SMS permission (will show dialog)');
+      final newStatus = await Permission.sms.request();
+      print('[DealerInvitationSMS] 🔍 DEBUG: Permission result: $newStatus');
+
+      if (newStatus.isGranted) {
+        print('[DealerInvitationSMS] ✅ SMS permission granted by user');
+        return true;
+      }
+
+      print('[DealerInvitationSMS] ⚠️ SMS permission not granted');
+      return false;
     } catch (e) {
       print('[DealerInvitationSMS] ❌ Permission error (silently ignored): $e');
       // Silently fail to prevent crash

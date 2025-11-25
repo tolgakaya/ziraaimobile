@@ -1,4 +1,5 @@
 import 'package:android_sms_reader/android_sms_reader.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// SMS'lerden referral kodu çıkarmak için servis
 /// İlk uygulama açılışında kullanılır (deferred deep linking)
@@ -65,15 +66,30 @@ class SmsReferralService {
     }
   }
 
-  /// SMS okuma izni iste (using android_sms_reader package)
+  /// SMS okuma izni iste (using permission_handler package)
   Future<bool> _requestSmsPermission() async {
     try {
       print('📋 SMS izni isteniyor...');
 
-      // Use android_sms_reader's permission request
-      final hasPermission = await AndroidSMSReader.requestPermissions();
+      // Check current permission status
+      final smsStatus = await Permission.sms.status;
 
-      if (hasPermission) {
+      // If already granted, return true
+      if (smsStatus.isGranted) {
+        print('✅ SMS izni zaten verilmiş');
+        return true;
+      }
+
+      // If permanently denied, can't request
+      if (smsStatus.isPermanentlyDenied) {
+        print('🚨 SMS izni kalıcı olarak reddedilmiş');
+        return false;
+      }
+
+      // Request permission - will show dialog
+      final newStatus = await Permission.sms.request();
+
+      if (newStatus.isGranted) {
         print('✅ SMS izni verildi');
         return true;
       } else {

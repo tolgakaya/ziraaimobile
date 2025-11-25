@@ -1,4 +1,5 @@
 import 'package:android_sms_reader/android_sms_reader.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// SMS Token Scanner Service
 ///
@@ -15,7 +16,15 @@ class SmsTokenScanner {
   Future<List<String>> scanForDealerTokens() async {
     try {
       // Request SMS permission if not granted
-      bool hasPermission = await AndroidSMSReader.requestPermissions();
+      final smsStatus = await Permission.sms.status;
+
+      bool hasPermission = smsStatus.isGranted;
+
+      // If not granted, request it
+      if (!hasPermission && !smsStatus.isPermanentlyDenied) {
+        final newStatus = await Permission.sms.request();
+        hasPermission = newStatus.isGranted;
+      }
 
       if (!hasPermission) {
         print('[SmsTokenScanner] ❌ SMS permission not granted');
@@ -58,8 +67,8 @@ class SmsTokenScanner {
   /// Check if SMS permission is granted
   Future<bool> hasPermission() async {
     try {
-      bool hasPermission = await AndroidSMSReader.requestPermissions();
-      return hasPermission;
+      final status = await Permission.sms.status;
+      return status.isGranted;
     } catch (e) {
       print('[SmsTokenScanner] Error checking permission: $e');
       return false;
@@ -69,8 +78,8 @@ class SmsTokenScanner {
   /// Request SMS permission from user
   Future<bool> requestPermission() async {
     try {
-      bool granted = await AndroidSMSReader.requestPermissions();
-      return granted;
+      final status = await Permission.sms.request();
+      return status.isGranted;
     } catch (e) {
       print('[SmsTokenScanner] Error requesting permission: $e');
       return false;
