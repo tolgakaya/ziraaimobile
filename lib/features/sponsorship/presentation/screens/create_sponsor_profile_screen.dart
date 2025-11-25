@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import '../../data/services/sponsor_service.dart';
 import '../../../../core/security/token_manager.dart';
 import '../../../../core/widgets/farmer_bottom_nav.dart';
+import '../../../../core/config/api_config.dart';
 import 'dart:developer' as developer;
 
 class CreateSponsorProfileScreen extends StatefulWidget {
@@ -157,7 +158,7 @@ class _CreateSponsorProfileScreenState extends State<CreateSponsorProfileScreen>
       final dio = Dio();
 
       final response = await dio.post(
-        'https://ziraai-api-sit.up.railway.app/api/v1/auth/refresh-token',
+        '${ApiConfig.apiBaseUrl}${ApiConfig.refreshToken}',
         data: {
           'refreshToken': refreshToken,
         },
