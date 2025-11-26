@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-// import 'package:install_referrer/install_referrer.dart';  // PACKAGE REMOVED - incompatible
+import 'package:android_play_install_referrer/android_play_install_referrer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service to handle Play Store Install Referrer for deferred deep linking
@@ -34,12 +34,10 @@ class InstallReferrerService {
 
       print('📦 InstallReferrer: Checking Play Store install referrer...');
 
-      // Get install referrer details
-      // DISABLED: install_referrer package removed
-      // final referrerDetails = await InstallReferrer.referrer;
-      final referrerDetails = null;  // Placeholder since package removed
+      // Get install referrer details from Google Play
+      final referrerDetails = await AndroidPlayInstallReferrer.installReferrer;
 
-      if (referrerDetails != null && referrerDetails.installReferrer != null && referrerDetails.installReferrer!.isNotEmpty) {
+      if (referrerDetails.installReferrer != null && referrerDetails.installReferrer!.isNotEmpty) {
         final referrerString = referrerDetails.installReferrer!;
         print('📦 InstallReferrer: Raw referrer data: $referrerString');
 

@@ -1,14 +1,25 @@
 import 'package:android_sms_reader/android_sms_reader.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// SMS'lerden referral kodu çıkarmak için servis
 /// İlk uygulama açılışında kullanılır (deferred deep linking)
 class SmsReferralService {
+  static const String _smsCheckedKey = 'sms_referral_checked';
 
   /// SMS'lerden ZIRA referral kodunu bul
   /// Son 24 saat içindeki mesajları tarar
+  /// SADECE BİR KEZ ÇALIŞIR - sonraki açılışlarda atlanır
   Future<String?> extractReferralFromSms() async {
     try {
+      // Check if we already checked SMS before
+      final prefs = await SharedPreferences.getInstance();
+      final alreadyChecked = prefs.getBool(_smsCheckedKey) ?? false;
+
+      if (alreadyChecked) {
+        print('📦 SmsReferral: Already checked before, skipping');
+        return null;
+      }
       // 1. SMS izni var mı kontrol et/iste
       final hasPermission = await _requestSmsPermission();
 
@@ -52,11 +63,18 @@ class SmsReferralService {
           print('   Tarih: ${message.date}');
           print('   Mesaj önizleme: ${body.substring(0, body.length > 50 ? 50 : body.length)}...');
 
+          // Mark as checked to prevent future scans
+          await prefs.setBool(_smsCheckedKey, true);
+
           return referralCode;
         }
       }
 
       print('ℹ️ SMS\'lerde ZIRA kodu bulunamadı - manuel giriş yapılacak');
+
+      // Mark as checked even if no code found
+      await prefs.setBool(_smsCheckedKey, true);
+
       return null;
 
     } catch (e, stackTrace) {

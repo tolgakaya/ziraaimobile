@@ -92,6 +92,7 @@ class FarmerProfileDto {
   Map<String, dynamic> toJson() => _$FarmerProfileDtoToJson(this);
 
   /// Convert DTO to domain entity
+  /// Safely handles null or invalid date fields
   FarmerProfile toEntity() {
     return FarmerProfile(
       userId: userId,
@@ -105,7 +106,8 @@ class FarmerProfileDto {
       notes: notes,
       status: status,
       isActive: isActive,
-      recordDate: DateTime.parse(recordDate),
+      // Safe parsing for recordDate - fallback to current time if invalid
+      recordDate: DateTime.tryParse(recordDate) ?? DateTime.now(),
       updateContactDate: updateContactDate != null
           ? DateTime.tryParse(updateContactDate!)
           : null,

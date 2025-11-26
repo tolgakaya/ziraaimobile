@@ -126,17 +126,24 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return PopScope(
+      // Disable back button if user came from referral link
+      canPop: widget.referralCode == null,
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
-          onPressed: () => Navigator.of(context).pop(),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          // Hide back button if user came from referral link
+          // This prevents returning to splash screen with referral code
+          leading: widget.referralCode == null
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
         ),
-      ),
-      body: BlocConsumer<AuthBloc, AuthState>(
+        body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is PhoneOtpSent) {
             // Navigate to OTP verification screen
@@ -523,6 +530,7 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }
