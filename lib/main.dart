@@ -8,12 +8,14 @@ import 'features/authentication/presentation/bloc/auth_bloc.dart';
 import 'features/authentication/presentation/screens/splash_screen.dart';
 import 'features/authentication/presentation/screens/phone_auth/phone_number_screen.dart';
 import 'features/sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
+import 'features/dealer/presentation/screens/dealer_invitation_screen.dart';
 import 'core/services/signalr_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/navigation_service.dart';
-// import 'core/services/install_referrer_service.dart';  // TEMPORARILY DISABLED
+import 'core/services/install_referrer_service.dart';
 import 'core/services/sms_referral_service.dart';
 import 'core/services/sponsorship_sms_listener.dart';
+import 'core/security/token_manager.dart';
 // ✅ REMOVED: dealer_invitation_sms_listener - switched to backend API integration
 import 'dart:async';
 
@@ -46,7 +48,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   StreamSubscription<String>? _deepLinkSubscription;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   String? _pendingReferralCode;
-  // bool _installReferrerChecked = false;  // TEMPORARILY DISABLED
+  bool _installReferrerChecked = false;
   bool _hasCheckedSms = false;
 
   @override
@@ -61,11 +63,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // Don't initialize SignalR here - SplashScreen handles auto-login and SignalR
 
-    // Check Install Referrer for deferred deep linking (first app launch after install)
-    // TEMPORARILY DISABLED - install_referrer package API changed, using SMS solution instead
-    // _checkInstallReferrer();
+    // Hybrid deferred deep linking strategy:
+    // 1. Try Install Referrer (reliable for Play Store downloads)
+    _checkInstallReferrer();
 
-    // Check SMS for referral code (deferred deep linking - app not installed scenario)
+    // 2. Fall back to SMS scanning (works for APK and if Play Store referrer unavailable)
     _checkSmsForReferralCode();
 
     // Initialize sponsorship SMS listener for automatic code detection
@@ -80,8 +82,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   /// Check Play Store Install Referrer for deferred deep linking
   /// This runs once after app installation from Play Store
-  /// TEMPORARILY DISABLED - install_referrer package incompatible, using SMS solution
-  /*
+  /// HYBRID STRATEGY: Try Install Referrer first, fall back to SMS if not found
   Future<void> _checkInstallReferrer() async {
     if (_installReferrerChecked) return;
 
@@ -112,9 +113,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _installReferrerChecked = true;
     }
   }
-  */
 
   /// Check SMS for referral code (deferred deep linking)
+  /// FALLBACK METHOD: Only runs if Install Referrer didn't find anything
   /// This runs once after app installation when user doesn't have app installed
   Future<void> _checkSmsForReferralCode() async {
     // Bir kez kontrol et
@@ -124,11 +125,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       return;
     }
 
-    // UI hazır olmasını bekle - SplashScreen'den önce bitirmek için daha kısa
+    // Wait for Install Referrer to finish first
     await Future.delayed(const Duration(milliseconds: 200));
 
+    // Check if Install Referrer already found a code
+    if (_pendingReferralCode != null) {
+      print('✅ Install Referrer already found code, skipping SMS check');
+      _hasCheckedSms = true;
+      MyApp._smsCheckComplete = true;
+      return;
+    }
+
     try {
-      print('🔍 SMS\'den referral kodu aranıyor...');
+      print('🔍 SMS fallback: Searching for referral code in SMS...');
 
       final smsService = getIt<SmsReferralService>();
       final referralCode = await smsService.extractReferralFromSms();
@@ -136,13 +145,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _hasCheckedSms = true;  // İşaretlendi
 
       if (referralCode != null) {
-        print('✅ SMS\'den kod bulundu: $referralCode');
+        print('✅ SMS fallback: Code found: $referralCode');
         _handleReferralCode(referralCode);
       } else {
-        print('ℹ️ SMS\'de kod yok - normal flow devam ediyor');
+        print('ℹ️ SMS fallback: No code found - normal flow continues');
       }
     } catch (e, stackTrace) {
-      print('⚠️ SMS kontrolü hatası: $e');
+      print('⚠️ SMS fallback error: $e');
       print('Stack trace: $stackTrace');
       _hasCheckedSms = true;
     } finally {
@@ -212,15 +221,34 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Listen to dealer invitation token stream
     _deepLinkService.dealerInvitationTokenStream.listen((token) {
       print('📱 Main: Dealer invitation token received from deep link: $token');
-      // Note: Navigation will be handled in DealerInvitationScreen
-      // For now, just log for monitoring purposes
-      // Actual implementation will check if user is logged in and navigate accordingly
+      if (mounted) {
+        _handleDealerInvitationToken(token);
+      }
     });
   }
 
   /// Handle received referral code from deep link
-  void _handleReferralCode(String referralCode) {
+  void _handleReferralCode(String referralCode) async {
     print('📱 Main: Referral code received from deep link: $referralCode');
+
+    // Check if user is already logged in (has valid token)
+    final tokenManager = getIt<TokenManager>();
+    final accessToken = await tokenManager.getAccessToken();
+
+    if (accessToken != null && accessToken.isNotEmpty) {
+      print('⚠️ User already logged in, ignoring referral code');
+      print('ℹ️ Referral codes can only be used during new user registration');
+      return;
+    }
+
+    // Check if user has already used a referral code before
+    final installReferrerService = getIt<InstallReferrerService>();
+    final hasPendingCode = await installReferrerService.hasDeferredReferralCode();
+
+    if (hasPendingCode) {
+      print('ℹ️ User already has a pending referral code, not overwriting');
+      return;
+    }
 
     // Use navigator key to access context
     final context = navigatorKey.currentContext;
@@ -248,7 +276,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Mark that SMS referral navigation is happening
     MyApp._smsReferralNavigated = true;
 
-    Navigator.of(context).push(
+    // Use pushReplacement to prevent back button returning to splash screen
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => PhoneNumberScreen(
           isRegistration: true,
@@ -283,6 +312,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       MaterialPageRoute(
         builder: (_) => SponsorshipRedemptionScreen(
           autoFilledCode: sponsorshipCode,
+        ),
+      ),
+    );
+  }
+
+  /// Handle received dealer invitation token from deep link
+  void _handleDealerInvitationToken(String token) {
+    print('📱 Main: Dealer invitation token received from deep link: $token');
+
+    // Use navigator key to access context
+    final context = navigatorKey.currentContext;
+    if (context == null || !mounted) {
+      print('⚠️ Navigator context not ready, will retry after delay');
+
+      // Retry after a short delay to give MaterialApp time to initialize
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _handleDealerInvitationToken(token);
+        }
+      });
+      return;
+    }
+
+    // Navigate directly to dealer invitation screen with token pre-filled
+    print('🎯 Navigating to dealer invitation screen with token: $token');
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DealerInvitationScreen(
+          token: token,
         ),
       ),
     );

@@ -312,7 +312,7 @@ class _DealerInvitationScreenState extends State<DealerInvitationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bayilik Daveti'),
+        title: const Text('Ücretsiz Abonelik Hediyesi'),
         elevation: 0,
       ),
       body: SafeArea(
@@ -449,6 +449,7 @@ class _DealerInvitationScreenState extends State<DealerInvitationScreen> {
                 const SizedBox(height: 12),
 
                 // Package tier with badge (🆕 v2.0 enhanced display)
+                // Only show if package tier is available
                 if (_invitationDetails!.packageTier != null) ...[
                   Card(
                     child: Padding(
@@ -469,9 +470,6 @@ class _DealerInvitationScreenState extends State<DealerInvitationScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                ] else ...[
-                  _buildInfoCard('🎁 Paket', '-'),
                   const SizedBox(height: 12),
                 ],
 

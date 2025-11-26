@@ -114,6 +114,11 @@ Future<void> setupMinimalServiceLocator() async {
       connectTimeout: ApiConfig.connectTimeout,
       receiveTimeout: ApiConfig.receiveTimeout,
       headers: ApiConfig.defaultHeaders,
+      // Allow 401 responses to pass through to TokenInterceptor
+      // This prevents Dio from throwing an exception before the interceptor can handle token refresh
+      validateStatus: (status) {
+        return status != null && (status < 400 || status == 401);
+      },
     ));
     
     // Add TokenInterceptor for automatic authentication and token refresh

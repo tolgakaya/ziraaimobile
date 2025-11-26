@@ -82,7 +82,7 @@ class AnalysisDetailScreen extends StatelessWidget {
                       LoadAnalysisDetail(analysisId: currentAnalysisId),
                     );
                   },
-                  label: const Text('Sponsora Yanıtla'),
+                  label: const Text('Uzmana Sor'),
                   icon: const Icon(Icons.reply),
                   backgroundColor: const Color(0xFF17CF17),
                 )
