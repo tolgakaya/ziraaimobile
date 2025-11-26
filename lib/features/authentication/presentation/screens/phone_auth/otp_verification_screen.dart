@@ -17,6 +17,7 @@ import '../../../../sponsorship/presentation/screens/farmer/sponsorship_redempti
 import '../../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../../../../dealer/data/dealer_api_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../../../../core/services/otp_sms_listener.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String mobilePhone;
@@ -44,15 +45,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   String? _otpError;
   int _resendCountdown = 60;
   bool _canResend = false;
+  StreamSubscription<String>? _otpSmsSubscription;
+  final _otpSmsListener = OtpSmsListener();
 
   @override
   void initState() {
     super.initState();
     _startResendCountdown();
+    _initializeOtpSmsListener();
   }
 
   @override
   void dispose() {
+    _otpSmsSubscription?.cancel();
     for (var controller in _otpControllers) {
       controller.dispose();
     }
@@ -60,6 +65,74 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       node.dispose();
     }
     super.dispose();
+  }
+
+  /// Initialize OTP SMS listener and subscribe to auto-fill stream
+  Future<void> _initializeOtpSmsListener() async {
+    try {
+      print('[OTP_SCREEN] 🎧 Initializing OTP SMS auto-fill...');
+
+      // Initialize listener (will request SMS permission if needed)
+      await _otpSmsListener.initialize();
+
+      // Subscribe to OTP code stream
+      _otpSmsSubscription = _otpSmsListener.otpCodeStream.listen((otpCode) {
+        print('[OTP_SCREEN] 📱 Received OTP code from SMS: $otpCode');
+        _autoFillOtp(otpCode);
+      });
+
+      // Also check recent SMS for codes (in case SMS arrived before screen opened)
+      final recentCode = await _otpSmsListener.checkRecentSmsForOtp();
+      if (recentCode != null && mounted) {
+        print('[OTP_SCREEN] 📱 Found OTP in recent SMS: $recentCode');
+        _autoFillOtp(recentCode);
+      }
+
+      print('[OTP_SCREEN] ✅ OTP SMS auto-fill initialized');
+    } catch (e) {
+      print('[OTP_SCREEN] ❌ Failed to initialize OTP SMS listener: $e');
+    }
+  }
+
+  /// Auto-fill OTP fields with received code
+  void _autoFillOtp(String otpCode) {
+    if (!mounted) return;
+
+    // Clear any error
+    setState(() => _otpError = null);
+
+    // Fill each digit into corresponding field
+    for (int i = 0; i < otpCode.length && i < 6; i++) {
+      _otpControllers[i].text = otpCode[i];
+    }
+
+    // Show success feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: const [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Doğrulama kodu SMS\'den otomatik dolduruldu',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green.shade600,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    // Auto-submit after brief delay (let user see the auto-fill)
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _validateAndSubmit();
+      }
+    });
   }
 
   void _startResendCountdown() {
