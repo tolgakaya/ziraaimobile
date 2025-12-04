@@ -1,7 +1,9 @@
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:injectable/injectable.dart';
 import '../storage/secure_storage_service.dart';
 import '../config/api_config.dart';
 
+@lazySingleton
 class TokenManager {
   final SecureStorageService _secureStorage;
 

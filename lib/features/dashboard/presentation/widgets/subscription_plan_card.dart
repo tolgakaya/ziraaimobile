@@ -47,28 +47,20 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
   Future<Map<String, dynamic>?> _loadSubscriptionData() async {
     try {
       print('🔄 Loading subscription data...');
-      
-      final networkClient = getIt<NetworkClient>();
-      final secureStorage = getIt<SecureStorageService>();
-      
-      // Get token
-      final token = await secureStorage.getToken();
-      if (token == null) {
-        print('❌ No token available');
-        return null;
-      }
 
-      print('✅ Token found, making API requests...');
+      final networkClient = getIt<NetworkClient>();
+
+      print('✅ Making API requests (TokenInterceptor will handle auth automatically)...');
+
+      // ✅ CRITICAL FIX: Removed manual token handling!
+      // TokenInterceptor in Dio now automatically:
+      // 1. Adds Bearer token to every request
+      // 2. Refreshes token if expired (before request)
+      // 3. Handles 401 errors and retries with new token
 
       // Get usage status (main data source)
       final usageResponse = await networkClient.get(
         ApiConfig.usageStatus,
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-        ),
       );
 
       print('📡 Usage Status Response: ${usageResponse.statusCode}');
@@ -81,10 +73,6 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
         final subscriptionResponse = await networkClient.get(
           ApiConfig.mySubscription,
           options: Options(
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
-            },
             validateStatus: (status) => status! < 500, // Accept 404 as valid response
           ),
         );
