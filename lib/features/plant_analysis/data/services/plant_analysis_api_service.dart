@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 import 'package:injectable/injectable.dart';
 import '../models/plant_analysis_request.dart';
+import '../models/plant_analysis_multi_image_request.dart';
 import '../models/plant_analysis_response.dart';
 import '../models/plant_analysis_response_new.dart';
 import '../models/plant_analysis_detail_dto.dart';
@@ -21,6 +22,14 @@ abstract class PlantAnalysisApiService {
   @POST('/plantanalyses/analyze-async')
   Future<ApiResponse<PlantAnalysisAsyncResponse>> submitAnalysisAsync(
     @Body() PlantAnalysisRequest request,
+  );
+
+  /// Submit multi-image plant analysis for asynchronous processing
+  /// Supports up to 5 images: 1 main (required) + 4 optional detail images
+  /// NOTE: Authorization header is automatically added by Dio interceptor
+  @POST('/plantanalyses/analyze-multi-async')
+  Future<ApiResponse<PlantAnalysisAsyncResponse>> submitMultiImageAnalysisAsync(
+    @Body() PlantAnalysisMultiImageRequest request,
   );
 
   /// Get analysis result by ID (deprecated - use getAnalysisDetail)

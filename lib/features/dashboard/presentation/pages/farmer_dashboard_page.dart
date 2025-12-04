@@ -26,6 +26,8 @@ import '../../../profile/presentation/screens/farmer_profile_screen.dart';
 import '../../../../core/services/sponsorship_sms_listener.dart';
 import '../../../sponsorship/data/services/sponsor_service.dart';
 import '../../../sponsorship/data/models/sponsorship_inbox_item.dart';
+import '../../../../core/services/signalr_service.dart';
+import '../../../../core/models/plant_analysis_notification.dart';
 
 class FarmerDashboardPage extends StatefulWidget {
   final String? pendingSponsorshipCode;
@@ -120,6 +122,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
     WidgetsBinding.instance.addObserver(this);
     _checkSponsorRole();
     _checkActiveOffers(); // Check for active sponsorship offers
+    _setupSignalRListener(); // Listen for completed analyses
 
     // Handle pending sponsorship code navigation
     if (widget.pendingSponsorshipCode != null) {
@@ -145,6 +148,31 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
         });
       });
     }
+  }
+
+  void _setupSignalRListener() {
+    final signalRService = SignalRService();
+
+    // Listen for analysis completion notifications
+    signalRService.onAnalysisCompleted = (PlantAnalysisNotification notification) {
+      print('🔔 Dashboard: Analysis completed notification received - ID: ${notification.analysisId}');
+
+      // Refresh dashboard to show the completed analysis
+      if (mounted) {
+        print('🔄 Dashboard: Refreshing to show completed analysis');
+        _refreshDashboard();
+
+        // Optional: Show a snackbar notification
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Analiz tamamlandı! 🎉'),
+            backgroundColor: const Color(0xFF22C55E),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    };
   }
 
   void _navigateToSponsorshipRedemption(String code) async {
@@ -263,15 +291,46 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
-      print('[Dashboard] 📱 App resumed - refreshing dashboard state');
+      print('[Dashboard] 📱 App resumed - checking token validity and refreshing dashboard');
 
-      // Force refresh subscription card when app resumes
-      setState(() {
-        _subscriptionCardKey = UniqueKey();
-      });
+      // Check token validity (will trigger refresh if needed)
+      final tokenManager = GetIt.instance<TokenManager>();
+      final isTokenValid = await tokenManager.ensureTokenIsValid();
 
-      // Check for active sponsorship offers (in case new codes arrived)
-      _checkActiveOffers();
+      if (!isTokenValid) {
+        print('[Dashboard] ⚠️ Token is invalid - user needs to re-login');
+        // Token is completely invalid (no refresh token or refresh token expired)
+        // Navigate to login screen
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+        return;
+      }
+
+      print('[Dashboard] ✅ Token is valid - refreshing dashboard');
+
+      // Trigger API call to force token refresh if expired
+      // This ensures token is refreshed BEFORE widgets try to load data
+      context.read<AuthBloc>().add(const AuthCheckStatusRequested());
+
+      // Wait for auth state to settle (token refresh + getCurrentUser API call)
+      // This ensures token is refreshed and validated before refreshing UI
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      // Force refresh UI widgets after token refresh
+      if (mounted) {
+        setState(() {
+          _subscriptionCardKey = UniqueKey();
+          _recentAnalysesKey = UniqueKey();
+        });
+
+        // Re-check active offers and sponsor role
+        _checkActiveOffers();
+        _checkSponsorRole();
+      }
 
       // Check for pending sponsorship code from SMS
       await _checkPendingSponsorshipCode();

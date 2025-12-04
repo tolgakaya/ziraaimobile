@@ -73,6 +73,14 @@ class AuthRepositoryImpl implements AuthRepository {
                 );
               }
 
+              // Store refresh token expiration if available
+              if (loginResponse.data!.refreshTokenExpiration != null) {
+                await _secureStorage.write(
+                  key: 'refresh_token_expiration',
+                  value: loginResponse.data!.refreshTokenExpiration!,
+                );
+              }
+
               // Create UserEntity - if user data is not available, create a minimal one
               final user = loginResponse.data!.user != null 
                 ? UserEntity(
@@ -109,6 +117,12 @@ class AuthRepositoryImpl implements AuthRepository {
         // Handle JSON response normally
         final loginResponse = LoginResponse.fromJson(response.data);
 
+        print('📝 Login Response Data:');
+        print('  - Token: ${loginResponse.data?.token?.substring(0, 20)}...');
+        print('  - Refresh Token: ${loginResponse.data?.refreshToken}');
+        print('  - Refresh Token Expiration: ${loginResponse.data?.refreshTokenExpiration}');
+        print('  - User Role: ${loginResponse.data?.user?.role}');
+
         if (loginResponse.success && loginResponse.data != null) {
           // Store token
           await _secureStorage.write(
@@ -118,9 +132,19 @@ class AuthRepositoryImpl implements AuthRepository {
 
           // Store refresh token if available
           if (loginResponse.data!.refreshToken != null) {
+            print('✅ Saving refresh token: ${loginResponse.data!.refreshToken}');
             await _secureStorage.write(
               key: 'refresh_token',
               value: loginResponse.data!.refreshToken!,
+            );
+          }
+
+          // Store refresh token expiration if available
+          if (loginResponse.data!.refreshTokenExpiration != null) {
+            print('✅ Saving refresh token expiration: ${loginResponse.data!.refreshTokenExpiration}');
+            await _secureStorage.write(
+              key: 'refresh_token_expiration',
+              value: loginResponse.data!.refreshTokenExpiration!,
             );
           }
 
@@ -329,6 +353,7 @@ class AuthRepositoryImpl implements AuthRepository {
       // Clear stored tokens
       await _secureStorage.delete(key: 'auth_token');
       await _secureStorage.delete(key: 'refresh_token');
+      await _secureStorage.delete(key: 'refresh_token_expiration');
       
       // Clear network client auth header
       _networkClient.dio.options.headers.remove('Authorization');
@@ -451,6 +476,14 @@ class AuthRepositoryImpl implements AuthRepository {
           );
         }
 
+        // Store refresh token expiration if available
+        if (response.data!.refreshTokenExpiration != null) {
+          await _secureStorage.write(
+            key: 'refresh_token_expiration',
+            value: response.data!.refreshTokenExpiration!,
+          );
+        }
+
         // Create UserEntity from token response
         // Phone login doesn't return full user data, so create minimal entity
         final user = UserEntity(
@@ -542,6 +575,14 @@ class AuthRepositoryImpl implements AuthRepository {
           await _secureStorage.write(
             key: 'refresh_token',
             value: response.data!.refreshToken!,
+          );
+        }
+
+        // Store refresh token expiration if available
+        if (response.data!.refreshTokenExpiration != null) {
+          await _secureStorage.write(
+            key: 'refresh_token_expiration',
+            value: response.data!.refreshTokenExpiration!,
           );
         }
 

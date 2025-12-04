@@ -220,8 +220,26 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
               SnackBar(content: Text(state.message)),
             );
           } else if (state is MessagesLoaded) {
-            _updateMessages(state.messages);
-            
+            // ✅ OPTIMIZATION: Only update if message count changed significantly
+            // This prevents clearing and re-adding all messages on every state change
+            // which causes scroll position and animation issues
+            final currentCount = _chatController.messages.length;
+            final newCount = state.messages.length;
+
+            // Full update only if:
+            // 1. First load (controller empty)
+            // 2. Message count difference > 1 (pagination/refresh)
+            // 3. Count decreased (deletion or error recovery)
+            if (currentCount == 0 || (newCount - currentCount).abs() > 1 || newCount < currentCount) {
+              print('📝 Full message update: currentCount=$currentCount, newCount=$newCount');
+              _updateMessages(state.messages);
+            } else if (newCount > currentCount) {
+              // Single message added (user sent or received 1 new message)
+              print('📝 Single message added: currentCount=$currentCount, newCount=$newCount');
+              final newMessage = state.messages.first; // DESC order - newest is first
+              _addSingleMessage(newMessage);
+            }
+
             // ✅ NEW: Mark unread messages as read when conversation opens
             _markUnreadMessagesAsRead(state.messages);
           }
@@ -246,50 +264,18 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
           return Column(
             children: [
-              // Image preview section (if images selected)
-              if (_selectedImages.isNotEmpty)
-                Container(
-                  height: 100,
-                  color: Colors.grey[100],
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _selectedImages.length,
-                    itemBuilder: (context, index) {
-                      return Stack(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: FileImage(File(_selectedImages[index].path)),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 0,
-                            right: 8,
-                            child: IconButton(
-                              icon: const Icon(Icons.cancel, color: Colors.red, size: 24),
-                              onPressed: () => _removeImage(index),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-              // Load More button (if pagination available)
+              // ✅ NEW: Load More button for older messages (reverse pagination)
+              // Backend now returns messages DESC (newest first)
+              // User scrolls UP to see older messages (WhatsApp pattern)
               if (state is MessagesLoaded && state.hasMorePages)
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+                    ),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -309,10 +295,12 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                               ),
                             );
                           },
-                          icon: const Icon(Icons.expand_more, size: 18),
-                          label: Text('Daha Fazla Mesaj Yükle (${state.totalRecords - state.messages.length} kaldı)'),
+                          icon: const Icon(Icons.expand_less, size: 18), // ✅ Changed: UP arrow for older messages
+                          label: Text('Eski Mesajları Yükle (${state.totalRecords - state.messages.length} kaldı)'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.blue,
                           ),
                         ),
                     ],
@@ -352,6 +340,104 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                     ),
               ),
 
+              // ✅ NEW: Image preview section at bottom (if images selected)
+              // Moved from top to bottom for better visibility
+              if (_selectedImages.isNotEmpty)
+                Container(
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      top: BorderSide(color: Colors.grey[300]!, width: 1),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        offset: const Offset(0, -2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
+                    children: [
+                      // Send button on the left
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        child: Material(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(24),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(24),
+                            onTap: () {
+                              // Send images without text (text optional)
+                              _sendWithAttachments('');
+                            },
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.send,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Image list
+                      Expanded(
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _selectedImages.length,
+                          itemBuilder: (context, index) {
+                            return Stack(
+                              children: [
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey[300]!, width: 2),
+                                    image: DecorationImage(
+                                      image: FileImage(File(_selectedImages[index].path)),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: -4,
+                                  right: 4,
+                                  child: Material(
+                                    color: Colors.red,
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      onTap: () => _removeImage(index),
+                                      customBorder: const CircleBorder(),
+                                      child: Container(
+                                        width: 28,
+                                        height: 28,
+                                        alignment: Alignment.center,
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // ✅ NEW: Voice recorder overlay (when recording)
               if (_isRecordingVoice)
                 VoiceRecorderWidget(
@@ -383,22 +469,60 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     );
   }
 
+  /// Add a single new message to chat controller (optimization)
+  /// Used when only 1 message added (user sends message or receives via SignalR)
+  void _addSingleMessage(dynamic msg) {
+    print('📝 _addSingleMessage called: id=${msg.id}');
+
+    // Check if message already exists to prevent duplicates
+    if (_chatController.messages.any((m) => m.id == msg.id.toString())) {
+      print('⚠️ Message ${msg.id} already exists, skipping');
+      return;
+    }
+
+    final textMessage = chat_core.TextMessage(
+      id: msg.id.toString(),
+      authorId: msg.fromUserId.toString(),
+      createdAt: msg.sentDate.toUtc(),
+      text: msg.message,
+      metadata: {
+        'messageStatus': msg.status.toString().split('.').last,
+        'senderAvatarUrl': msg.senderAvatarUrl,
+        'senderAvatarThumbnailUrl': msg.senderAvatarThumbnailUrl,
+        'attachmentUrls': msg.attachmentUrls,
+        'attachmentThumbnails': msg.attachmentThumbnails,
+        'hasAttachments': msg.hasAttachments,
+        'isVoiceMessage': msg.isVoiceMessage,
+        'voiceMessageUrl': msg.voiceMessageUrl,
+        'voiceMessageDuration': msg.voiceMessageDuration,
+        'voiceMessageWaveform': msg.voiceMessageWaveform,
+      },
+    );
+
+    print('📝 Adding single message: id=${textMessage.id}, createdAt=${textMessage.createdAt}');
+    _chatController.insertMessage(textMessage);
+    print('✅ Message added, total messages: ${_chatController.messages.length}');
+  }
+
   void _updateMessages(List messages) {
     print('📝 _updateMessages called with ${messages.length} messages');
-    
+
     // Clear existing messages first to avoid duplicates
     while (_chatController.messages.isNotEmpty) {
       _chatController.removeMessage(_chatController.messages.first);
     }
     print('📝 Cleared all messages from controller');
-    
-    // Insert all messages in chronological order (oldest to newest)
-    // flutter_chat_ui will display them with newest at bottom
+
+    // ✅ CRITICAL: flutter_chat_ui sorts messages by createdAt automatically
+    // Backend sends DESC order (newest first), but we just insert all messages
+    // The Chat widget will sort them correctly by createdAt timestamp
+    // DO NOT reverse or manually sort - let flutter_chat_ui handle it!
+
     for (var msg in messages) {
       final textMessage = chat_core.TextMessage(
         id: msg.id.toString(),
         authorId: msg.fromUserId.toString(),
-        createdAt: msg.sentDate.toUtc(),
+        createdAt: msg.sentDate.toUtc(), // ✅ This timestamp is used for automatic sorting
         text: msg.message,
         metadata: {
           'messageStatus': msg.status.toString().split('.').last,  // Convert enum to string (e.g., "sent", "delivered", "read")
@@ -414,10 +538,11 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           'voiceMessageWaveform': msg.voiceMessageWaveform,
         },
       );
-      print('📝 Inserting TextMessage: id=${textMessage.id}, authorId=${textMessage.authorId}, metadata=${textMessage.metadata}');
+      print('📝 Inserting TextMessage: id=${textMessage.id}, createdAt=${textMessage.createdAt}');
       _chatController.insertMessage(textMessage);
     }
     print('📝 Total messages in controller: ${_chatController.messages.length}');
+    print('📝 flutter_chat_ui will sort messages by createdAt automatically');
   }
 
   /// Build avatar widget for received messages

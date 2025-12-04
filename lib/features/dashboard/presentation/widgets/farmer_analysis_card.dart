@@ -17,23 +17,28 @@ class FarmerAnalysisCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Disable interaction for processing analyses
+    final isInteractive = !analysis.isProcessing;
+
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0F000000),
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      onTap: isInteractive ? onTap : null,
+      child: Opacity(
+        opacity: isInteractive ? 1.0 : 0.6, // Dimmed for processing
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 3,
+                offset: Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Image Section with Status Badge
             Container(
               height: 200,
@@ -56,14 +61,54 @@ class FarmerAnalysisCard extends StatelessWidget {
                     ),
                     child: _buildPlantImage(analysis.thumbnailUrl),
                   ),
+                  // Processing Indicator Overlay (center)
+                  if (analysis.isProcessing)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 3,
+                              ),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  'Analiz devam ediyor...',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   // Health Status Badge
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: _buildHealthBadge(context),
-                  ),
+                  if (!analysis.isProcessing)
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: _buildHealthBadge(context),
+                    ),
                   // Message Badge Overlay (top-left corner)
-                  if (analysis.hasMessages)
+                  if (analysis.hasMessages && !analysis.isProcessing)
                     Positioned(
                       top: 8,
                       left: 8,
@@ -122,7 +167,8 @@ class FarmerAnalysisCard extends StatelessWidget {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

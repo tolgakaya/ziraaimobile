@@ -20,6 +20,7 @@ import '../widgets/sponsor_bottom_navigation.dart';
 import '../widgets/notification_bell_icon.dart';
 import 'farmer_dashboard_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/security/token_manager.dart';
 
 class SponsorDashboardPage extends StatefulWidget {
   const SponsorDashboardPage({super.key});
@@ -53,11 +54,43 @@ class _SponsorDashboardPageState extends State<SponsorDashboardPage> with Widget
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
-    // Refresh dashboard when app comes back to foreground
+
     if (state == AppLifecycleState.resumed) {
-      _loadDashboardData();
+      print('[SponsorDashboard] 📱 App resumed - checking token validity and refreshing dashboard');
+
+      // Check token validity (will trigger refresh if needed)
+      final tokenManager = GetIt.instance<TokenManager>();
+      final isTokenValid = await tokenManager.ensureTokenIsValid();
+
+      if (!isTokenValid) {
+        print('[SponsorDashboard] ⚠️ Token is invalid - user needs to re-login');
+        // Token is completely invalid (no refresh token or refresh token expired)
+        // Navigate to login screen
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+        return;
+      }
+
+      print('[SponsorDashboard] ✅ Token is valid - refreshing dashboard');
+
+      // Trigger API call to force token refresh if expired
+      // This ensures token is refreshed BEFORE widgets try to load data
+      context.read<AuthBloc>().add(const AuthCheckStatusRequested());
+
+      // Wait for auth state to settle (token refresh + getCurrentUser API call)
+      // This ensures token is refreshed and validated before refreshing UI
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      // Refresh dashboard with new token
+      if (mounted) {
+        _loadDashboardData();
+      }
     }
   }
 

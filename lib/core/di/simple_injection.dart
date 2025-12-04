@@ -59,6 +59,7 @@ Future<void> setupSimpleDI() async {
     () => PlantAnalysisRepositoryImpl(
       getIt<PlantAnalysisApiService>(),
       getIt<AuthService>(),
+      getIt<Dio>(),
     ),
   );
 

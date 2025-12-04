@@ -51,6 +51,10 @@ class AnalysisSummary {
 
   final String? thumbnailUrl;
 
+  // Analysis status: "Processing", "Completed", "Failed"
+  @JsonKey(name: 'status') // Backend sends "status", not "analysisStatus"
+  final String? analysisStatus;
+
   // ==========================================
   // Messaging Fields (Flat structure - Backend v1.1)
   // ==========================================
@@ -69,6 +73,7 @@ class AnalysisSummary {
     this.healthStatus,
     required this.date,
     this.thumbnailUrl,
+    this.analysisStatus,
     this.unreadMessageCount,
     this.totalMessageCount,
     this.lastMessageDate,
@@ -86,6 +91,15 @@ class AnalysisSummary {
   // ==========================================
   // Helper Getters for UI
   // ==========================================
+
+  /// Analysis is still being processed (not ready to view)
+  bool get isProcessing => analysisStatus == 'Processing';
+
+  /// Analysis is completed and ready to view
+  bool get isCompleted => analysisStatus == 'Completed' || analysisStatus == null; // Null for backward compatibility
+
+  /// Analysis failed
+  bool get isFailed => analysisStatus == 'Failed';
 
   /// Has any messages in conversation
   bool get hasMessages => (totalMessageCount ?? 0) > 0;

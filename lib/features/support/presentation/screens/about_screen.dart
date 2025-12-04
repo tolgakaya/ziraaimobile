@@ -296,30 +296,69 @@ class _AboutScreenState extends State<AboutScreen> {
       child: Column(
         children: [
           if (appInfo.termsOfServiceUrl != null)
-            ListTile(
-              leading: const Icon(Icons.description, color: Color(0xFF059669)),
-              title: const Text('Kullanım Koşulları'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _launchUrl(appInfo.termsOfServiceUrl!),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _launchUrl(appInfo.termsOfServiceUrl!),
+                child: ListTile(
+                  leading: const Icon(Icons.description, color: Color(0xFF059669)),
+                  title: const Text(
+                    'Kullanım Koşulları',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+              ),
             ),
           if (appInfo.termsOfServiceUrl != null &&
               (appInfo.privacyPolicyUrl != null || appInfo.cookiePolicyUrl != null))
             const Divider(height: 1),
           if (appInfo.privacyPolicyUrl != null)
-            ListTile(
-              leading: const Icon(Icons.privacy_tip, color: Color(0xFF059669)),
-              title: const Text('Gizlilik Politikası'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _launchUrl(appInfo.privacyPolicyUrl!),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _launchUrl(appInfo.privacyPolicyUrl!),
+                child: ListTile(
+                  leading: const Icon(Icons.privacy_tip, color: Color(0xFF059669)),
+                  title: const Text(
+                    'Gizlilik Politikası',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+              ),
             ),
           if (appInfo.privacyPolicyUrl != null && appInfo.cookiePolicyUrl != null)
             const Divider(height: 1),
           if (appInfo.cookiePolicyUrl != null)
-            ListTile(
-              leading: const Icon(Icons.cookie, color: Color(0xFF059669)),
-              title: const Text('Çerez Politikası'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _launchUrl(appInfo.cookiePolicyUrl!),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _launchUrl(appInfo.cookiePolicyUrl!),
+                child: ListTile(
+                  leading: const Icon(Icons.cookie, color: Color(0xFF059669)),
+                  title: const Text(
+                    'Çerez Politikası',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -490,48 +529,98 @@ class _AboutScreenState extends State<AboutScreen> {
     String value,
     VoidCallback onTap,
   ) {
-    return InkWell(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey.shade500),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: Colors.grey.shade500),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF3B82F6),
+                        decoration: TextDecoration.underline,
+                        decorationColor: Color(0xFF3B82F6),
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF3B82F6),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.open_in_new,
+                size: 18,
+                color: const Color(0xFF3B82F6),
+              ),
+            ],
           ),
-          Icon(
-            Icons.open_in_new,
-            size: 16,
-            color: Colors.grey.shade400,
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final uri = Uri.parse(url);
+
+      // Check if URL can be launched
+      if (!await canLaunchUrl(uri)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bu bağlantı açılamıyor'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Launch URL with appropriate mode based on scheme
+      final bool launched = await launchUrl(
+        uri,
+        mode: uri.scheme == 'tel' || uri.scheme == 'mailto'
+            ? LaunchMode.externalApplication // For tel: and mailto:
+            : LaunchMode.platformDefault, // For https:
+      );
+
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bağlantı açılamadı'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error launching URL: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

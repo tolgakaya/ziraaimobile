@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:convert';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
@@ -8,6 +7,7 @@ import '../../../../core/error/failures.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
 import '../services/plant_analysis_api_service.dart';
 import '../models/plant_analysis_request.dart';
+import '../models/plant_analysis_multi_image_request.dart';
 import '../models/plant_analysis_response.dart';
 import '../models/analysis_result.dart';
 import '../models/analysis_list_response.dart';
@@ -20,8 +20,9 @@ import '../../../../core/config/api_config.dart';
 class PlantAnalysisRepositoryImpl implements PlantAnalysisRepository {
   final PlantAnalysisApiService _apiService;
   final AuthService _authService;
+  final Dio _dio;
 
-  PlantAnalysisRepositoryImpl(this._apiService, this._authService);
+  PlantAnalysisRepositoryImpl(this._apiService, this._authService, this._dio);
 
   @override
   Future<Either<Failure, PlantAnalysisData>> submitAnalysis({
@@ -42,18 +43,10 @@ class PlantAnalysisRepositoryImpl implements PlantAnalysisRepository {
         cropType: null, // Auto-detect
       );
 
-      // Submit analysis - using Dio directly because backend returns flat JSON (no data wrapper)
-      final token = await _authService.getToken();
-      final dio = Dio();
-      final apiResponse = await dio.post(
-        'https://ziraai-api-sit.up.railway.app/api/v1/plantanalyses/analyze-async',
+      // Submit analysis - using injected Dio with interceptors
+      final apiResponse = await _dio.post(
+        '/plantanalyses/analyze-async',
         data: request.toJson(),
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-        ),
       );
 
       print('🚀 PlantAnalysisRepository: API Response received');
@@ -91,6 +84,116 @@ class PlantAnalysisRepositoryImpl implements PlantAnalysisRepository {
       return Left(_handleDioError(e));
     } catch (e) {
       print('❌ PlantAnalysisRepository: Exception: $e');
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, PlantAnalysisData>> submitMultiImageAnalysis({
+    required File mainImage,
+    File? leafTopImage,
+    File? leafBottomImage,
+    File? plantOverviewImage,
+    File? rootImage,
+    String? notes,
+    String? location,
+  }) async {
+    try {
+      print('🌿 PlantAnalysisRepository: Starting multi-image analysis submission');
+
+      // Convert main image to base64 (required)
+      final mainBytes = await mainImage.readAsBytes();
+      final base64MainImage = base64Encode(mainBytes);
+      print('   Main image converted: ${base64MainImage.length} bytes');
+
+      // Convert optional images to base64 (only if provided)
+      String? base64LeafTop;
+      String? base64LeafBottom;
+      String? base64PlantOverview;
+      String? base64Root;
+
+      if (leafTopImage != null) {
+        final bytes = await leafTopImage.readAsBytes();
+        base64LeafTop = base64Encode(bytes);
+        print('   Leaf top image converted: ${base64LeafTop.length} bytes');
+      }
+
+      if (leafBottomImage != null) {
+        final bytes = await leafBottomImage.readAsBytes();
+        base64LeafBottom = base64Encode(bytes);
+        print('   Leaf bottom image converted: ${base64LeafBottom.length} bytes');
+      }
+
+      if (plantOverviewImage != null) {
+        final bytes = await plantOverviewImage.readAsBytes();
+        base64PlantOverview = base64Encode(bytes);
+        print('   Plant overview image converted: ${base64PlantOverview.length} bytes');
+      }
+
+      if (rootImage != null) {
+        final bytes = await rootImage.readAsBytes();
+        base64Root = base64Encode(bytes);
+        print('   Root image converted: ${base64Root.length} bytes');
+      }
+
+      // Prepare multi-image request
+      final request = PlantAnalysisMultiImageRequest(
+        image: 'data:image/jpeg;base64,$base64MainImage',
+        leafTopImage: base64LeafTop != null ? 'data:image/jpeg;base64,$base64LeafTop' : null,
+        leafBottomImage: base64LeafBottom != null ? 'data:image/jpeg;base64,$base64LeafBottom' : null,
+        plantOverviewImage: base64PlantOverview != null ? 'data:image/jpeg;base64,$base64PlantOverview' : null,
+        rootImage: base64Root != null ? 'data:image/jpeg;base64,$base64Root' : null,
+        notes: notes,
+        location: location,
+        cropType: null, // Auto-detect
+      );
+
+      print('   Total images: ${request.imageCount}');
+
+      // Submit multi-image analysis - using injected Dio with interceptors
+      print('🌐 PlantAnalysisRepository: Submitting request to /plantanalyses/analyze-multi-async');
+      final apiResponse = await _dio.post(
+        '/plantanalyses/analyze-multi-async',
+        data: request.toJson(),
+      );
+
+      print('🚀 PlantAnalysisRepository: Multi-image API Response received');
+      print('   statusCode: ${apiResponse.statusCode}');
+      print('   data: ${apiResponse.data}');
+
+      final Map<String, dynamic> responseData = apiResponse.data as Map<String, dynamic>;
+
+      // Backend returns flat JSON with snake_case fields
+      final success = responseData['success'] as bool? ?? false;
+      final message = responseData['message'] as String? ?? '';
+      final analysisId = responseData['analysis_id'] as String? ?? '';
+      final imageCount = responseData['image_count'] as int?;
+
+      print('   success: $success');
+      print('   message: $message');
+      print('   analysis_id: $analysisId');
+      print('   image_count: $imageCount');
+
+      // Check if multi-image analysis was queued successfully
+      if (success && analysisId.isNotEmpty) {
+        print('✅ PlantAnalysisRepository: Multi-image analysis queued successfully!');
+        final plantAnalysisData = PlantAnalysisData(
+          analysisId: analysisId,
+          status: 'queued',
+          message: message,
+        );
+        return Right(plantAnalysisData);
+      } else {
+        print('❌ PlantAnalysisRepository: Multi-image analysis submission failed');
+        return Left(ServerFailure(
+          message: message.isNotEmpty ? message : 'Multi-image analysis submission failed',
+          code: null,
+        ));
+      }
+    } on DioException catch (e) {
+      return Left(_handleDioError(e));
+    } catch (e) {
+      print('❌ PlantAnalysisRepository: Multi-image exception: $e');
       return Left(ServerFailure(message: e.toString()));
     }
   }
