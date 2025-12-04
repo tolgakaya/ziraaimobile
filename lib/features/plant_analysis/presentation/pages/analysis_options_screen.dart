@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
 import '../../../../core/services/image_processing_service.dart';
+import '../../../../core/services/location_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/error/plant_analysis_exceptions.dart';
 import '../../../../core/widgets/error_widgets.dart';
@@ -29,7 +30,12 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   late final PlantAnalysisRepository _repository;
+  late final LocationService _locationService;
   final ImagePicker _imagePicker = ImagePicker();
+
+  // Location state
+  String? _autoDetectedLocation; // Automatically detected GPS location
+  bool _isLoadingLocation = false;
 
   // Plant type dropdown options
   final List<String> _plantTypes = [
@@ -65,9 +71,42 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   @override
   void initState() {
     super.initState();
-    // Temporary: Use mock repository with correct async flow
+    // Initialize services
     _repository = getIt<PlantAnalysisRepository>();
+    _locationService = getIt<LocationService>();
     _validateImage();
+    // Automatically fetch location in background (silent, non-blocking)
+    _fetchLocationInBackground();
+  }
+
+  /// Fetch GPS location in background without blocking UI
+  /// This runs silently - no error dialogs if location unavailable
+  Future<void> _fetchLocationInBackground() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final location = await _locationService.getCurrentLocationString();
+      if (mounted) {
+        setState(() {
+          _autoDetectedLocation = location;
+          _isLoadingLocation = false;
+        });
+        if (location != null) {
+          print('✅ Auto-detected location: $location');
+        } else {
+          print('⚠️ Location not available (permission denied or services disabled)');
+        }
+      }
+    } catch (e) {
+      print('⚠️ Background location fetch error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
   }
 
   Future<void> _validateImage() async {
@@ -109,9 +148,11 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
             : 'Bitki Türü: $_selectedPlantType';
       }
 
-      final String? location = _locationController.text.trim().isNotEmpty
-          ? _locationController.text.trim()
-          : null;
+      // ✅ NEW: Smart location handling
+      // Priority: User input + Auto-detected location
+      final String userLocation = _locationController.text.trim();
+      final String? finalLocation = _buildFinalLocation(userLocation, _autoDetectedLocation);
+
       final String? notes = combinedNotes.isNotEmpty ? combinedNotes : null;
 
       // Choose endpoint based on analysis type
@@ -122,12 +163,12 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
               leafBottomImage: _leafBottomImage,
               plantOverviewImage: _plantOverviewImage,
               rootImage: _rootImage,
-              location: location,
+              location: finalLocation,
               notes: notes,
             )
           : await _repository.submitAnalysis(
               imageFile: widget.selectedImage,
-              location: location,
+              location: finalLocation,
               notes: notes,
             );
 
@@ -1140,14 +1181,34 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             const SizedBox(height: 24),
 
-            // Location Input
-            const Text(
-              'Konum (Opsiyonel)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF374151),
-              ),
+            // Location Input with Auto-Detection
+            Row(
+              children: [
+                const Text(
+                  'Konum (Opsiyonel)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_isLoadingLocation)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else if (_autoDetectedLocation != null)
+                  const Tooltip(
+                    message: 'GPS konumu otomatik olarak algılandı',
+                    child: Icon(
+                      Icons.gps_fixed,
+                      size: 18,
+                      color: Color(0xFF22C55E),
+                    ),
+                  ),
+              ],
             ),
 
             const SizedBox(height: 8),
@@ -1160,12 +1221,48 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
               ),
               child: TextField(
                 controller: _locationController,
-                decoration: const InputDecoration(
-                  hintText: 'Örn: Ankara, Türkiye',
-                  hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
+                decoration: InputDecoration(
+                  hintText: _autoDetectedLocation != null
+                      ? 'GPS: ${_autoDetectedLocation!.split(', ')[0]}'
+                      : 'Örn: Ankara, Türkiye',
+                  hintStyle: TextStyle(
+                    color: _autoDetectedLocation != null
+                        ? const Color(0xFF22C55E).withOpacity(0.7)
+                        : const Color(0xFF9CA3AF),
+                  ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  prefixIcon: Icon(Icons.location_on, color: Color(0xFF6B7280)),
+                  contentPadding: const EdgeInsets.all(16),
+                  prefixIcon: Icon(
+                    _autoDetectedLocation != null ? Icons.my_location : Icons.location_on,
+                    color: _autoDetectedLocation != null
+                        ? const Color(0xFF22C55E)
+                        : const Color(0xFF6B7280),
+                  ),
+                  suffixIcon: _autoDetectedLocation != null
+                      ? IconButton(
+                          icon: const Icon(Icons.info_outline, size: 20),
+                          color: const Color(0xFF6B7280),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Konum Bilgisi'),
+                                content: Text(
+                                  'GPS Koordinatları:\n$_autoDetectedLocation\n\n'
+                                  'İsterseniz şehir adını da girebilirsiniz. '
+                                  'Her iki bilgi de analize eklenecektir.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Tamam'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        )
+                      : null,
                 ),
               ),
             ),
@@ -1288,6 +1385,31 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
     // No subscription tier information means likely no active subscription
     return 'no_subscription';
+  }
+
+  /// Build final location string combining user input and auto-detected GPS
+  /// Logic:
+  /// - If user entered location AND GPS available: "User Location - GPS Coordinates"
+  /// - If only user entered location: "User Location"
+  /// - If only GPS available: "GPS Coordinates"
+  /// - If neither: null
+  String? _buildFinalLocation(String userInput, String? gpsLocation) {
+    final hasUserInput = userInput.isNotEmpty;
+    final hasGPS = gpsLocation != null && gpsLocation.isNotEmpty;
+
+    if (hasUserInput && hasGPS) {
+      // Both available: combine them
+      return '$userInput - $gpsLocation';
+    } else if (hasUserInput) {
+      // Only user input
+      return userInput;
+    } else if (hasGPS) {
+      // Only GPS
+      return gpsLocation;
+    } else {
+      // Neither available
+      return null;
+    }
   }
 }
 
