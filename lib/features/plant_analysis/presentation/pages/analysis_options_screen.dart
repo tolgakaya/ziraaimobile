@@ -28,7 +28,6 @@ class AnalysisOptionsScreen extends StatefulWidget {
 
 class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
   late final PlantAnalysisRepository _repository;
   late final LocationService _locationService;
   final ImagePicker _imagePicker = ImagePicker();
@@ -148,10 +147,8 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
             : 'Bitki Türü: $_selectedPlantType';
       }
 
-      // ✅ NEW: Smart location handling
-      // Priority: User input + Auto-detected location
-      final String userLocation = _locationController.text.trim();
-      final String? finalLocation = _buildFinalLocation(userLocation, _autoDetectedLocation);
+      // ✅ NEW: Automatic GPS location (background only, not shown in UI)
+      final String? finalLocation = _autoDetectedLocation;
 
       final String? notes = combinedNotes.isNotEmpty ? combinedNotes : null;
 
@@ -814,7 +811,6 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   @override
   void dispose() {
     _notesController.dispose();
-    _locationController.dispose();
     super.dispose();
   }
 
@@ -1179,93 +1175,8 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
-
-            // Location Input with Auto-Detection
-            Row(
-              children: [
-                const Text(
-                  'Konum (Opsiyonel)',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (_isLoadingLocation)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else if (_autoDetectedLocation != null)
-                  const Tooltip(
-                    message: 'GPS konumu otomatik olarak algılandı',
-                    child: Icon(
-                      Icons.gps_fixed,
-                      size: 18,
-                      color: Color(0xFF22C55E),
-                    ),
-                  ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: TextField(
-                controller: _locationController,
-                decoration: InputDecoration(
-                  hintText: _autoDetectedLocation != null
-                      ? 'GPS: ${_autoDetectedLocation!.split(', ')[0]}'
-                      : 'Örn: Ankara, Türkiye',
-                  hintStyle: TextStyle(
-                    color: _autoDetectedLocation != null
-                        ? const Color(0xFF22C55E).withOpacity(0.7)
-                        : const Color(0xFF9CA3AF),
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.all(16),
-                  prefixIcon: Icon(
-                    _autoDetectedLocation != null ? Icons.my_location : Icons.location_on,
-                    color: _autoDetectedLocation != null
-                        ? const Color(0xFF22C55E)
-                        : const Color(0xFF6B7280),
-                  ),
-                  suffixIcon: _autoDetectedLocation != null
-                      ? IconButton(
-                          icon: const Icon(Icons.info_outline, size: 20),
-                          color: const Color(0xFF6B7280),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Konum Bilgisi'),
-                                content: Text(
-                                  'GPS Koordinatları:\n$_autoDetectedLocation\n\n'
-                                  'İsterseniz şehir adını da girebilirsiniz. '
-                                  'Her iki bilgi de analize eklenecektir.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Tamam'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        )
-                      : null,
-                ),
-              ),
-            ),
+            // ✅ Location is fetched in background but not shown in UI
+            // GPS coordinates are automatically included in analysis request
 
             const SizedBox(height: 24),
 
@@ -1387,30 +1298,8 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
     return 'no_subscription';
   }
 
-  /// Build final location string combining user input and auto-detected GPS
-  /// Logic:
-  /// - If user entered location AND GPS available: "User Location - GPS Coordinates"
-  /// - If only user entered location: "User Location"
-  /// - If only GPS available: "GPS Coordinates"
-  /// - If neither: null
-  String? _buildFinalLocation(String userInput, String? gpsLocation) {
-    final hasUserInput = userInput.isNotEmpty;
-    final hasGPS = gpsLocation != null && gpsLocation.isNotEmpty;
-
-    if (hasUserInput && hasGPS) {
-      // Both available: combine them
-      return '$userInput - $gpsLocation';
-    } else if (hasUserInput) {
-      // Only user input
-      return userInput;
-    } else if (hasGPS) {
-      // Only GPS
-      return gpsLocation;
-    } else {
-      // Neither available
-      return null;
-    }
-  }
+  // ✅ Location logic simplified: Only GPS coordinates sent automatically
+  // No user input field, location fetched silently in background
 }
 
 /// Image types for multi-image analysis
