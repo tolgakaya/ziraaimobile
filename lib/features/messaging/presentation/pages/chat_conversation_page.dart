@@ -333,9 +333,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                         // Attachment button positioned over input area (only if not recording)
                         if (!_isRecordingVoice)
                           _buildAttachmentButton(state),
+                        // ❌ DISABLED: Voice recording button temporarily disabled
                         // Voice recording button (only if not recording and no attachments selected)
-                        if (!_isRecordingVoice && _selectedImages.isEmpty)
-                          _buildVoiceButton(state),
+                        // if (!_isRecordingVoice && _selectedImages.isEmpty)
+                        //   _buildVoiceButton(state),
                       ],
                     ),
               ),
@@ -438,30 +439,31 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                   ),
                 ),
 
+              // ❌ DISABLED: Voice recorder overlay temporarily disabled
               // ✅ NEW: Voice recorder overlay (when recording)
-              if (_isRecordingVoice)
-                VoiceRecorderWidget(
-                  onSendVoice: (filePath, duration, waveform) {
-                    // Send voice message
-                    context.read<MessagingBloc>().add(
-                      SendVoiceMessageEvent(
-                        plantAnalysisId: widget.plantAnalysisId,
-                        toUserId: widget.sponsorUserId,
-                        voiceFilePath: filePath,
-                        duration: duration,
-                        waveform: waveform,
-                      ),
-                    );
-                    setState(() {
-                      _isRecordingVoice = false;
-                    });
-                  },
-                  onCancel: () {
-                    setState(() {
-                      _isRecordingVoice = false;
-                    });
-                  },
-                ),
+              // if (_isRecordingVoice)
+              //   VoiceRecorderWidget(
+              //     onSendVoice: (filePath, duration, waveform) {
+              //       // Send voice message
+              //       context.read<MessagingBloc>().add(
+              //         SendVoiceMessageEvent(
+              //           plantAnalysisId: widget.plantAnalysisId,
+              //           toUserId: widget.sponsorUserId,
+              //           voiceFilePath: filePath,
+              //           duration: duration,
+              //           waveform: waveform,
+              //         ),
+              //       );
+              //       setState(() {
+              //         _isRecordingVoice = false;
+              //       });
+              //     },
+              //     onCancel: () {
+              //       setState(() {
+              //         _isRecordingVoice = false;
+              //       });
+              //     },
+              //   ),
             ],
           );
         },
