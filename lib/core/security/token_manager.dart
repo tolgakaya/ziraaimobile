@@ -1,7 +1,7 @@
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:injectable/injectable.dart';
 import '../storage/secure_storage_service.dart';
-import '../config/api_config.dart';
+import '../config/api_config.dart' as config;
 
 @lazySingleton
 class TokenManager {
@@ -167,17 +167,17 @@ class TokenManager {
 
       // Map environment to expected issuer
       String expectedIssuer;
-      switch (ApiConfig.environment) {
-        case Environment.production:
+      switch (config.ApiConfig.environment) {
+        case config.Environment.production:
           expectedIssuer = 'ZiraAI_Prod';
           break;
-        case Environment.staging:
+        case config.Environment.staging:
           expectedIssuer = 'ZiraAI_Staging';
           break;
-        case Environment.development:
+        case config.Environment.development:
           expectedIssuer = 'ZiraAI_Dev';
           break;
-        case Environment.local:
+        case config.Environment.local:
           expectedIssuer = 'ZiraAI_Local';
           break;
       }
@@ -188,7 +188,7 @@ class TokenManager {
         print('⚠️ TokenManager: Token environment mismatch!');
         print('   Token issuer: $issuer');
         print('   Expected issuer: $expectedIssuer');
-        print('   Current environment: ${ApiConfig.environment}');
+        print('   Current environment: ${config.ApiConfig.environment}');
       }
 
       return isValid;
