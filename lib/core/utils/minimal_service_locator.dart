@@ -44,6 +44,7 @@ import '../../features/dealer/presentation/screens/pending_invitations_screen.da
 import '../services/notification_signalr_service.dart';
 import '../services/navigation_service.dart';
 import '../services/permission_service.dart';
+import '../services/location_service.dart';
 import '../../features/profile/data/services/farmer_profile_api_service.dart';
 import '../../features/profile/data/repositories/farmer_profile_repository_impl.dart';
 import '../../features/profile/domain/repositories/farmer_profile_repository.dart';
@@ -83,6 +84,13 @@ Future<void> setupMinimalServiceLocator() async {
   );
 
   print('✅ PERMISSIONS: PermissionService registered successfully!');
+
+  // ✅ LOCATION SERVICE - GPS location detection for plant analysis
+  getIt.registerLazySingleton<LocationService>(
+    () => LocationService(),
+  );
+
+  print('✅ LOCATION: LocationService registered successfully!');
 
   // Deferred Deep Linking Services
   // Install Referrer TEMPORARILY DISABLED - using SMS solution instead
