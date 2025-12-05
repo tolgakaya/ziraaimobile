@@ -77,7 +77,7 @@ class ApiConfig {
 
   // Messaging Endpoints
   static const String messagingSend = '/sponsorship/messages';
-  static const String messagingGetConversation = '/sponsorship/conversations'; // ✅ FIXED: Updated to new backend endpoint
+  static const String messagingGetConversation = '/sponsorship/messages/conversation'; // ✅ Using old endpoint with new pagination structure
   static const String messagingBlock = '/sponsorship/messages/block';
   static String messagingUnblock(int sponsorId) =>
       '/sponsorship/messages/block/$sponsorId';

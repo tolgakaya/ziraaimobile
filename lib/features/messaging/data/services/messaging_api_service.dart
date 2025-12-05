@@ -48,7 +48,7 @@ class MessagingApiService {
   }
 
   /// Get paginated messages for a specific plant analysis
-  /// GET /sponsorship/conversations?fromUserId={}&toUserId={}&plantAnalysisId={}&page={}&pageSize={}
+  /// GET /sponsorship/messages/conversation?fromUserId={}&toUserId={}&plantAnalysisId={}&page={}&pageSize={}
   /// ✅ UPDATED: Backend now returns DESC order (newest first on page 1)
   /// ✅ Frontend should NOT reverse the array - backend sends correct order
   Future<PaginatedConversationResponse> getMessages({
