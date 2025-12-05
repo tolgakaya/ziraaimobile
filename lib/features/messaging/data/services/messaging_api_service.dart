@@ -48,18 +48,22 @@ class MessagingApiService {
   }
 
   /// Get paginated messages for a specific plant analysis
-  /// GET /sponsorship/messages/conversation?otherUserId={}&plantAnalysisId={}&page={}&pageSize={}
+  /// GET /sponsorship/conversations?fromUserId={}&toUserId={}&plantAnalysisId={}&page={}&pageSize={}
+  /// ✅ UPDATED: Backend now returns DESC order (newest first on page 1)
+  /// ✅ Frontend should NOT reverse the array - backend sends correct order
   Future<PaginatedConversationResponse> getMessages({
+    required int fromUserId,
+    required int toUserId,
     required int plantAnalysisId,
-    required int otherUserId,
     int page = 1,
     int pageSize = 20,
   }) async {
     final response = await _networkClient.get(
       ApiConfig.messagingGetConversation,
       queryParameters: {
+        'fromUserId': fromUserId,
+        'toUserId': toUserId,
         'plantAnalysisId': plantAnalysisId,
-        'otherUserId': otherUserId,
         'page': page,
         'pageSize': pageSize,
       },

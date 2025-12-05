@@ -70,7 +70,7 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
 
     // Load messages - for sponsor, the "other user" is the farmer
     context.read<MessagingBloc>().add(
-      LoadMessagesEvent(widget.plantAnalysisId, widget.farmerId),  // ⬅️ CHANGED: farmerId is other user
+      LoadMessagesEvent(widget.sponsorUserId, widget.farmerId, widget.plantAnalysisId),
     );
 
     // Load messaging features (tier-based) for this specific analysis
@@ -321,8 +321,9 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
                           onPressed: () {
                             context.read<MessagingBloc>().add(
                               LoadMoreMessagesEvent(
-                                widget.plantAnalysisId,
-                                widget.farmerId,  // ⬅️ CHANGED: farmerId is other user
+                                plantAnalysisId: widget.plantAnalysisId,
+                                fromUserId: widget.sponsorUserId,
+                                toUserId: widget.farmerId,
                               ),
                             );
                           },

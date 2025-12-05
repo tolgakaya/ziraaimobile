@@ -13,6 +13,7 @@ import '../../domain/usecases/mark_messages_as_read_usecase.dart';
 class MessageDetailPage extends StatefulWidget {
   final int plantAnalysisId;
   final int farmerId;
+  final int sponsorUserId;  // ✅ NEW: Sponsor user ID for API calls
   final String farmerName;
   final bool canMessage;
 
@@ -20,6 +21,7 @@ class MessageDetailPage extends StatefulWidget {
     super.key,
     required this.plantAnalysisId,
     required this.farmerId,
+    required this.sponsorUserId,
     required this.farmerName,
     required this.canMessage,
   });
@@ -45,7 +47,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
       getMessagingFeaturesUseCase: getIt<GetMessagingFeaturesUseCase>(),
       markMessageAsReadUseCase: getIt<MarkMessageAsReadUseCase>(),
       markMessagesAsReadUseCase: getIt<MarkMessagesAsReadUseCase>(),
-    )..add(LoadMessagesEvent(widget.plantAnalysisId, widget.farmerId));
+    )..add(LoadMessagesEvent(widget.sponsorUserId, widget.farmerId, widget.plantAnalysisId));
   }
 
   @override
@@ -117,7 +119,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () => _messagingBloc.add(
-                                  LoadMessagesEvent(widget.plantAnalysisId, widget.farmerId),
+                                  LoadMessagesEvent(widget.sponsorUserId, widget.farmerId, widget.plantAnalysisId),
                                 ),
                             child: const Text('Yeniden Dene'),
                           ),
