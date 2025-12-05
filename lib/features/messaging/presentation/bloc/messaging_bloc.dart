@@ -63,8 +63,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
   ) async {
     emit(MessagingLoading());
     final result = await getMessagesUseCase(
-      fromUserId: event.fromUserId,
-      toUserId: event.toUserId,
+      otherUserId: event.otherUserId,
       plantAnalysisId: event.plantAnalysisId,
       page: 1,
       pageSize: 20,
@@ -130,8 +129,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     Emitter<MessagingState> emit,
   ) async {
     final result = await getMessagesUseCase(
-      fromUserId: event.fromUserId,
-      toUserId: event.toUserId,
+      otherUserId: event.otherUserId,
       plantAnalysisId: event.plantAnalysisId,
       page: 1,
       pageSize: 20,
@@ -230,8 +228,7 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
 
     final nextPage = currentState.currentPage + 1;
     final result = await getMessagesUseCase(
-      fromUserId: event.fromUserId,
-      toUserId: event.toUserId,
+      otherUserId: event.otherUserId,
       plantAnalysisId: event.plantAnalysisId,
       page: nextPage,
       pageSize: 20,

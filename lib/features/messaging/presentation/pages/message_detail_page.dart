@@ -47,7 +47,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
       getMessagingFeaturesUseCase: getIt<GetMessagingFeaturesUseCase>(),
       markMessageAsReadUseCase: getIt<MarkMessageAsReadUseCase>(),
       markMessagesAsReadUseCase: getIt<MarkMessagesAsReadUseCase>(),
-    )..add(LoadMessagesEvent(widget.sponsorUserId, widget.farmerId, widget.plantAnalysisId));
+    )..add(LoadMessagesEvent(widget.farmerId, widget.plantAnalysisId));
   }
 
   @override
@@ -119,7 +119,7 @@ class _MessageDetailPageState extends State<MessageDetailPage> {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () => _messagingBloc.add(
-                                  LoadMessagesEvent(widget.sponsorUserId, widget.farmerId, widget.plantAnalysisId),
+                                  LoadMessagesEvent(widget.farmerId, widget.plantAnalysisId),
                                 ),
                             child: const Text('Yeniden Dene'),
                           ),

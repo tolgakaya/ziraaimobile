@@ -67,7 +67,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
 
     // Load messages - for farmer, the "other user" is the sponsor
     context.read<MessagingBloc>().add(
-      LoadMessagesEvent(widget.farmerId, widget.sponsorUserId, widget.plantAnalysisId),
+      LoadMessagesEvent(widget.sponsorUserId, widget.plantAnalysisId),
     );
 
     // Load messaging features (tier-based) for this specific analysis
@@ -291,8 +291,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                             context.read<MessagingBloc>().add(
                               LoadMoreMessagesEvent(
                                 plantAnalysisId: widget.plantAnalysisId,
-                                fromUserId: widget.farmerId,
-                                toUserId: widget.sponsorUserId,
+                                otherUserId: widget.sponsorUserId,
                               ),
                             );
                           },

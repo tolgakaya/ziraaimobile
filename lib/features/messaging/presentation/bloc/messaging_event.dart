@@ -8,14 +8,13 @@ abstract class MessagingEvent extends Equatable {
 }
 
 class LoadMessagesEvent extends MessagingEvent {
-  final int fromUserId;
-  final int toUserId;
+  final int otherUserId;
   final int plantAnalysisId;
 
-  const LoadMessagesEvent(this.fromUserId, this.toUserId, this.plantAnalysisId);
+  const LoadMessagesEvent(this.otherUserId, this.plantAnalysisId);
 
   @override
-  List<Object?> get props => [fromUserId, toUserId, plantAnalysisId];
+  List<Object?> get props => [otherUserId, plantAnalysisId];
 }
 
 class SendMessageEvent extends MessagingEvent {
@@ -38,14 +37,13 @@ class SendMessageEvent extends MessagingEvent {
 }
 
 class RefreshMessagesEvent extends MessagingEvent {
-  final int fromUserId;
-  final int toUserId;
+  final int otherUserId;
   final int plantAnalysisId;
 
-  const RefreshMessagesEvent(this.fromUserId, this.toUserId, this.plantAnalysisId);
+  const RefreshMessagesEvent(this.otherUserId, this.plantAnalysisId);
 
   @override
-  List<Object?> get props => [fromUserId, toUserId, plantAnalysisId];
+  List<Object?> get props => [otherUserId, plantAnalysisId];
 }
 
 // ✅ NEW: Event for real-time message updates from SignalR
@@ -80,17 +78,15 @@ class SendMessageWithAttachmentsEvent extends MessagingEvent {
 // ✅ NEW: Event for loading more messages (pagination)
 class LoadMoreMessagesEvent extends MessagingEvent {
   final int plantAnalysisId;
-  final int fromUserId;
-  final int toUserId;
+  final int otherUserId;
 
   const LoadMoreMessagesEvent({
     required this.plantAnalysisId,
-    required this.fromUserId,
-    required this.toUserId,
+    required this.otherUserId,
   });
 
   @override
-  List<Object?> get props => [plantAnalysisId, fromUserId, toUserId];
+  List<Object?> get props => [plantAnalysisId, otherUserId];
 }
 
 // ✅ NEW: Event for sending voice message

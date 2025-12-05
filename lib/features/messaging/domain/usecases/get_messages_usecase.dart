@@ -12,15 +12,13 @@ class GetMessagesUseCase {
   GetMessagesUseCase(this.repository);
 
   Future<Either<Failure, PaginatedMessages>> call({
-    required int fromUserId,
-    required int toUserId,
+    required int otherUserId,
     required int plantAnalysisId,
     int page = 1,
     int pageSize = 20,
   }) async {
     return await repository.getMessages(
-      fromUserId: fromUserId,
-      toUserId: toUserId,
+      otherUserId: otherUserId,
       plantAnalysisId: plantAnalysisId,
       page: page,
       pageSize: pageSize,

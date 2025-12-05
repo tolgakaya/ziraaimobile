@@ -44,16 +44,14 @@ class MessagingRepositoryImpl implements MessagingRepository {
 
   @override
   Future<Either<Failure, PaginatedMessages>> getMessages({
-    required int fromUserId,
-    required int toUserId,
+    required int otherUserId,
     required int plantAnalysisId,
     int page = 1,
     int pageSize = 20,
   }) async {
     try {
       final response = await _apiService.getMessages(
-        fromUserId: fromUserId,
-        toUserId: toUserId,
+        otherUserId: otherUserId,
         plantAnalysisId: plantAnalysisId,
         page: page,
         pageSize: pageSize,
