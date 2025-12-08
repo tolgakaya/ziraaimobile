@@ -50,7 +50,7 @@ android {
             dimension = "environment"
             applicationId = "com.ziraai.app"
             resValue("string", "app_name", "ZiraAI")
-            manifestPlaceholders["deepLinkHost"] = "ziraai.com"
+            manifestPlaceholders["deepLinkHost"] = "api.ziraai.com"
         }
     }
 
