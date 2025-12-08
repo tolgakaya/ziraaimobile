@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ziraai.ziraai_mobile"
+    namespace = "com.ziraai.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
