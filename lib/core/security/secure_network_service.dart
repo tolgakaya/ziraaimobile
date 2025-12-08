@@ -85,6 +85,10 @@ class SecureNetworkService {
     _dio.interceptors.add(RetryInterceptor());
   }
 
+  /// Expose Dio instance for injection
+  /// This Dio instance has TokenInterceptor configured for automatic token refresh
+  Dio get dio => _dio;
+
   /// Make a secure GET request
   Future<Response<T>> get<T>(
     String path, {

@@ -44,6 +44,7 @@ import '../../features/dealer/presentation/screens/pending_invitations_screen.da
 import '../services/notification_signalr_service.dart';
 import '../services/navigation_service.dart';
 import '../services/permission_service.dart';
+import '../services/location_service.dart';
 import '../../features/profile/data/services/farmer_profile_api_service.dart';
 import '../../features/profile/data/repositories/farmer_profile_repository_impl.dart';
 import '../../features/profile/domain/repositories/farmer_profile_repository.dart';
@@ -83,6 +84,13 @@ Future<void> setupMinimalServiceLocator() async {
   );
 
   print('✅ PERMISSIONS: PermissionService registered successfully!');
+
+  // ✅ LOCATION SERVICE - GPS location detection for plant analysis
+  getIt.registerLazySingleton<LocationService>(
+    () => LocationService(),
+  );
+
+  print('✅ LOCATION: LocationService registered successfully!');
 
   // Deferred Deep Linking Services
   // Install Referrer TEMPORARILY DISABLED - using SMS solution instead
@@ -192,6 +200,7 @@ Future<void> setupMinimalServiceLocator() async {
     () => PlantAnalysisRepositoryImpl(
       getIt<PlantAnalysisApiService>(),
       getIt<AuthService>(),
+      getIt<Dio>(),
     ),
   );
 
@@ -399,7 +408,7 @@ class _TokenInterceptor extends Interceptor {
   final TokenManager _tokenManager;
   final Dio _dio;
   bool _isRefreshing = false;
-  final List<_RequestRetry> _retryQueue = [];
+  final List<_QueuedRequest> _requestQueue = [];
 
   _TokenInterceptor(this._tokenManager, this._dio);
 
@@ -411,15 +420,119 @@ class _TokenInterceptor extends Interceptor {
       return;
     }
 
-    // Get valid access token
-    final token = await _tokenManager.getValidAccessToken();
+    // Get current token (even if expired)
+    final currentToken = await _tokenManager.getToken();
 
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
-      print('🔑 TokenInterceptor: Added auth token to ${options.path}');
+    if (currentToken == null) {
+      print('⚠️ TokenInterceptor: No token available for ${options.path}');
       handler.next(options);
+      return;
+    }
+
+    // Check if token is expired
+    if (_tokenManager.isTokenExpired(currentToken)) {
+      print('🔑 TokenInterceptor: Token expired, need refresh for ${options.path}');
+
+      // If already refreshing, queue this request
+      if (_isRefreshing) {
+        print('🔄 TokenInterceptor: Refresh in progress, queueing request to ${options.path}');
+        _requestQueue.add(_QueuedRequest.fromRequest(
+          requestOptions: options,
+          requestHandler: handler,
+        ));
+        return; // Don't call handler.next() - will be handled after refresh
+      }
+
+      // Start token refresh
+      _isRefreshing = true;
+
+      try {
+        final refreshToken = await _tokenManager.getRefreshToken();
+
+        if (refreshToken == null || refreshToken.isEmpty) {
+          print('❌ TokenInterceptor: No refresh token available');
+          _isRefreshing = false;
+          handler.next(options);
+          return;
+        }
+
+        // Check if refresh token is expired
+        final isRefreshTokenExpired = await _tokenManager.isRefreshTokenExpired();
+        if (isRefreshTokenExpired) {
+          print('❌ TokenInterceptor: Refresh token is expired - clearing tokens');
+          _isRefreshing = false;
+          await _tokenManager.clearTokens();
+          handler.next(options);
+          return;
+        }
+
+        print('🔄 TokenInterceptor: Refreshing token proactively...');
+
+        // Call refresh token endpoint
+        final response = await _dio.post(
+          ApiConfig.refreshToken,
+          data: {'refreshToken': refreshToken},
+          options: Options(headers: {'Content-Type': 'application/json'}),
+        );
+
+        if (response.statusCode == 200 && response.data['success'] == true) {
+          final newAccessToken = response.data['data']['token'];  // Backend returns 'token', not 'accessToken'
+          final newRefreshToken = response.data['data']['refreshToken'];
+          final refreshTokenExpiration = response.data['data']['refreshTokenExpiration'];
+
+          // Save new tokens
+          await _tokenManager.saveToken(newAccessToken);
+          await _tokenManager.saveRefreshToken(newRefreshToken);
+
+          // Save refresh token expiration if available
+          if (refreshTokenExpiration != null) {
+            await _tokenManager.saveRefreshTokenExpiration(refreshTokenExpiration);
+          }
+
+          print('✅ TokenInterceptor: Token refreshed proactively');
+
+          // Add new token to current request
+          options.headers['Authorization'] = 'Bearer $newAccessToken';
+          print('🔑 TokenInterceptor: Added new token to ${options.path}');
+
+          _isRefreshing = false;
+
+          // Process all queued requests before continuing with current one
+          _processQueuedRequests(newAccessToken);
+
+          handler.next(options);
+        } else {
+          print('❌ TokenInterceptor: Proactive token refresh failed');
+          _isRefreshing = false;
+          _clearRequestQueue(DioException(
+            requestOptions: options,
+            error: 'Token refresh failed',
+          ));
+          // Don't continue - refresh failed, user needs to login
+          await _tokenManager.clearTokens();
+          handler.reject(DioException(
+            requestOptions: options,
+            error: 'Authentication failed, please login again',
+          ));
+        }
+      } catch (refreshError) {
+        print('❌ TokenInterceptor: Proactive refresh error: $refreshError');
+        _isRefreshing = false;
+        _clearRequestQueue(DioException(
+          requestOptions: options,
+          error: refreshError,
+        ));
+        // Don't continue - refresh failed, user needs to login
+        await _tokenManager.clearTokens();
+        handler.reject(DioException(
+          requestOptions: options,
+          error: refreshError,
+        ));
+      }
     } else {
-      print('⚠️ TokenInterceptor: No valid token, skipping auth header for ${options.path}');
+      // Token is valid, use it
+      options.headers['Authorization'] = 'Bearer $currentToken';
+      print('🔑 TokenInterceptor: Added valid token to ${options.path}');
       handler.next(options);
     }
   }
@@ -439,10 +552,10 @@ class _TokenInterceptor extends Interceptor {
 
       // If already refreshing, queue this request
       if (_isRefreshing) {
-        print('🔄 TokenInterceptor: Token refresh in progress, queueing request');
-        _retryQueue.add(_RequestRetry(
+        print('🔄 TokenInterceptor: Token refresh in progress, queueing 401 request');
+        _requestQueue.add(_QueuedRequest.fromError(
           requestOptions: err.requestOptions,
-          handler: handler,
+          errorHandler: handler,
         ));
         return;
       }
@@ -453,11 +566,23 @@ class _TokenInterceptor extends Interceptor {
       try {
         // Get refresh token
         final refreshToken = await _tokenManager.getRefreshToken();
-        
+
         if (refreshToken == null) {
           print('❌ TokenInterceptor: No refresh token available');
           _isRefreshing = false;
-          _clearRetryQueue(err);
+          await _tokenManager.clearTokens();
+          _clearRequestQueue(err);
+          handler.next(err);
+          return;
+        }
+
+        // Check if refresh token is expired
+        final isRefreshTokenExpired = await _tokenManager.isRefreshTokenExpired();
+        if (isRefreshTokenExpired) {
+          print('❌ TokenInterceptor: Refresh token is expired - clearing tokens');
+          _isRefreshing = false;
+          await _tokenManager.clearTokens();
+          _clearRequestQueue(err);
           handler.next(err);
           return;
         }
@@ -472,12 +597,18 @@ class _TokenInterceptor extends Interceptor {
         );
 
         if (response.statusCode == 200 && response.data['success'] == true) {
-          final newAccessToken = response.data['data']['accessToken'];
+          final newAccessToken = response.data['data']['token'];  // Backend returns 'token', not 'accessToken'
           final newRefreshToken = response.data['data']['refreshToken'];
+          final refreshTokenExpiration = response.data['data']['refreshTokenExpiration'];
 
           // Save new tokens
           await _tokenManager.saveToken(newAccessToken);
           await _tokenManager.saveRefreshToken(newRefreshToken);
+
+          // Save refresh token expiration if available
+          if (refreshTokenExpiration != null) {
+            await _tokenManager.saveRefreshTokenExpiration(refreshTokenExpiration);
+          }
 
           print('✅ TokenInterceptor: Token refreshed successfully');
 
@@ -487,25 +618,29 @@ class _TokenInterceptor extends Interceptor {
           final retryResponse = await _dio.fetch(err.requestOptions);
           
           _isRefreshing = false;
-          
-          // Process retry queue
-          _processRetryQueue(newAccessToken);
-          
+
+          // Process all queued requests
+          _processQueuedRequests(newAccessToken);
+
           handler.resolve(retryResponse);
         } else {
           print('❌ TokenInterceptor: Token refresh failed');
           _isRefreshing = false;
-          _clearRetryQueue(err);
+          await _tokenManager.clearTokens();
+          _clearRequestQueue(err);
           handler.next(err);
         }
       } catch (refreshError) {
         print('❌ TokenInterceptor: Token refresh error: $refreshError');
         _isRefreshing = false;
-        _clearRetryQueue(err);
-        
+
         // Clear tokens on refresh failure (user needs to login again)
         await _tokenManager.clearTokens();
-        
+        _clearRequestQueue(DioException(
+          requestOptions: err.requestOptions,
+          error: refreshError,
+        ));
+
         handler.next(err);
       }
     } else {
@@ -514,37 +649,60 @@ class _TokenInterceptor extends Interceptor {
     }
   }
 
-  /// Process queued requests after successful token refresh
-  void _processRetryQueue(String newAccessToken) async {
-    print('🔄 TokenInterceptor: Processing ${_retryQueue.length} queued requests');
-    
-    for (final retry in _retryQueue) {
+  /// Process all queued requests after successful token refresh
+  void _processQueuedRequests(String newAccessToken) async {
+    if (_requestQueue.isEmpty) {
+      print('✅ TokenInterceptor: No queued requests to process');
+      return;
+    }
+
+    print('🔄 TokenInterceptor: Processing ${_requestQueue.length} queued requests');
+
+    // Create a copy of the queue and clear the original to prevent concurrent modification
+    final queueCopy = List<_QueuedRequest>.from(_requestQueue);
+    _requestQueue.clear();
+
+    for (final queuedRequest in queueCopy) {
       try {
-        retry.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
-        final response = await _dio.fetch(retry.requestOptions);
-        retry.handler.resolve(response);
+        // Add new token to request
+        queuedRequest.requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+
+        // Execute the request
+        final response = await _dio.fetch(queuedRequest.requestOptions);
+
+        // Resolve with success
+        queuedRequest.resolve(response);
+
+        print('✅ TokenInterceptor: Queued request succeeded: ${queuedRequest.requestOptions.path}');
       } catch (e) {
-        retry.handler.reject(
+        // Reject with error
+        queuedRequest.reject(
           DioException(
-            requestOptions: retry.requestOptions,
+            requestOptions: queuedRequest.requestOptions,
             error: e,
           ),
         );
+
+        print('❌ TokenInterceptor: Queued request failed: ${queuedRequest.requestOptions.path} - $e');
       }
     }
-    
-    _retryQueue.clear();
+
+    print('✅ TokenInterceptor: All queued requests processed');
   }
 
-  /// Clear retry queue on refresh failure
-  void _clearRetryQueue(DioException error) {
-    print('❌ TokenInterceptor: Clearing ${_retryQueue.length} queued requests');
-    
-    for (final retry in _retryQueue) {
-      retry.handler.reject(error);
+  /// Clear request queue on refresh failure
+  void _clearRequestQueue(DioException error) {
+    if (_requestQueue.isEmpty) {
+      return;
     }
-    
-    _retryQueue.clear();
+
+    print('❌ TokenInterceptor: Clearing ${_requestQueue.length} queued requests due to refresh failure');
+
+    for (final queuedRequest in _requestQueue) {
+      queuedRequest.reject(error);
+    }
+
+    _requestQueue.clear();
   }
 
   bool _isAuthEndpoint(String path) {
@@ -555,15 +713,40 @@ class _TokenInterceptor extends Interceptor {
   }
 }
 
-/// Helper class to store retry request info
-class _RequestRetry {
+/// Helper class to store queued request info
+/// Supports both request and error handlers for unified queueing
+class _QueuedRequest {
   final RequestOptions requestOptions;
-  final ErrorInterceptorHandler handler;
+  final RequestInterceptorHandler? requestHandler;
+  final ErrorInterceptorHandler? errorHandler;
 
-  _RequestRetry({
+  _QueuedRequest.fromRequest({
     required this.requestOptions,
-    required this.handler,
-  });
+    required this.requestHandler,
+  }) : errorHandler = null;
+
+  _QueuedRequest.fromError({
+    required this.requestOptions,
+    required this.errorHandler,
+  }) : requestHandler = null;
+
+  /// Resolve the request with successful response
+  void resolve(Response response) {
+    if (requestHandler != null) {
+      requestHandler!.resolve(response);
+    } else if (errorHandler != null) {
+      errorHandler!.resolve(response);
+    }
+  }
+
+  /// Reject the request with error
+  void reject(DioException error) {
+    if (requestHandler != null) {
+      requestHandler!.reject(error);
+    } else if (errorHandler != null) {
+      errorHandler!.reject(error);
+    }
+  }
 }
 
 /// Handle dealer invitation notification tap

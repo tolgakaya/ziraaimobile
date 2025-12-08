@@ -9,6 +9,7 @@ import 'recommendations.dart';
 import 'analysis_summary.dart';
 import 'environmental_factors.dart';
 import 'sponsorship_metadata.dart';
+import 'image_metadata.dart';
 
 class ApiToSimpleConverter {
   static PlantAnalysisResult convertApiResponse(Map<String, dynamic> apiData) {
@@ -162,6 +163,27 @@ class ApiToSimpleConverter {
         print('⚠️ CONVERTER: No sponsorshipMetadata in response');
       }
 
+      // Parse imageInfo for both single-image and multi-image analyses
+      ImageMetadata? imageMetadata;
+      if (apiData['imageInfo'] != null) {
+        print('🔍 CONVERTER: Processing imageInfo');
+        final imageInfoData = apiData['imageInfo'] as Map<String, dynamic>;
+        print('📸 CONVERTER: imageInfo keys: ${imageInfoData.keys.toList()}');
+
+        // Check if this is a multi-image analysis
+        final totalImages = imageInfoData['totalImages'] as int?;
+        if (totalImages != null && totalImages > 1) {
+          print('🖼️ CONVERTER: Multi-image analysis detected ($totalImages images)');
+        } else {
+          print('🖼️ CONVERTER: Single-image analysis');
+        }
+
+        imageMetadata = ImageMetadata.fromJson(imageInfoData);
+        print('✅ CONVERTER: imageMetadata parsed - isMultiImage: ${imageMetadata.isMultiImage}');
+      } else {
+        print('⚠️ CONVERTER: No imageInfo in response');
+      }
+
       print('🔍 CONVERTER: Creating PlantAnalysisResult');
       print('🌾 CONVERTER: farmerFriendlySummary = ${apiData['farmerFriendlySummary']}');
 
@@ -199,6 +221,7 @@ class ApiToSimpleConverter {
             : null,
         plantSpecies: apiData['plantSpecies'] as String?,
         sponsorshipMetadata: sponsorshipMetadata,
+        imageMetadata: imageMetadata,
       );
     } catch (e, stackTrace) {
       print('❌ CONVERTER ERROR: $e');

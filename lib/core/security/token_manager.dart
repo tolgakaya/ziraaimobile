@@ -1,7 +1,9 @@
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:injectable/injectable.dart';
 import '../storage/secure_storage_service.dart';
-import '../config/api_config.dart';
+import '../config/api_config.dart' as config;
 
+@lazySingleton
 class TokenManager {
   final SecureStorageService _secureStorage;
 
@@ -36,12 +38,56 @@ class TokenManager {
   }
 
   Future<String?> getRefreshToken() async {
-    return await _secureStorage.read(key: 'refresh_token');
+    final token = await _secureStorage.read(key: 'refresh_token');
+    print('📖 TokenManager: Reading refresh token from storage: ${token ?? "NULL"}');
+    return token;
+  }
+
+  Future<void> saveRefreshTokenExpiration(String expirationDateTime) async {
+    await _secureStorage.write(key: 'refresh_token_expiration', value: expirationDateTime);
+  }
+
+  Future<String?> getRefreshTokenExpiration() async {
+    return await _secureStorage.read(key: 'refresh_token_expiration');
+  }
+
+  /// Check if refresh token is expired based on stored expiration DateTime
+  /// Returns true if expired or expiration not available
+  Future<bool> isRefreshTokenExpired() async {
+    try {
+      final expirationString = await getRefreshTokenExpiration();
+
+      if (expirationString == null || expirationString.isEmpty) {
+        print('⚠️ TokenManager: No refresh token expiration found');
+        return true; // Treat as expired for safety
+      }
+
+      final expirationDate = DateTime.parse(expirationString);
+      final now = DateTime.now();
+
+      // Add 60 second buffer - consider expired if expiring within next minute
+      final bufferTime = const Duration(seconds: 60);
+      final expirationWithBuffer = expirationDate.subtract(bufferTime);
+
+      final isExpired = now.isAfter(expirationWithBuffer);
+
+      if (isExpired) {
+        print('🔑 TokenManager: Refresh token is expired or expiring soon');
+        print('   Expiration: $expirationDate');
+        print('   Current time: $now');
+      }
+
+      return isExpired;
+    } catch (e) {
+      print('⚠️ TokenManager: Error checking refresh token expiration: $e');
+      return true; // Treat as expired for safety
+    }
   }
 
   Future<void> clearTokens() async {
     await _secureStorage.delete(key: 'auth_token');
     await _secureStorage.delete(key: 'refresh_token');
+    await _secureStorage.delete(key: 'refresh_token_expiration');
   }
 
   Future<bool> hasValidToken() async {
@@ -121,17 +167,17 @@ class TokenManager {
 
       // Map environment to expected issuer
       String expectedIssuer;
-      switch (ApiConfig.environment) {
-        case Environment.production:
+      switch (config.ApiConfig.environment) {
+        case config.Environment.production:
           expectedIssuer = 'ZiraAI_Prod';
           break;
-        case Environment.staging:
+        case config.Environment.staging:
           expectedIssuer = 'ZiraAI_Staging';
           break;
-        case Environment.development:
+        case config.Environment.development:
           expectedIssuer = 'ZiraAI_Dev';
           break;
-        case Environment.local:
+        case config.Environment.local:
           expectedIssuer = 'ZiraAI_Local';
           break;
       }
@@ -142,7 +188,7 @@ class TokenManager {
         print('⚠️ TokenManager: Token environment mismatch!');
         print('   Token issuer: $issuer');
         print('   Expected issuer: $expectedIssuer');
-        print('   Current environment: ${ApiConfig.environment}');
+        print('   Current environment: ${config.ApiConfig.environment}');
       }
 
       return isValid;
@@ -196,6 +242,52 @@ class TokenManager {
   Future<bool> hasRole(String role) async {
     final roles = await getUserRoles();
     return roles.contains(role);
+  }
+
+  /// Force token validation and refresh if expired
+  /// This is useful when app resumes from background to ensure token is valid
+  /// Returns true if token is valid or successfully refreshed, false otherwise
+  Future<bool> ensureTokenIsValid() async {
+    try {
+      print('🔍 TokenManager: Checking token validity...');
+
+      final token = await getToken();
+
+      if (token == null || token.isEmpty) {
+        print('⚠️ TokenManager: No token available');
+        return false;
+      }
+
+      // Check if token is expired or expiring soon
+      if (isTokenExpired(token)) {
+        print('🔑 TokenManager: Token is expired or expiring soon');
+
+        // Check if we have a valid refresh token
+        final refreshToken = await getRefreshToken();
+        if (refreshToken == null || refreshToken.isEmpty) {
+          print('❌ TokenManager: No refresh token available');
+          return false;
+        }
+
+        // Check if refresh token is expired
+        final isRefreshExpired = await isRefreshTokenExpired();
+        if (isRefreshExpired) {
+          print('❌ TokenManager: Refresh token is expired');
+          await clearTokens();
+          return false;
+        }
+
+        print('✅ TokenManager: Refresh token is valid, token refresh will be handled by interceptor');
+        // Return true because interceptor will handle the refresh automatically on next API call
+        return true;
+      }
+
+      print('✅ TokenManager: Token is valid');
+      return true;
+    } catch (e) {
+      print('⚠️ TokenManager: Error checking token validity: $e');
+      return false;
+    }
   }
 
   void dispose() {

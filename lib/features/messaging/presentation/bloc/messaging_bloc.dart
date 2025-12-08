@@ -63,8 +63,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
   ) async {
     emit(MessagingLoading());
     final result = await getMessagesUseCase(
-      plantAnalysisId: event.plantAnalysisId,
       otherUserId: event.otherUserId,
+      plantAnalysisId: event.plantAnalysisId,
       page: 1,
       pageSize: 20,
     );
@@ -111,7 +111,9 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         emit(MessageSendError(failure.message, currentState.messages));
       },
       (sentMessage) {
-        final updatedMessages = [...currentState.messages, sentMessage];
+        // ✅ NEW: Backend returns messages in DESC order (newest first)
+        // So prepend new message to beginning of list
+        final updatedMessages = [sentMessage, ...currentState.messages];
         emit(MessagesLoaded(
           messages: updatedMessages,
           canReply: _canFarmerReply(updatedMessages),
@@ -127,8 +129,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
     Emitter<MessagingState> emit,
   ) async {
     final result = await getMessagesUseCase(
-      plantAnalysisId: event.plantAnalysisId,
       otherUserId: event.otherUserId,
+      plantAnalysisId: event.plantAnalysisId,
       page: 1,
       pageSize: 20,
     );
@@ -171,7 +173,9 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         emit(MessageSendError(failure.message, currentState.messages));
       },
       (sentMessage) {
-        final updatedMessages = [...currentState.messages, sentMessage];
+        // ✅ NEW: Backend returns messages in DESC order (newest first)
+        // So prepend new message to beginning of list
+        final updatedMessages = [sentMessage, ...currentState.messages];
         emit(MessagesLoaded(
           messages: updatedMessages,
           canReply: _canFarmerReply(updatedMessages),
@@ -195,7 +199,9 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
       return;
     }
 
-    final updatedMessages = [...currentState.messages, event.message];
+    // ✅ NEW: Backend returns messages in DESC order (newest first)
+    // So prepend new message to beginning of list
+    final updatedMessages = [event.message, ...currentState.messages];
 
     emit(MessagesLoaded(
       messages: updatedMessages,
@@ -222,8 +228,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
 
     final nextPage = currentState.currentPage + 1;
     final result = await getMessagesUseCase(
-      plantAnalysisId: event.plantAnalysisId,
       otherUserId: event.otherUserId,
+      plantAnalysisId: event.plantAnalysisId,
       page: nextPage,
       pageSize: 20,
     );
@@ -234,10 +240,12 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         emit(currentState.copyWith(isLoadingMore: false));
       },
       (paginatedMessages) {
-        // Append new messages to existing ones
+        // ✅ NEW: Backend returns messages DESC (newest first)
+        // Page 1: Messages #45-26 (newest), Page 2: Messages #25-6 (older)
+        // Append older messages to end of list to maintain DESC order
         final updatedMessages = [
-          ...currentState.messages,
-          ...paginatedMessages.messages,
+          ...currentState.messages, // Current messages (newer)
+          ...paginatedMessages.messages, // Loaded messages (older)
         ];
 
         emit(MessagesLoaded(
@@ -280,7 +288,9 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         emit(MessageSendError(failure.message, currentState.messages));
       },
       (sentMessage) {
-        final updatedMessages = [...currentState.messages, sentMessage];
+        // ✅ NEW: Backend returns messages in DESC order (newest first)
+        // So prepend new message to beginning of list
+        final updatedMessages = [sentMessage, ...currentState.messages];
         emit(MessagesLoaded(
           messages: updatedMessages,
           canReply: _canFarmerReply(updatedMessages),

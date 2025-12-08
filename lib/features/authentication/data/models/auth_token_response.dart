@@ -46,12 +46,16 @@ class AuthTokenData {
   @JsonKey(name: 'refreshToken')
   final String refreshToken;
 
+  @JsonKey(name: 'refreshTokenExpiration')
+  final String? refreshTokenExpiration; // ISO 8601 datetime string
+
   AuthTokenData({
     required this.provider,
     this.claims,
     required this.token,
     required this.expiration,
     required this.refreshToken,
+    this.refreshTokenExpiration,
   });
 
   factory AuthTokenData.fromJson(Map<String, dynamic> json) =>
@@ -70,4 +74,13 @@ class AuthTokenData {
     final fiveMinutesFromNow = DateTime.now().add(Duration(minutes: 5));
     return fiveMinutesFromNow.isAfter(expirationDateTime);
   }
+
+  /// Parse refresh token expiration string to DateTime
+  DateTime? get refreshTokenExpirationDateTime =>
+      refreshTokenExpiration != null ? DateTime.parse(refreshTokenExpiration!) : null;
+
+  /// Check if refresh token is expired
+  bool get isRefreshTokenExpired =>
+      refreshTokenExpirationDateTime != null &&
+      DateTime.now().isAfter(refreshTokenExpirationDateTime!);
 }

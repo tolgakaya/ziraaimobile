@@ -62,11 +62,19 @@ class _SponsoredAnalysisDetailScreenState
       print('🔍 RAW API RESPONSE tier data: ${response.data['data']['tierMetadata']}');
 
       if (response.data['success'] == true && response.data['data'] != null) {
-        final detail = SponsoredAnalysisDetailResponse.fromJson(
-          response.data['data'],
-        );
-        print('🔍 PARSED TIER: tierName=${detail.tierMetadata.tierName}, canMessage=${detail.tierMetadata.canMessage}');
-        return detail;
+        try {
+          print('🔧 Starting to parse response...');
+          final detail = SponsoredAnalysisDetailResponse.fromJson(
+            response.data['data'],
+          );
+          print('🔍 PARSED TIER: tierName=${detail.tierMetadata.tierName}, canMessage=${detail.tierMetadata.canMessage}');
+          return detail;
+        } catch (parseError, stackTrace) {
+          print('❌ JSON PARSE ERROR: $parseError');
+          print('📜 Stack trace: $stackTrace');
+          print('📄 RAW DATA: ${response.data['data']}');
+          rethrow;
+        }
       } else {
         throw Exception(response.data['message'] ?? 'Failed to load analysis');
       }
@@ -220,6 +228,12 @@ class _SponsoredAnalysisDetailScreenState
               // 1. Farmer Friendly Summary (Green gradient card - image 1)
               if (analysis.farmerFriendlySummary != null) ...[
                 _buildFarmerFriendlySummarySection(analysis.farmerFriendlySummary!),
+                const SizedBox(height: 16),
+              ],
+
+              // 1.5. Multi-Image Display Section (if multi-image analysis)
+              if (analysis.imageInfo != null && (analysis.imageInfo!.totalImages ?? 0) > 1) ...[
+                _buildMultiImageSection(analysis.imageInfo!),
                 const SizedBox(height: 16),
               ],
 
@@ -1722,6 +1736,355 @@ class _SponsoredAnalysisDetailScreenState
           else
             const Text('Yok', style: TextStyle(color: Colors.grey)),
         ],
+      ),
+    );
+  }
+
+  // Multi-Image Display Section (swipeable gallery)
+  Widget _buildMultiImageSection(ImageInfoDto imageInfo) {
+
+  // Gallery image card for swipeable PageView
+  Widget _buildGalleryImageCard(String label, String imageUrl, int currentPage, int totalPages) {
+    return GestureDetector(
+      onTap: () {
+        // Open full-screen image viewer
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => Scaffold(
+              backgroundColor: Colors.black,
+              appBar: AppBar(
+                backgroundColor: Colors.black,
+                iconTheme: const IconThemeData(color: Colors.white),
+                title: Text(
+                  label,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              body: Center(
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.image_not_supported,
+                        size: 64,
+                        color: Colors.grey,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                width: double.infinity,
+                height: 300,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    width: double.infinity,
+                    height: 300,
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: double.infinity,
+                    height: 300,
+                    color: Colors.grey[200],
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.image_not_supported, size: 64, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Görsel yüklenemedi', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            
+            // Gradient overlay at bottom for label
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            
+            // Page indicator badge at top-right
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$currentPage/$totalPages',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+    // Collect all available images
+    final List<Map<String, String>> images = [];
+
+    // Main image (always present)
+    if (imageInfo.imageUrl != null) {
+      images.add({'label': 'Ana Görsel', 'url': imageInfo.imageUrl!});
+    }
+
+    // Additional images (leaf_top, leaf_bottom, plant_overview, root)
+    if (imageInfo.hasLeafTop == true && imageInfo.leafTopImageUrl != null) {
+      images.add({'label': 'Yaprak Üstü', 'url': imageInfo.leafTopImageUrl!});
+    }
+    if (imageInfo.hasLeafBottom == true && imageInfo.leafBottomImageUrl != null) {
+      images.add({'label': 'Yaprak Altı', 'url': imageInfo.leafBottomImageUrl!});
+    }
+    if (imageInfo.hasPlantOverview == true && imageInfo.plantOverviewImageUrl != null) {
+      images.add({'label': 'Bitki Genel', 'url': imageInfo.plantOverviewImageUrl!});
+    }
+    if (imageInfo.hasRoot == true && imageInfo.rootImageUrl != null) {
+      images.add({'label': 'Kök', 'url': imageInfo.rootImageUrl!});
+    }
+
+    // Only show section if we have more than 1 image
+    if (images.length <= 1) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title
+          const Row(
+            children: [
+              Text('📸', style: TextStyle(fontSize: 20)),
+              SizedBox(width: 8),
+              Text(
+                'Analiz Görselleri',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E7D32),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${images.length} görsel ile detaylı analiz • Kaydırarak gezin',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+
+          // Swipeable PageView Gallery
+          SizedBox(
+            height: 300,
+            child: PageView.builder(
+              itemCount: images.length,
+              itemBuilder: (context, index) {
+                final image = images[index];
+                return _buildGalleryImageCard(
+                  image['label']!,
+                  image['url']!,
+                  index + 1,
+                  images.length,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Individual image card for multi-image grid
+  Widget _buildImageCard(String label, String imageUrl) {
+    return GestureDetector(
+      onTap: () {
+        // Open full-screen image viewer
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => Scaffold(
+              backgroundColor: Colors.black,
+              appBar: AppBar(
+                backgroundColor: Colors.black,
+                iconTheme: const IconThemeData(color: Colors.white),
+                title: Text(
+                  label,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              body: Center(
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.image_not_supported,
+                        size: 64,
+                        color: Colors.grey,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Image
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        size: 40,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            // Label
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+              ),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2E7D32),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

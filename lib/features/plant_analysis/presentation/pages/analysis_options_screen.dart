@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../domain/repositories/plant_analysis_repository.dart';
 import '../../../../core/services/image_processing_service.dart';
+import '../../../../core/services/location_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/error/plant_analysis_exceptions.dart';
 import '../../../../core/widgets/error_widgets.dart';
@@ -26,8 +28,13 @@ class AnalysisOptionsScreen extends StatefulWidget {
 
 class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
   late final PlantAnalysisRepository _repository;
+  late final LocationService _locationService;
+  final ImagePicker _imagePicker = ImagePicker();
+
+  // Location state
+  String? _autoDetectedLocation; // Automatically detected GPS location
+  bool _isLoadingLocation = false;
 
   // Plant type dropdown options
   final List<String> _plantTypes = [
@@ -54,12 +61,51 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   bool _isSubmitting = false;
   PlantAnalysisException? _currentError;
 
+  // Multi-image support (for detailed analysis)
+  File? _leafTopImage;
+  File? _leafBottomImage;
+  File? _plantOverviewImage;
+  File? _rootImage;
+
   @override
   void initState() {
     super.initState();
-    // Temporary: Use mock repository with correct async flow
+    // Initialize services
     _repository = getIt<PlantAnalysisRepository>();
+    _locationService = getIt<LocationService>();
     _validateImage();
+    // Automatically fetch location in background (silent, non-blocking)
+    _fetchLocationInBackground();
+  }
+
+  /// Fetch GPS location in background without blocking UI
+  /// This runs silently - no error dialogs if location unavailable
+  Future<void> _fetchLocationInBackground() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final location = await _locationService.getCurrentLocationString();
+      if (mounted) {
+        setState(() {
+          _autoDetectedLocation = location;
+          _isLoadingLocation = false;
+        });
+        if (location != null) {
+          print('✅ Auto-detected location: $location');
+        } else {
+          print('⚠️ Location not available (permission denied or services disabled)');
+        }
+      }
+    } catch (e) {
+      print('⚠️ Background location fetch error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
   }
 
   Future<void> _validateImage() async {
@@ -101,14 +147,27 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
             : 'Bitki Türü: $_selectedPlantType';
       }
 
-      // Submit analysis request to API
-      final result = await _repository.submitAnalysis(
-        imageFile: widget.selectedImage,
-        location: _locationController.text.trim().isNotEmpty
-            ? _locationController.text.trim()
-            : null,
-        notes: combinedNotes.isNotEmpty ? combinedNotes : null,
-      );
+      // ✅ NEW: Automatic GPS location (background only, not shown in UI)
+      final String? finalLocation = _autoDetectedLocation;
+
+      final String? notes = combinedNotes.isNotEmpty ? combinedNotes : null;
+
+      // Choose endpoint based on analysis type
+      final result = _selectedAnalysisType == 'detailed'
+          ? await _repository.submitMultiImageAnalysis(
+              mainImage: widget.selectedImage,
+              leafTopImage: _leafTopImage,
+              leafBottomImage: _leafBottomImage,
+              plantOverviewImage: _plantOverviewImage,
+              rootImage: _rootImage,
+              location: finalLocation,
+              notes: notes,
+            )
+          : await _repository.submitAnalysis(
+              imageFile: widget.selectedImage,
+              location: finalLocation,
+              notes: notes,
+            );
 
       if (!mounted) return;
 
@@ -198,6 +257,437 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
         });
       }
     }
+  }
+
+  /// Pick additional image for multi-image analysis
+  Future<void> _pickImage(ImageType imageType) async {
+    // Show modern bottom sheet for source selection
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Title
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    Icon(Icons.add_photo_alternate, color: Color(0xFF22C55E), size: 24),
+                    SizedBox(width: 12),
+                    Text(
+                      'Resim Kaynağı Seçin',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Camera option
+              InkWell(
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Color(0xFF22C55E),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Kamera',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF111827),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Yeni bir fotoğraf çek',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Divider
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Divider(height: 1, color: Colors.grey.shade200),
+              ),
+
+              // Gallery option
+              InkWell(
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.photo_library,
+                          color: Color(0xFF22C55E),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Galeri',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF111827),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Mevcut fotoğraflardan seç',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Cancel button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'İptal',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return; // User cancelled
+
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        final File imageFile = File(pickedFile.path);
+
+        // Validate image
+        final validation = await ImageProcessingService.validateImage(imageFile);
+        if (validation['isValid'] != true) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Geçersiz resim formatı veya boyutu'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
+        setState(() {
+          switch (imageType) {
+            case ImageType.leafTop:
+              _leafTopImage = imageFile;
+              break;
+            case ImageType.leafBottom:
+              _leafBottomImage = imageFile;
+              break;
+            case ImageType.plantOverview:
+              _plantOverviewImage = imageFile;
+              break;
+            case ImageType.root:
+              _rootImage = imageFile;
+              break;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Resim seçilirken hata oluştu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Remove additional image
+  void _removeImage(ImageType imageType) {
+    setState(() {
+      switch (imageType) {
+        case ImageType.leafTop:
+          _leafTopImage = null;
+          break;
+        case ImageType.leafBottom:
+          _leafBottomImage = null;
+          break;
+        case ImageType.plantOverview:
+          _plantOverviewImage = null;
+          break;
+        case ImageType.root:
+          _rootImage = null;
+          break;
+      }
+    });
+  }
+
+  /// Build image picker card widget
+  Widget _buildImagePickerCard(
+    String label,
+    IconData icon,
+    File? imageFile,
+    ImageType imageType,
+  ) {
+    final bool hasImage = imageFile != null;
+
+    return GestureDetector(
+      onTap: hasImage ? null : () => _pickImage(imageType),
+      child: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: hasImage ? const Color(0xFF22C55E) : const Color(0xFFE5E7EB),
+            width: hasImage ? 2 : 1,
+          ),
+        ),
+        child: hasImage
+            ? Stack(
+                children: [
+                  // Image preview
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: Row(
+                      children: [
+                        // Thumbnail
+                        Image.file(
+                          imageFile,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        ),
+                        const SizedBox(width: 12),
+                        // Label
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(icon, size: 18, color: const Color(0xFF22C55E)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    label,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF374151),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              const Row(
+                                children: [
+                                  Icon(Icons.check_circle, size: 16, color: Color(0xFF22C55E)),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Eklendi',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF22C55E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Remove button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () => _removeImage(imageType),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade500,
+                          shape: BoxShape.circle,
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  const SizedBox(width: 16),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: const Color(0xFF9CA3AF),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF374151),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Resim eklemek için tıklayın',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.add_circle_outline,
+                    color: Color(0xFF9CA3AF),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 16),
+                ],
+              ),
+      ),
+    );
   }
 
   /// Show dialog when user has no subscription
@@ -321,7 +811,6 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
   @override
   void dispose() {
     _notesController.dispose();
-    _locationController.dispose();
     super.dispose();
   }
 
@@ -574,6 +1063,75 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
 
             const SizedBox(height: 24),
 
+            // Multi-Image Section (only for detailed analysis)
+            if (_selectedAnalysisType == 'detailed') ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF22C55E).withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.add_photo_alternate, color: Color(0xFF22C55E), size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Ek Görseller (Opsiyonel)',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF374151),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Daha detaylı analiz için farklı açılardan çekilmiş görseller ekleyebilirsiniz.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Image picker cards
+                    _buildImagePickerCard(
+                      'Yaprak Üstü',
+                      Icons.eco,
+                      _leafTopImage,
+                      ImageType.leafTop,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildImagePickerCard(
+                      'Yaprak Altı',
+                      Icons.eco_outlined,
+                      _leafBottomImage,
+                      ImageType.leafBottom,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildImagePickerCard(
+                      'Bitki Genel',
+                      Icons.nature,
+                      _plantOverviewImage,
+                      ImageType.plantOverview,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildImagePickerCard(
+                      'Kök Sistemi',
+                      Icons.grass,
+                      _rootImage,
+                      ImageType.root,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
             // Plant Type Dropdown
             const Text(
               'Bitki Türü (Opsiyonel)',
@@ -617,37 +1175,8 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
-
-            // Location Input
-            const Text(
-              'Konum (Opsiyonel)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF374151),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: TextField(
-                controller: _locationController,
-                decoration: const InputDecoration(
-                  hintText: 'Örn: Ankara, Türkiye',
-                  hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                  prefixIcon: Icon(Icons.location_on, color: Color(0xFF6B7280)),
-                ),
-              ),
-            ),
+            // ✅ Location is fetched in background but not shown in UI
+            // GPS coordinates are automatically included in analysis request
 
             const SizedBox(height: 24),
 
@@ -768,4 +1297,15 @@ class _AnalysisOptionsScreenState extends State<AnalysisOptionsScreen> {
     // No subscription tier information means likely no active subscription
     return 'no_subscription';
   }
+
+  // ✅ Location logic simplified: Only GPS coordinates sent automatically
+  // No user input field, location fetched silently in background
+}
+
+/// Image types for multi-image analysis
+enum ImageType {
+  leafTop,
+  leafBottom,
+  plantOverview,
+  root,
 }

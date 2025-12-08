@@ -8,6 +8,7 @@ import 'pest_disease.dart';
 import 'recommendations.dart';
 import 'analysis_summary.dart';
 import 'environmental_factors.dart';
+import 'image_metadata.dart';
 
 class PlantAnalysisResult {
   final int? id;
@@ -43,6 +44,9 @@ class PlantAnalysisResult {
   // Sponsorship metadata (null if not sponsored)
   final SponsorshipMetadata? sponsorshipMetadata;
 
+  // Multi-image metadata (null for single-image analyses)
+  final ImageMetadata? imageMetadata;
+
   PlantAnalysisResult({
     this.id,
     this.analysisId,
@@ -72,6 +76,7 @@ class PlantAnalysisResult {
     this.createdDate,
     this.plantSpecies,
     this.sponsorshipMetadata,
+    this.imageMetadata,
   });
 
   factory PlantAnalysisResult.fromJson(Map<String, dynamic> json) {
@@ -134,6 +139,9 @@ class PlantAnalysisResult {
       sponsorshipMetadata: json['sponsorshipMetadata'] != null
           ? SponsorshipMetadata.fromJson(json['sponsorshipMetadata'] as Map<String, dynamic>)
           : null,
+      imageMetadata: json['imageMetadata'] != null
+          ? ImageMetadata.fromJson(json['imageMetadata'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -167,6 +175,7 @@ class PlantAnalysisResult {
       'createdDate': createdDate?.toIso8601String(),
       'plantSpecies': plantSpecies,
       'sponsorshipMetadata': sponsorshipMetadata?.toJson(),
+      'imageMetadata': imageMetadata?.toJson(),
     };
   }
 
@@ -177,4 +186,27 @@ class PlantAnalysisResult {
   String get healthStatus => healthAssessment?.severity ?? summary?.overallHealthScore ?? 'Unknown';
   String? get growthStage => plantIdentification?.growthStage;
   String get finalImageUrl => imageUrl ?? imagePath ?? '';
+
+  /// Get ImageMetadata for gallery display
+  /// Creates metadata from existing fields if multi-image data not present
+  ImageMetadata get imageMetadataOrDefault {
+    if (imageMetadata != null) {
+      return imageMetadata!;
+    }
+
+    // Create single-image metadata for backward compatibility
+    return ImageMetadata(
+      imageUrl: finalImageUrl,
+      totalImages: null, // Null indicates single-image
+      imagesProvided: null,
+      hasLeafTop: null,
+      hasLeafBottom: null,
+      hasPlantOverview: null,
+      hasRoot: null,
+      leafTopImageUrl: null,
+      leafBottomImageUrl: null,
+      plantOverviewImageUrl: null,
+      rootImageUrl: null,
+    );
+  }
 }

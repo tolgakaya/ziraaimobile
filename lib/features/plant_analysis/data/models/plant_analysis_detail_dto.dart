@@ -191,17 +191,18 @@ class PestDiseaseDto {
 
 @JsonSerializable()
 class PestDto {
+  @JsonKey(name: 'name') // Backend sends "name", not "type"
   final String type;
-  final String category;
+  final String? category; // Optional - backend may not send
   final String severity;
-  final List<String> affectedParts;
+  final List<String>? affectedParts; // Optional - backend may not send
   final double confidence;
 
   PestDto({
     required this.type,
-    required this.category,
+    this.category,
     required this.severity,
-    required this.affectedParts,
+    this.affectedParts,
     required this.confidence,
   });
 
@@ -404,11 +405,33 @@ class LocalizedRecommendationsDto {
 @JsonSerializable()
 class ImageInfoDto {
   final String? imageUrl;
-  final String format;
+  final String? format; // Optional - backend may not always send
+
+  // Multi-image fields (for detailed analysis with 5 images)
+  final int? totalImages;
+  final List<String>? imagesProvided;
+  final bool? hasLeafTop;
+  final bool? hasLeafBottom;
+  final bool? hasPlantOverview;
+  final bool? hasRoot;
+  final String? leafTopImageUrl;
+  final String? leafBottomImageUrl;
+  final String? plantOverviewImageUrl;
+  final String? rootImageUrl;
 
   ImageInfoDto({
     this.imageUrl,
-    required this.format,
+    this.format,
+    this.totalImages,
+    this.imagesProvided,
+    this.hasLeafTop,
+    this.hasLeafBottom,
+    this.hasPlantOverview,
+    this.hasRoot,
+    this.leafTopImageUrl,
+    this.leafBottomImageUrl,
+    this.plantOverviewImageUrl,
+    this.rootImageUrl,
   });
 
   factory ImageInfoDto.fromJson(Map<String, dynamic> json) =>

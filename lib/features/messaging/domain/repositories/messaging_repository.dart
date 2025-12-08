@@ -17,8 +17,8 @@ abstract class MessagingRepository {
   });
 
   Future<Either<Failure, PaginatedMessages>> getMessages({
-    required int plantAnalysisId,
     required int otherUserId,
+    required int plantAnalysisId,
     int page = 1,
     int pageSize = 20,
   });

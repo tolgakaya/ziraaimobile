@@ -104,7 +104,8 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
   }
 
   void _generateLink() {
-    if (!_formKey.currentState!.validate()) {
+    // Validate form first (including required name field)
+    if (_formKey.currentState?.validate() != true) {
       return;
     }
 
@@ -125,13 +126,15 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
       return;
     }
 
+    // Format the name as "{name} size mesaj gönderdi"
+    final name = _messageController.text.trim();
+    final formattedMessage = '$name size mesaj gönderdi';
+
     context.read<ReferralBloc>().add(
       GenerateReferralLinkRequested(
         phoneNumbers: phoneNumbers,
         deliveryMethod: _selectedMethod.value,
-        customMessage: _messageController.text.trim().isEmpty
-            ? null
-            : _messageController.text.trim(),
+        customMessage: formattedMessage,
       ),
     );
   }
@@ -422,7 +425,7 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
 
                   const SizedBox(height: 16),
 
-                  // Custom message (optional)
+                  // Name input (required)
                   Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFFF9FAFB),
@@ -431,18 +434,18 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                     ),
                     child: TextFormField(
                       controller: _messageController,
-                      maxLines: 3,
+                      maxLines: 1,
                       enabled: !isLoading,
                       style: const TextStyle(
                         fontSize: 16,
                         color: Color(0xFF111827),
                       ),
                       decoration: InputDecoration(
-                        labelText: 'Özel Mesaj (İsteğe Bağlı)',
+                        labelText: 'İsim *',
                         labelStyle: const TextStyle(
                           color: Color(0xFF6B7280),
                         ),
-                        hintText: 'Arkadaşlarınıza özel bir mesaj ekleyin...',
+                        hintText: 'İsminizi yazın',
                         hintStyle: const TextStyle(
                           color: Color(0xFF6B7280),
                         ),
@@ -451,13 +454,19 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                           horizontal: 16,
                           vertical: 16,
                         ),
-                        helperText: 'Bu mesaj gönderilen davetlere eklenecek',
+                        helperText: 'Bu isim gönderilen davetlerde görünecek',
                         helperStyle: const TextStyle(
                           color: Color(0xFF6B7280),
                           fontSize: 12,
                         ),
                       ),
-                      maxLength: 200,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'İsim alanı zorunludur';
+                        }
+                        return null;
+                      },
+                      maxLength: 50,
                     ),
                   ),
 

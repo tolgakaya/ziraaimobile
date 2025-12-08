@@ -30,6 +30,7 @@ class LoginData {
   final DateTime? tokenExpiry;
   final List<String>? claims;
   final String? expiration;
+  final String? refreshTokenExpiration; // ISO 8601 datetime string
 
   const LoginData({
     required this.token,
@@ -38,12 +39,22 @@ class LoginData {
     this.tokenExpiry,
     this.claims,
     this.expiration,
+    this.refreshTokenExpiration,
   });
 
   factory LoginData.fromJson(Map<String, dynamic> json) =>
       _$LoginDataFromJson(json);
 
   Map<String, dynamic> toJson() => _$LoginDataToJson(this);
+
+  /// Parse refresh token expiration string to DateTime
+  DateTime? get refreshTokenExpirationDateTime =>
+      refreshTokenExpiration != null ? DateTime.parse(refreshTokenExpiration!) : null;
+
+  /// Check if refresh token is expired
+  bool get isRefreshTokenExpired =>
+      refreshTokenExpirationDateTime != null &&
+      DateTime.now().isAfter(refreshTokenExpirationDateTime!);
 }
 
 @JsonSerializable()

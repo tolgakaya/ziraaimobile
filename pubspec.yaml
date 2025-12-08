@@ -60,6 +60,7 @@ dependencies:
   # Camera & Image
   image_picker: ^1.0.8            # Camera and gallery image selection
   permission_handler: ^11.3.0     # Camera and storage permissions
+  geolocator: ^13.0.2             # Location services with permission handling
   share_plus: ^10.1.2             # Social sharing functionality
   flutter_contacts: ^1.1.9        # Contacts access for referral invitations
   cached_network_image: ^3.4.1    # Network image caching with authentication headers

@@ -10,6 +10,7 @@ import '../../data/models/plant_analysis_result.dart';
 import '../blocs/analysis_detail/analysis_detail_bloc.dart';
 import '../blocs/analysis_detail/analysis_detail_event.dart';
 import '../blocs/analysis_detail/analysis_detail_state.dart';
+import '../widgets/detail/image_gallery_widget.dart';
 
 class AnalysisDetailScreen extends StatelessWidget {
   final int analysisId;
@@ -113,6 +114,12 @@ class AnalysisDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
+                // Image Gallery (single or multi-image display)
+                ImageGalleryWidget(
+                  imageMetadata: detail.imageMetadataOrDefault,
+                ),
+                const SizedBox(height: 20),
+
                 // 10. Farmer Friendly Summary (MUST BE AT TOP - as requested)
                 _buildFarmerFriendlySummarySection(detail),
                 const SizedBox(height: 20),

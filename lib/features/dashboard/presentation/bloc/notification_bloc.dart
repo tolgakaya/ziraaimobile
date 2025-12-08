@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:developer' as developer;
 import '../../../../core/models/plant_analysis_notification.dart';
+import '../../../../core/services/signalr_service.dart';
 import 'notification_event.dart';
 import 'notification_state.dart';
 
@@ -14,6 +15,26 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<MarkAllNotificationsAsRead>(_onMarkAllNotificationsAsRead);
     on<ClearNotification>(_onClearNotification);
     on<ClearAllNotifications>(_onClearAllNotifications);
+
+    // Setup SignalR listener for analysis completion notifications
+    _setupSignalRListener();
+  }
+
+  /// Setup SignalR listener to automatically add notifications when analyses complete
+  void _setupSignalRListener() {
+    final signalRService = SignalRService();
+
+    signalRService.onAnalysisCompleted = (PlantAnalysisNotification notification) {
+      print('🔔 NotificationBloc: SignalR notification received - ID: ${notification.analysisId}');
+
+      // Add notification to the bloc via event (positional parameter)
+      add(AddNotification(notification));
+    };
+
+    developer.log(
+      'SignalR listener setup complete for bell icon notifications',
+      name: 'NotificationBloc',
+    );
   }
 
   Future<void> _onLoadNotifications(

@@ -11,7 +11,11 @@ class SignalRService {
   String? _currentToken;
 
   // Event callbacks (CHANGED TO LISTS to support multiple listeners)
-  Function(PlantAnalysisNotification)? onAnalysisCompleted;
+  // ✅ CRITICAL FIX: Support multiple listeners for analysis completion
+  // - NotificationBloc needs to add notifications to bell icon
+  // - FarmerDashboardPage needs to refresh dashboard
+  final List<Function(PlantAnalysisNotification)> _onAnalysisCompletedListeners = [];
+  
   Function(int analysisId, String error)? onAnalysisFailed;
 
   // ✅ CRITICAL FIX: Support multiple listeners for real-time messaging
@@ -25,6 +29,26 @@ class SignalRService {
 
   // ✅ NEW: Dealer invitation callbacks - support multiple listeners (same pattern as messages)
   final List<Function(DealerInvitationNotification)> _onNewDealerInvitationListeners = [];
+
+  // ✅ Methods to manage analysis completion listeners
+  void addAnalysisCompletedListener(Function(PlantAnalysisNotification) listener) {
+    if (!_onAnalysisCompletedListeners.contains(listener)) {
+      _onAnalysisCompletedListeners.add(listener);
+      print('✅ SignalR: Added analysis completed listener (total: ${_onAnalysisCompletedListeners.length})');
+    }
+  }
+
+  void removeAnalysisCompletedListener(Function(PlantAnalysisNotification) listener) {
+    _onAnalysisCompletedListeners.remove(listener);
+    print('✅ SignalR: Removed analysis completed listener (remaining: ${_onAnalysisCompletedListeners.length})');
+  }
+
+  // Backward compatibility: Keep old setter for existing code
+  set onAnalysisCompleted(Function(PlantAnalysisNotification)? callback) {
+    if (callback != null) {
+      addAnalysisCompletedListener(callback);
+    }
+  }
 
   // ✅ Methods to manage message listeners
   void addNewMessageListener(Function(MessageNotification) listener) {
@@ -180,7 +204,21 @@ class SignalRService {
         try {
           final notification = PlantAnalysisNotification.fromJson(notificationData);
           print('✅ SignalR: Notification parsed from AnalysisCompleted');
-          onAnalysisCompleted?.call(notification);
+          
+          // ✅ CRITICAL FIX: Notify ALL listeners (both notification bell AND dashboard)
+          if (_onAnalysisCompletedListeners.isNotEmpty) {
+            print('🔔 SignalR: Notifying ${_onAnalysisCompletedListeners.length} analysis completed listener(s)...');
+            for (final listener in _onAnalysisCompletedListeners) {
+              try {
+                listener(notification);
+              } catch (e) {
+                print('❌ SignalR: Error in analysis completed listener: $e');
+              }
+            }
+            print('✅ SignalR: All analysis completed listeners notified');
+          } else {
+            print('⚠️ SignalR: WARNING - No analysis completed listeners registered!');
+          }
         } catch (e) {
           print('❌ SignalR: Error parsing AnalysisCompleted: $e');
         }
@@ -200,12 +238,19 @@ class SignalRService {
           print('✅ SignalR: Notification parsed successfully');
           print('📋 SignalR: Notification details - ID: ${notification.analysisId}, User: ${notification.userId}, Status: ${notification.status}');
 
-          if (onAnalysisCompleted != null) {
-            print('🔔 SignalR: Calling onAnalysisCompleted callback...');
-            onAnalysisCompleted?.call(notification);
-            print('✅ SignalR: Callback executed');
+          // ✅ CRITICAL FIX: Notify ALL listeners (both notification bell AND dashboard)
+          if (_onAnalysisCompletedListeners.isNotEmpty) {
+            print('🔔 SignalR: Notifying ${_onAnalysisCompletedListeners.length} analysis completed listener(s)...');
+            for (final listener in _onAnalysisCompletedListeners) {
+              try {
+                listener(notification);
+              } catch (e) {
+                print('❌ SignalR: Error in analysis completed listener: $e');
+              }
+            }
+            print('✅ SignalR: All analysis completed listeners notified');
           } else {
-            print('⚠️ SignalR: WARNING - onAnalysisCompleted callback is NULL! No handler registered!');
+            print('⚠️ SignalR: WARNING - No analysis completed listeners registered!');
           }
         } catch (e, stackTrace) {
           print('❌ SignalR: Error parsing notification: $e');

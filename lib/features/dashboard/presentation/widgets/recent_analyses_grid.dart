@@ -29,24 +29,22 @@ class _RecentAnalysesGridState extends State<RecentAnalysesGrid> {
   Future<List<AnalysisSummary>> _loadAnalyses() async {
     try {
       print('🚀🚀🚀 CLAUDE: Starting to load analyses with NEW CODE! 🚀🚀🚀');
-      // Get network client and auth token
+
+      // ✅ CRITICAL FIX: Removed manual token handling!
+      // TokenInterceptor in Dio now automatically:
+      // 1. Adds Bearer token to every request
+      // 2. Refreshes token if expired (before request)
+      // 3. Handles 401 errors and retries with new token
+      // This fixes "Authentication failed" errors!
+
+      // Get network client
       final networkClient = getIt<NetworkClient>();
-      final secureStorage = getIt<SecureStorageService>();
-      final token = await secureStorage.getToken();
 
-      if (token == null) {
-        print('🚀 CLAUDE: No token found, returning empty list');
-        return [];
-      }
-
-      print('🚀 CLAUDE: Making API call to plantanalyses/list');
+      print('🚀 CLAUDE: Making API call to plantanalyses/list (TokenInterceptor handles auth)');
       // Make API call to get analysis list
       final response = await networkClient.get(
         ApiConfig.plantAnalysesList,
         queryParameters: {'page': 1, 'pageSize': 10},
-        options: Options(headers: {
-          'Authorization': 'Bearer $token',
-        }),
       );
 
       if (response.data['success'] == true && response.data['data'] != null) {
