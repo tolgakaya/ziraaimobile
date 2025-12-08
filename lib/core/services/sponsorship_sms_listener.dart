@@ -31,11 +31,12 @@ class SponsorshipSmsListener {
   StreamSubscription<AndroidSMSMessage>? _smsSubscription;
   Timer? _healthCheckTimer;
 
-  // Regex to match sponsorship codes
-  // Format: AGRI-XXXX-XXXXXXXX or SPONSOR-XXXX-XXXXXXXX
-  // Supports hyphens in code: AGRI-2025-52834B45
+  // Regex to match sponsorship codes with ANY custom prefix
+  // Format: PREFIX-YYYY-XXXXXXXX (e.g., AGRI-2025-ABC123, TOLGATARIM-2025-31803149)
+  // Pattern: [A-Z]+ (any uppercase prefix) - \d{4} (4-digit year) - [A-Z0-9]+ (alphanumeric code)
+  // Backward compatible: Still matches AGRI-2025-XXXXX and SPONSOR-2025-XXXXX
   static final RegExp _codeRegex = RegExp(
-    r'(AGRI-[A-Z0-9\-]+|SPONSOR-[A-Z0-9\-]+)',
+    r'([A-Z]+-\d{4}-[A-Z0-9]+)',
     caseSensitive: true,
   );
 
@@ -292,13 +293,20 @@ class SponsorshipSmsListener {
   }
 
   /// Check if SMS contains sponsorship-related keywords
+  /// Enhanced to detect custom sponsor prefix SMS messages
   bool _containsSponsorshipKeywords(String messageBody) {
     final keywords = [
       'Sponsorluk Kodunuz',
+      'Abonelik Kodunuz',    // For custom prefix SMS (e.g., TOLGATARIM)
       'sponsorluk',
+      'abonelik',             // General subscription keyword
       'paketi hediye',
-      'AGRI-',
-      'SPONSOR-',
+      'ucretsiz',             // Free subscription keyword
+      'ZiraAI',               // Brand name
+      'AGRI-',                // Default prefix
+      'SPONSOR-',             // Default prefix
+      'ziraai.com/redeem',    // Deep link pattern
+      'api.ziraai.com/redeem', // Production deep link
     ];
 
     return keywords.any((keyword) => messageBody.contains(keyword));

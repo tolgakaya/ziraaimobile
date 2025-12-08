@@ -59,14 +59,15 @@ class _SponsorshipRedemptionScreenState
   }
 
   void _validateCodeFormat(String code) {
-    // Validate format: AGRI-XXXX-XXXXXXXX or SPONSOR-XXXX-XXXXXXXX
-    // Supports hyphens in code: AGRI-2025-52834B45
-    final isValid = RegExp(r'^(AGRI|SPONSOR)-[A-Z0-9\-]+$').hasMatch(code);
+    // Validate format: PREFIX-YYYY-XXXXXXXX (supports any custom sponsor prefix)
+    // Examples: AGRI-2025-ABC123, TOLGATARIM-2025-31803149, COMPANYX-2025-XYZ789
+    // Pattern: [A-Z]+ (any uppercase prefix) - \d{4} (4-digit year) - [A-Z0-9]+ (alphanumeric)
+    final isValid = RegExp(r'^[A-Z]+-\d{4}-[A-Z0-9]+$').hasMatch(code);
 
     setState(() {
       _isCodeValid = isValid;
       if (code.isNotEmpty && !isValid) {
-        _errorMessage = 'Geçersiz kod formatı';
+        _errorMessage = 'Geçersiz kod formatı. Örnek: AGRI-2025-X3K9';
       } else {
         _errorMessage = null;
       }
@@ -320,8 +321,9 @@ class _SponsorshipRedemptionScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('• AGRI-XXXXX', style: TextStyle(fontFamily: 'monospace')),
-                    Text('• SPONSOR-XXXXX', style: TextStyle(fontFamily: 'monospace')),
+                    Text('• AGRI-2025-XXXXX', style: TextStyle(fontFamily: 'monospace')),
+                    Text('• SPONSOR-2025-XXXXX', style: TextStyle(fontFamily: 'monospace')),
+                    Text('• ŞİRKETADI-2025-XXXXX', style: TextStyle(fontFamily: 'monospace')),
                   ],
                 ),
               ),
