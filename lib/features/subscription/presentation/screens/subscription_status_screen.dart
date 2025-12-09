@@ -5,6 +5,7 @@ import '../../services/subscription_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
 import '../../../../core/error/subscription_exceptions.dart';
 import '../../../../core/widgets/farmer_bottom_nav.dart';
+import '../../../../core/widgets/iyzico_footer.dart';
 import 'sponsor_request_screen.dart';
 import '../../../payment/presentation/screens/farmer_payment_screen.dart';
 
@@ -157,6 +158,8 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
                       _buildActionButtons(),
                       const SizedBox(height: 20),
                       if (usageStatus!.hasActiveSubscription) _buildUsageDetails(),
+                      const SizedBox(height: 24),
+                      const IyzicoFooter(),
                     ],
                   ),
                 ),
