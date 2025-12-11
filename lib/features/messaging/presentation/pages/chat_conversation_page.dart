@@ -220,25 +220,15 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
               SnackBar(content: Text(state.message)),
             );
           } else if (state is MessagesLoaded) {
-            // ✅ OPTIMIZATION: Only update if message count changed significantly
-            // This prevents clearing and re-adding all messages on every state change
-            // which causes scroll position and animation issues
+            // ✅ FIX: Always do full update to ensure correct chronological order
+            // Single message optimization was causing messages to appear at wrong position
             final currentCount = _chatController.messages.length;
             final newCount = state.messages.length;
 
-            // Full update only if:
-            // 1. First load (controller empty)
-            // 2. Message count difference > 1 (pagination/refresh)
-            // 3. Count decreased (deletion or error recovery)
-            if (currentCount == 0 || (newCount - currentCount).abs() > 1 || newCount < currentCount) {
-              print('📝 Full message update: currentCount=$currentCount, newCount=$newCount');
-              _updateMessages(state.messages);
-            } else if (newCount > currentCount) {
-              // Single message added (user sent or received 1 new message)
-              print('📝 Single message added: currentCount=$currentCount, newCount=$newCount');
-              final newMessage = state.messages.first; // DESC order - newest is first
-              _addSingleMessage(newMessage);
-            }
+            print('📝 Message update: currentCount=$currentCount, newCount=$newCount');
+
+            // Always full update to ensure correct chronological order
+            _updateMessages(state.messages);
 
             // ✅ NEW: Mark unread messages as read when conversation opens
             _markUnreadMessagesAsRead(state.messages);

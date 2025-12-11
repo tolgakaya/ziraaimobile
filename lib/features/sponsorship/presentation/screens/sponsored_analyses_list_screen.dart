@@ -284,177 +284,185 @@ class _SponsoredAnalysesListScreenState
 
 /// Show filter dialog with date range
   void _showFilterDialog() {
+    // Store temporary dates to update UI in dialog
+    DateTime? tempStartDate = _startDate;
+    DateTime? tempEndDate = _endDate;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.filter_list, color: Theme.of(context).primaryColor),
-            const SizedBox(width: 12),
-            const Text(
-              'Tarih Aralığı',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Icon(Icons.filter_list, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 12),
+              const Text(
+                'Tarih Aralığı',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Start date
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: tempStartDate ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                    locale: const Locale('tr', 'TR'),
+                    helpText: 'Başlangıç Tarihi Seçin',
+                    cancelText: 'İptal',
+                    confirmText: 'Seç',
+                  );
+                  if (picked != null) {
+                    setDialogState(() => tempStartDate = picked);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today,
+                           size: 20,
+                           color: Colors.grey.shade600),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Başlangıç Tarihi',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              tempStartDate != null
+                                  ? DateFormat('d MMMM yyyy', 'tr_TR').format(tempStartDate!)
+                                  : 'Seçiniz',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (tempStartDate != null)
+                        IconButton(
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () => setDialogState(() => tempStartDate = null),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // End date
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: tempEndDate ?? DateTime.now(),
+                    firstDate: tempStartDate ?? DateTime(2020),
+                    lastDate: DateTime.now(),
+                    locale: const Locale('tr', 'TR'),
+                    helpText: 'Bitiş Tarihi Seçin',
+                    cancelText: 'İptal',
+                    confirmText: 'Seç',
+                  );
+                  if (picked != null) {
+                    setDialogState(() => tempEndDate = picked);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today,
+                           size: 20,
+                           color: Colors.grey.shade600),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bitiş Tarihi',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              tempEndDate != null
+                                  ? DateFormat('d MMMM yyyy', 'tr_TR').format(tempEndDate!)
+                                  : 'Seçiniz',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (tempEndDate != null)
+                        IconButton(
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () => setDialogState(() => tempEndDate = null),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('İptal'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  _startDate = tempStartDate;
+                  _endDate = tempEndDate;
+                  _initialLoadFuture = _loadAnalyses(refresh: true);
+                });
+              },
+              child: const Text('Uygula'),
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Start date
-            InkWell(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _startDate ?? DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                  locale: const Locale('tr', 'TR'),
-                  helpText: 'Başlangıç Tarihi Seçin',
-                  cancelText: 'İptal',
-                  confirmText: 'Seç',
-                );
-                if (picked != null) {
-                  setState(() => _startDate = picked);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today, 
-                         size: 20, 
-                         color: Colors.grey.shade600),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Başlangıç Tarihi',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _startDate != null
-                                ? DateFormat('d MMMM yyyy', 'tr_TR').format(_startDate!)
-                                : 'Seçiniz',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_startDate != null)
-                      IconButton(
-                        icon: const Icon(Icons.clear, size: 20),
-                        onPressed: () => setState(() => _startDate = null),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // End date
-            InkWell(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _endDate ?? DateTime.now(),
-                  firstDate: _startDate ?? DateTime(2020),
-                  lastDate: DateTime.now(),
-                  locale: const Locale('tr', 'TR'),
-                  helpText: 'Bitiş Tarihi Seçin',
-                  cancelText: 'İptal',
-                  confirmText: 'Seç',
-                );
-                if (picked != null) {
-                  setState(() => _endDate = picked);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today, 
-                         size: 20, 
-                         color: Colors.grey.shade600),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Bitiş Tarihi',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _endDate != null
-                                ? DateFormat('d MMMM yyyy', 'tr_TR').format(_endDate!)
-                                : 'Seçiniz',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_endDate != null)
-                      IconButton(
-                        icon: const Icon(Icons.clear, size: 20),
-                        onPressed: () => setState(() => _endDate = null),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _initialLoadFuture = _loadAnalyses(refresh: true);
-              });
-            },
-            child: const Text('Uygula'),
-          ),
-        ],
       ),
     );
   }

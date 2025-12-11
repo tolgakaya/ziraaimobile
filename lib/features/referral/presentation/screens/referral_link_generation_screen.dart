@@ -312,11 +312,13 @@ class _ReferralLinkGenerationScreenState extends State<ReferralLinkGenerationScr
                         value: DeliveryMethod.whatsApp,
                         label: Text('WhatsApp'),
                         icon: Icon(Icons.chat),
+                        enabled: false, // WhatsApp disabled
                       ),
                       ButtonSegment(
                         value: DeliveryMethod.both,
                         label: Text('İkisi'),
                         icon: Icon(Icons.all_inclusive),
+                        enabled: false, // Both disabled since WhatsApp is disabled
                       ),
                     ],
                     selected: {_selectedMethod},

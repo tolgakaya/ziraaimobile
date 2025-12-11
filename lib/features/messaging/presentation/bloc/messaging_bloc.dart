@@ -111,9 +111,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         emit(MessageSendError(failure.message, currentState.messages));
       },
       (sentMessage) {
-        // ✅ NEW: Backend returns messages in DESC order (newest first)
-        // So prepend new message to beginning of list
-        final updatedMessages = [sentMessage, ...currentState.messages];
+        // Add new message to end of list - flutter_chat_ui sorts by createdAt automatically
+        final updatedMessages = [...currentState.messages, sentMessage];
         emit(MessagesLoaded(
           messages: updatedMessages,
           canReply: _canFarmerReply(updatedMessages),
@@ -173,9 +172,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         emit(MessageSendError(failure.message, currentState.messages));
       },
       (sentMessage) {
-        // ✅ NEW: Backend returns messages in DESC order (newest first)
-        // So prepend new message to beginning of list
-        final updatedMessages = [sentMessage, ...currentState.messages];
+        // Add new message to end of list - flutter_chat_ui sorts by createdAt automatically
+        final updatedMessages = [...currentState.messages, sentMessage];
         emit(MessagesLoaded(
           messages: updatedMessages,
           canReply: _canFarmerReply(updatedMessages),
@@ -199,9 +197,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
       return;
     }
 
-    // ✅ NEW: Backend returns messages in DESC order (newest first)
-    // So prepend new message to beginning of list
-    final updatedMessages = [event.message, ...currentState.messages];
+    // Add new message to end of list - flutter_chat_ui sorts by createdAt automatically
+    final updatedMessages = [...currentState.messages, event.message];
 
     emit(MessagesLoaded(
       messages: updatedMessages,
@@ -288,9 +285,8 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
         emit(MessageSendError(failure.message, currentState.messages));
       },
       (sentMessage) {
-        // ✅ NEW: Backend returns messages in DESC order (newest first)
-        // So prepend new message to beginning of list
-        final updatedMessages = [sentMessage, ...currentState.messages];
+        // Add new message to end of list - flutter_chat_ui sorts by createdAt automatically
+        final updatedMessages = [...currentState.messages, sentMessage];
         emit(MessagesLoaded(
           messages: updatedMessages,
           canReply: _canFarmerReply(updatedMessages),

@@ -59,7 +59,7 @@
             </intent-filter>
 
             <!-- Deep linking for referral system - Environment specific -->
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
@@ -72,7 +72,7 @@
             </intent-filter>
 
             <!-- Deep linking for sponsorship redemption - Environment specific -->
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
@@ -85,7 +85,7 @@
             </intent-filter>
 
             <!-- Deep linking for dealer invitation - Environment specific -->
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>

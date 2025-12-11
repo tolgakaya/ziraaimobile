@@ -277,26 +277,26 @@ packages:
     dependency: transitive
     description:
       name: cross_cache
-      sha256: ddf99059e2174d141efa03bea6d51eb7c8983f4a4af43ddee7556bbc43399522
+      sha256: "4983a16603cc99b0a14de6a772fa8ee4533411f46f3c423f1386fea7566049c5"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.5"
+    version: "1.1.0"
   cross_file:
     dependency: transitive
     description:
       name: cross_file
-      sha256: "7caf6a750a0c04effbb52a676dce9a4a592e10ad35c34d6d2d0e4811160d5670"
+      sha256: "701dcfc06da0882883a2657c445103380e53e647060ad8d9dfb710c100996608"
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.4+2"
+    version: "0.3.5+1"
   crypto:
     dependency: "direct main"
     description:
       name: crypto
-      sha256: "1e445881f28f22d6140f181e07737b22f1e099a5e1ff94b0af2f9e4a463f4855"
+      sha256: c8ea0233063ba03258fbcf2ca4d6dadfefe14f02fab57702265467a19f27fadf
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.6"
+    version: "3.0.7"
   cupertino_icons:
     dependency: "direct main"
     description:
@@ -450,18 +450,18 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_chat_core
-      sha256: "113f9b0c2c9f8fb77a40d298084d99b28ff4876f99598ad01bea8b731f1acc20"
+      sha256: "8c46790f64f106bf6e610e2a7324b3844320e9e295867c06d45d9deb134d848d"
       url: "https://pub.dev"
     source: hosted
-    version: "2.8.0"
+    version: "2.9.0"
   flutter_chat_ui:
     dependency: "direct main"
     description:
       name: flutter_chat_ui
-      sha256: aafab2afe71c034ec6353a2b109cbaba73ce4be572692ebd29889e4d82227b49
+      sha256: "599a19e8a2df47c34647eb63794131fd4c4a4654b364a9f9ecdd7c99c1e562c7"
       url: "https://pub.dev"
     source: hosted
-    version: "2.9.0"
+    version: "2.11.0"
   flutter_contacts:
     dependency: "direct main"
     description:
@@ -713,10 +713,10 @@ packages:
     dependency: transitive
     description:
       name: idb_shim
-      sha256: ee391deb010143823d25db15f8b002945e19dcb5f2dd5b696a98cb6db7644012
+      sha256: "071f3b05032fa62e60ca15db9939f8afbaf403b37e67747ac88f858c3e999228"
       url: "https://pub.dev"
     source: hosted
-    version: "2.6.7"
+    version: "2.6.7+1"
   image:
     dependency: transitive
     description:
