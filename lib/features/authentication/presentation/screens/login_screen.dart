@@ -21,6 +21,7 @@ import '../../../sponsorship/presentation/screens/farmer/sponsorship_redemption_
 import '../../../dealer/presentation/screens/dealer_invitation_screen.dart';
 import '../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../../../dealer/data/dealer_api_service.dart';
+import 'email_login_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,6 +39,10 @@ class _LoginScreenState extends State<LoginScreen> {
   // Screen mode: 'login' or 'register'
   String _screenMode = 'login';
 
+  // Double-tap protection
+  bool _isProcessing = false;
+  DateTime? _lastTapTime;
+
   @override
   void initState() {
     super.initState();
@@ -51,18 +56,42 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _validateAndLogin() {
+    // Double-tap protection: Prevent multiple rapid taps
+    final now = DateTime.now();
+    if (_isProcessing) {
+      print('⚠️ Login already in progress, ignoring tap');
+      return;
+    }
+
+    if (_lastTapTime != null && now.difference(_lastTapTime!).inMilliseconds < 2000) {
+      print('⚠️ Too fast! Ignoring duplicate tap (${now.difference(_lastTapTime!).inMilliseconds}ms)');
+      return;
+    }
+
+    _lastTapTime = now;
+
     // Validate phone and request OTP
     setState(() {
       _phoneError = _validatePhone(_phoneController.text);
     });
 
     if (_phoneError == null) {
+      setState(() => _isProcessing = true);
+
       final phone = _phoneController.text.trim();
+      print('📱 Requesting OTP for: $phone');
 
       // Dispatch OTP request event
       context.read<AuthBloc>().add(
         PhoneLoginOtpRequested(mobilePhone: phone),
       );
+
+      // Reset processing flag after 3 seconds as fallback
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() => _isProcessing = false);
+        }
+      });
     }
   }
 
@@ -91,8 +120,9 @@ class _LoginScreenState extends State<LoginScreen> {
         content: Text(message),
         backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4), // Auto-dismiss after 4 seconds
         action: SnackBarAction(
-          label: 'OK',
+          label: 'TAMAM',
           textColor: Colors.white,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -241,6 +271,9 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         } else if (state is PhoneOtpSent) {
+          // Reset processing flag on success
+          setState(() => _isProcessing = false);
+
           // Navigate to OTP verification screen
           final authBloc = GetIt.instance<AuthBloc>();
           Navigator.push(
@@ -256,6 +289,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         } else if (state is AuthError) {
+          // Reset processing flag on error
+          setState(() => _isProcessing = false);
           _showErrorSnackBar(state.message);
         }
       },
@@ -447,6 +482,39 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               },
             ),
+
+          // Email/Password Login Option (Small button below main login)
+          if (_screenMode == 'login') ...[
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () {
+                final authBloc = context.read<AuthBloc>();
+                showDialog(
+                  context: context,
+                  builder: (dialogContext) => BlocProvider.value(
+                    value: authBloc,
+                    child: const EmailLoginDialog(),
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.email_outlined,
+                size: 18,
+                color: Color(0xFF6B7280),
+              ),
+              label: const Text(
+                'Email ve şifre ile giriş yap',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF6B7280),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ],
         ],
       ),
     );

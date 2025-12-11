@@ -1,4 +1,4 @@
-package com.ziraai.ziraai_mobile
+package com.ziraai.app
 
 import io.flutter.embedding.android.FlutterActivity
 import android.Manifest

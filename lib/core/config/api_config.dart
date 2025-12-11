@@ -4,7 +4,7 @@
 
 class ApiConfig {
   // Environment configuration
-  static const Environment environment = Environment.staging;
+  static const Environment environment = Environment.production;
   
   // Base URLs for different environments
   static const Map<Environment, String> _baseUrls = {

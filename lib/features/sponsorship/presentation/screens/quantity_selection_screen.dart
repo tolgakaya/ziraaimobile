@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/models/sponsorship_tier_comparison.dart';
+import '../../../../core/widgets/iyzico_footer.dart';
 import 'invoice_information_screen.dart';
 
 /// Quantity selection screen for sponsor package purchase
@@ -526,31 +527,41 @@ class _QuantitySelectionScreenState extends State<QuantitySelectionScreen> {
         ],
       ),
       child: SafeArea(
-        child: ElevatedButton(
-          onPressed: _continue,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF10B981),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const IyzicoFooter(
+              padding: EdgeInsets.only(bottom: 12),
+              height: 20,
             ),
-            elevation: 0,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Devam Et',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+            ElevatedButton(
+              onPressed: _continue,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 0,
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward, size: 20),
-            ],
-          ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Devam Et',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_forward, size: 20),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

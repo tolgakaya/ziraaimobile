@@ -507,13 +507,13 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Yükselt button
-                      Expanded(
+                      // Yükselt button (flexible for small screens)
+                      Flexible(
                         child: InkWell(
                           onTap: widget.onNavigateToSubscription ?? () {},
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [
@@ -527,22 +527,25 @@ class _SubscriptionPlanCardState extends State<SubscriptionPlanCard> {
                                 width: 1,
                               ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
-                              children: [
+                              children: const [
                                 Icon(
                                   Icons.upgrade,
                                   size: 14,
                                   color: Color(0xFF7C3AED), // purple-600
                                 ),
                                 SizedBox(width: 4),
-                                Text(
-                                  'Yükselt',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6D28D9), // purple-700
+                                Flexible(
+                                  child: Text(
+                                    'Yükselt',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF6D28D9), // purple-700
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],

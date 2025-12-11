@@ -5,6 +5,7 @@ import '../../data/services/sponsor_service.dart';
 import '../widgets/tier_card_widget.dart';
 import '../widgets/tier_detail_card_widget.dart';
 import '../widgets/tier_comparison_table_widget.dart';
+import '../../../../core/widgets/iyzico_footer.dart';
 import 'quantity_selection_screen.dart';
 
 /// Tier selection screen for sponsor package purchase
@@ -423,6 +424,10 @@ class _TierSelectionScreenState extends State<TierSelectionScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const IyzicoFooter(
+              padding: EdgeInsets.only(bottom: 12),
+              height: 20,
+            ),
             if (hasSelection) ...[
               Text(
                 '${_selectedTier!.displayName} - ${_selectedTier!.monthlyPrice.toStringAsFixed(0)} ${_selectedTier!.currency}/ay',

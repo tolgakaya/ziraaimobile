@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +8,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Load keystore properties
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
 android {
-    namespace = "com.ziraai.ziraai_mobile"
+    namespace = "com.ziraai.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -27,6 +37,15 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String?
+            keyPassword = keystoreProperties["keyPassword"] as String?
+            storeFile = keystoreProperties["storeFile"]?.let { rootProject.file(it) }
+            storePassword = keystoreProperties["storePassword"] as String?
+        }
     }
 
     flavorDimensions += "environment"
@@ -50,15 +69,13 @@ android {
             dimension = "environment"
             applicationId = "com.ziraai.app"
             resValue("string", "app_name", "ZiraAI")
-            manifestPlaceholders["deepLinkHost"] = "ziraai.com"
+            manifestPlaceholders["deepLinkHost"] = "api.ziraai.com"
         }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

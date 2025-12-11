@@ -467,67 +467,90 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
                   const SizedBox(height: 48),
 
-                  // OTP Input Fields
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(6, (index) {
-                      return SizedBox(
-                        width: 45,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFB),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: const Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          child: TextField(
-                            controller: _otpControllers[index],
-                            focusNode: _otpFocusNodes[index],
-                            enabled: !isLoading,
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            maxLength: 1,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111827),
-                            ),
-                            decoration: const InputDecoration(
-                              counterText: '',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                vertical: 12,
+                  // OTP Input Fields with clear button
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: List.generate(6, (index) {
+                          return SizedBox(
+                            width: 45,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFFE5E7EB),
+                                ),
+                              ),
+                              child: TextField(
+                                controller: _otpControllers[index],
+                                focusNode: _otpFocusNodes[index],
+                                enabled: !isLoading,
+                                textAlign: TextAlign.center,
+                                keyboardType: TextInputType.number,
+                                maxLength: 1,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF111827),
+                                ),
+                                decoration: const InputDecoration(
+                                  counterText: '',
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                onChanged: (value) {
+                                  if (_otpError != null) {
+                                    setState(() => _otpError = null);
+                                  }
+
+                                  if (value.isNotEmpty && index < 5) {
+                                    _otpFocusNodes[index + 1].requestFocus();
+                                  } else if (value.isEmpty && index > 0) {
+                                    _otpFocusNodes[index - 1].requestFocus();
+                                  }
+
+                                  // Auto-submit when all fields filled
+                                  if (index == 5 && value.isNotEmpty) {
+                                    final allFilled = _otpControllers.every(
+                                      (c) => c.text.isNotEmpty,
+                                    );
+                                    if (allFilled) {
+                                      _validateAndSubmit();
+                                    }
+                                  }
+                                },
                               ),
                             ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            onChanged: (value) {
-                              if (_otpError != null) {
-                                setState(() => _otpError = null);
-                              }
-
-                              if (value.isNotEmpty && index < 5) {
-                                _otpFocusNodes[index + 1].requestFocus();
-                              } else if (value.isEmpty && index > 0) {
-                                _otpFocusNodes[index - 1].requestFocus();
-                              }
-
-                              // Auto-submit when all fields filled
-                              if (index == 5 && value.isNotEmpty) {
-                                final allFilled = _otpControllers.every(
-                                  (c) => c.text.isNotEmpty,
-                                );
-                                if (allFilled) {
-                                  _validateAndSubmit();
-                                }
-                              }
-                            },
-                          ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 8),
+                      // Clear all button
+                      TextButton.icon(
+                        onPressed: isLoading ? null : () {
+                          for (var controller in _otpControllers) {
+                            controller.clear();
+                          }
+                          _otpFocusNodes[0].requestFocus();
+                          if (_otpError != null) {
+                            setState(() => _otpError = null);
+                          }
+                        },
+                        icon: const Icon(Icons.clear_all, size: 16),
+                        label: const Text('Tümünü Temizle'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF6B7280),
+                          textStyle: const TextStyle(fontSize: 13),
                         ),
-                      );
-                    }),
+                      ),
+                    ],
                   ),
 
                   if (_otpError != null) ...[

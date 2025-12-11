@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'analysis_options_screen.dart';
 import '../../../../core/widgets/farmer_bottom_nav.dart';
 import '../../../../core/services/permission_service.dart';
 import '../../../../core/utils/minimal_service_locator.dart';
+import '../../../subscription/services/subscription_service.dart';
+import '../../../referral/presentation/screens/referral_link_generation_screen.dart';
+import '../../../referral/presentation/bloc/referral_bloc.dart';
 
 class CaptureScreen extends StatefulWidget {
   const CaptureScreen({super.key});
@@ -17,6 +21,145 @@ class _CaptureScreenState extends State<CaptureScreen> {
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
   final PermissionService _permissionService = getIt<PermissionService>();
+  final SubscriptionService _subscriptionService = getIt<SubscriptionService>();
+
+  bool _isCheckingQuota = true;
+  bool _quotaExceeded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSubscriptionQuota();
+  }
+
+  /// Check subscription quota on screen load
+  Future<void> _checkSubscriptionQuota() async {
+    try {
+      print('🔍 Checking subscription quota...');
+      final usageStatus = await _subscriptionService.getUsageStatus();
+
+      if (usageStatus != null && usageStatus.isQuotaExceeded) {
+        print('⚠️ Quota exceeded! Showing referral screen...');
+        setState(() {
+          _quotaExceeded = true;
+          _isCheckingQuota = false;
+        });
+
+        // Show referral dialog after a brief delay
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _showQuotaExceededDialog(usageStatus);
+          }
+        });
+      } else {
+        print('✅ Quota available, proceeding normally');
+        setState(() {
+          _quotaExceeded = false;
+          _isCheckingQuota = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error checking quota: $e');
+      // On error, allow user to proceed (fail open)
+      setState(() {
+        _quotaExceeded = false;
+        _isCheckingQuota = false;
+      });
+    }
+  }
+
+  /// Show dialog when quota is exceeded
+  void _showQuotaExceededDialog(usageStatus) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // User must make a choice
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Color(0xFFF59E0B), size: 24),
+            SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'Analiz Hakkınız Doldu',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                usageStatus.getStatusMessage(),
+                style: const TextStyle(fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4), // green-50
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF86EFAC)), // green-300
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.card_giftcard, color: Color(0xFF16A34A), size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Arkadaşlarınızı davet ederek ek kredi kazanabilirsiniz!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF16A34A),
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Go back to dashboard
+            },
+            child: const Text('Geri Dön'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              // Navigate directly to referral link generation screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BlocProvider(
+                    create: (context) => getIt<ReferralBloc>(),
+                    child: const ReferralLinkGenerationScreen(),
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.people, size: 16),
+            label: const Text(
+              'Arkadaş Davet Et',
+              style: TextStyle(fontSize: 13),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF22C55E),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _selectFromCamera() async {
     try {
@@ -270,41 +413,48 @@ class _CaptureScreenState extends State<CaptureScreen> {
           // Action Buttons
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _selectFromCamera,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Kamera'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+            child: _isCheckingQuota
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _selectFromGallery,
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text('Galeri'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _quotaExceeded ? null : _selectFromCamera,
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text('Kamera'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF22C55E),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _quotaExceeded ? null : _selectFromGallery,
+                          icon: const Icon(Icons.photo_library),
+                          label: const Text('Galeri'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF3B82F6),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

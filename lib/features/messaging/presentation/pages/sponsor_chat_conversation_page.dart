@@ -408,8 +408,8 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
     }
     print('📝 Cleared all messages from controller');
 
-    // Insert all messages in chronological order (oldest to newest)
-    // flutter_chat_ui will display them with newest at bottom
+    // Insert all messages - flutter_chat_ui's insertMessage automatically sorts by createdAt
+    // No need to reverse, the chat UI handles chronological ordering
     for (var msg in messages) {
       final textMessage = chat_core.TextMessage(
         id: msg.id.toString(),
@@ -429,7 +429,7 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
           'voiceMessageWaveform': msg.voiceMessageWaveform,
         },
       );
-      print('📝 Inserting TextMessage: id=${textMessage.id}, authorId=${textMessage.authorId}, metadata=${textMessage.metadata}');
+      print('📝 Inserting TextMessage: id=${textMessage.id}, authorId=${textMessage.authorId}, createdAt=${textMessage.createdAt}');
       _chatController.insertMessage(textMessage);
     }
     print('📝 Total messages in controller: ${_chatController.messages.length}');
@@ -980,6 +980,16 @@ class _SponsorChatConversationPageState extends State<SponsorChatConversationPag
     final canUseVideoAttachment = videoFeature != null && _isTierSufficient(videoFeature.requiredTier);
 
     final hasAnyAttachmentFeature = canUseImageAttachment || canUseFileAttachment || canUseVideoAttachment;
+
+    // 🔍 DEBUG: Log attachment button state
+    print('📎 SPONSOR ATTACHMENT BUTTON DEBUG:');
+    print('   Current Tier: ${widget.sponsorshipTier}');
+    print('   State: $state');
+    print('   Features: $features');
+    print('   Image Feature - requiredTier: ${imageFeature?.requiredTier}, canUse: $canUseImageAttachment');
+    print('   File Feature - requiredTier: ${fileFeature?.requiredTier}, canUse: $canUseFileAttachment');
+    print('   Video Feature - requiredTier: ${videoFeature?.requiredTier}, canUse: $canUseVideoAttachment');
+    print('   hasAnyAttachmentFeature: $hasAnyAttachmentFeature');
 
     return Positioned(
       bottom: 16,
