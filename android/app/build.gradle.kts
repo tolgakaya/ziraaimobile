@@ -17,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.ziraai.app"
-    compileSdk = 35  // Updated to Android 15 (API 35)
+    compileSdk = 36  // Updated to support latest plugins (backward compatible with API 35)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
