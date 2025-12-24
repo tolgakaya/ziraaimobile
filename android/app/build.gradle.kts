@@ -17,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.ziraai.app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35  // Updated to Android 15 (API 35)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -34,7 +34,7 @@ android {
         // Default application ID - overridden by flavors
         applicationId = "com.ziraai.app"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 35  // Updated to Android 15 (API 35)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

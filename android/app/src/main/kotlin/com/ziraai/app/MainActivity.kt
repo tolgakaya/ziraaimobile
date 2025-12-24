@@ -2,9 +2,17 @@ package com.ziraai.app
 
 import io.flutter.embedding.android.FlutterActivity
 import android.Manifest
+import android.os.Build
+import android.os.Bundle
+import androidx.core.view.WindowCompat
 
 class MainActivity : FlutterActivity() {
-    // Simplified MainActivity
-    // The telephony plugin conflict cannot be easily resolved at this level
-    // Solution: Use different permission request approach at Dart level
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge display for Android 15+ compatibility
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
+    }
 }
