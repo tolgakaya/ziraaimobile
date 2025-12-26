@@ -35,7 +35,7 @@ android {
         applicationId = "com.ziraai.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 35  // Updated to Android 15 (API 35)
-        versionCode = 5  // Manually set to 5 for production release
+        versionCode = 6  // Manually set to 6 for production release
         versionName = "1.1.0"
     }
 
