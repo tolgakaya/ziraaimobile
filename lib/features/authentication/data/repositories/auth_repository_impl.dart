@@ -456,11 +456,16 @@ class AuthRepositoryImpl implements AuthRepository {
     required int code,
   }) async {
     try {
+      print('📞 AuthRepository: verifyPhoneLoginOtp started');
+      print('📞 AuthRepository: mobilePhone: $mobilePhone, code: $code');
+
       final request = VerifyPhoneOtpRequest(
         mobilePhone: mobilePhone,
         code: code,
       );
+      print('📞 AuthRepository: Calling API service...');
       final response = await _phoneAuthApiService.verifyLoginOtp(request);
+      print('📞 AuthRepository: API response received: success=${response.success}');
 
       if (response.success && response.data != null) {
         // Store authentication tokens

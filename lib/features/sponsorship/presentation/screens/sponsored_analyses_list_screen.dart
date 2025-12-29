@@ -52,7 +52,7 @@ class _SponsoredAnalysesListScreenState
   late String _selectedFilter; // all, unread
 
   // Navigation state
-  int _selectedIndex = 1; // Default to 1 (Analizler) since we're on analysis list
+  late int _selectedIndex; // Will be set based on initialFilter
   SponsorDashboardSummary? _dashboardSummary; // For code distribution
 
   late Future<void> _initialLoadFuture;
@@ -62,6 +62,9 @@ class _SponsoredAnalysesListScreenState
     super.initState();
     // Initialize filter from widget parameter or default to 'all'
     _selectedFilter = widget.initialFilter ?? 'all';
+    // Set selectedIndex based on initialFilter
+    // If coming from Mesajlar button (initialFilter='unread'), show Mesajlar tab active
+    _selectedIndex = (_selectedFilter == 'unread') ? 2 : 1;
     // Removed scroll listener - using "Load More" button instead
     _initialLoadFuture = _loadAnalyses(refresh: true);
     _loadDashboardSummary(); // Load dashboard summary for code distribution
@@ -239,15 +242,28 @@ class _SponsoredAnalysesListScreenState
         ),
       );
     } else if (index == 1) {
-      // Analizler - Already on this screen, reset selection
+      // Analizler - Reload current screen with all filter
+      if (_selectedIndex == 1 && _selectedFilter == 'all') {
+        // Already on Analizler with all filter, no need to reload
+        return;
+      }
       setState(() {
-        _selectedIndex = 1;
+        _selectedFilter = 'all';
+        _selectedIndex = 1; // ✅ Show Analizler tab as active
+        _currentPage = 1;
+        _allAnalyses.clear();
+        _hasMorePages = true;
+        _initialLoadFuture = _loadAnalyses(refresh: true);
       });
     } else if (index == 2) {
       // Mesajlar - Reload current screen with unread filter
+      if (_selectedIndex == 2 && _selectedFilter == 'unread') {
+        // Already on Mesajlar with unread filter, no need to reload
+        return;
+      }
       setState(() {
         _selectedFilter = 'unread';
-        _selectedIndex = 1; // Stay on analyses screen
+        _selectedIndex = 2; // ✅ Show Mesajlar tab as active
         _currentPage = 1;
         _allAnalyses.clear();
         _hasMorePages = true;

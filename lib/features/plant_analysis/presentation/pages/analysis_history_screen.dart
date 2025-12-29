@@ -14,10 +14,12 @@ import '../../../../core/widgets/farmer_bottom_nav.dart';
 /// Accessed from Farmer Dashboard "Geçmiş" button
 class AnalysisHistoryScreen extends StatefulWidget {
   final String? initialFilter; // Optional initial filter: 'all', 'active', 'idle', 'unread'
+  final int? bottomNavIndex; // Optional bottom nav index: 1 for Analizler, 2 for Mesajlar
 
   const AnalysisHistoryScreen({
     super.key,
     this.initialFilter,
+    this.bottomNavIndex,
   });
 
   @override
@@ -312,7 +314,9 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: const FarmerBottomNav(currentIndex: 1), // Analizler sekmesi
+      bottomNavigationBar: FarmerBottomNav(
+        currentIndex: widget.bottomNavIndex ?? 1, // Default to Analizler (1), but can be Mesajlar (2)
+      ),
     );
   }
 

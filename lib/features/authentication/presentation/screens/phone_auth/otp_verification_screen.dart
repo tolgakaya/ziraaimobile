@@ -160,10 +160,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void _validateAndSubmit() {
     final otp = _otpControllers.map((c) => c.text).join();
 
+    print('🔍 DEBUG: _validateAndSubmit called with OTP: $otp');
+    print('🔍 DEBUG: Current AuthBloc state: ${context.read<AuthBloc>().state}');
+
     if (otp.length != 6) {
       setState(() {
         _otpError = '6 haneli kodu tam girin';
       });
+      print('❌ DEBUG: OTP length validation failed');
       return;
     }
 
@@ -172,12 +176,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       setState(() {
         _otpError = 'Geçersiz kod formatı';
       });
+      print('❌ DEBUG: OTP parse failed');
       return;
     }
 
     setState(() => _otpError = null);
 
+    print('✅ DEBUG: Validation passed, sending event to AuthBloc');
+    print('🔍 DEBUG: isRegistration: ${widget.isRegistration}, mobilePhone: ${widget.mobilePhone}, code: $otpCode');
+
     if (widget.isRegistration) {
+      print('📤 DEBUG: Sending PhoneRegisterOtpVerifyRequested event');
       context.read<AuthBloc>().add(
         PhoneRegisterOtpVerifyRequested(
           mobilePhone: widget.mobilePhone,
@@ -186,6 +195,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         ),
       );
     } else {
+      print('📤 DEBUG: Sending PhoneLoginOtpVerifyRequested event');
       context.read<AuthBloc>().add(
         PhoneLoginOtpVerifyRequested(
           mobilePhone: widget.mobilePhone,
@@ -193,6 +203,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         ),
       );
     }
+
+    print('✅ DEBUG: Event sent to AuthBloc');
   }
 
   void _resendOtp() {
