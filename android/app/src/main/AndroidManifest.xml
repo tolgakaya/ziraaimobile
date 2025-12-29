@@ -17,9 +17,9 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
 
-    <!-- SMS permissions for Deferred Deep Linking (Referral Code from SMS) -->
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <!-- SMS permissions REMOVED - Using Google SMS Retriever API instead -->
+    <!-- SMS Retriever API does not require READ_SMS or RECEIVE_SMS permissions -->
+    <!-- This eliminates Google Play Store compliance issues -->
 
     <!-- Notification permission for Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

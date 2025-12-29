@@ -1,34 +1,32 @@
 import 'dart:async';
-import 'package:android_sms_reader/android_sms_reader.dart';
+// DISABLED: SMS reading feature removed due to Google Play Store policy compliance
+// import 'package:android_sms_reader/android_sms_reader.dart';
+// import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get_it/get_it.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../services/navigation_service.dart';
 import '../services/auth_service.dart';
 import '../../features/sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// SMS-based automatic sponsorship code redemption service
-/// Listens for incoming SMS with sponsorship codes and auto-fills redemption screen
+/// SMS-based automatic sponsorship code redemption service - DISABLED
+/// ⚠️ Feature disabled for Google Play Store compliance (SDK 35+ policy)
 ///
-/// Features:
-/// - Real-time SMS listening (background)
+/// DISABLED Features (Play Store Compliance):
+/// - Real-time SMS listening (requires READ_SMS permission - not allowed)
 /// - Code extraction: AGRI-[A-Z0-9]+ or SPONSOR-[A-Z0-9]+
-/// - Persistent storage for deferred deep linking
 /// - 7-day inbox scan for codes received before app install
+///
+/// STILL ACTIVE Features:
+/// - Persistent storage for deferred deep linking (manual entry)
 /// - Auto-navigation for logged-in users
 /// - Local notifications for immediate user awareness
 /// - Duplicate prevention: Processed codes are tracked to prevent re-notifications
 ///
-/// Duplicate Prevention Strategy:
-/// - Each processed code is stored in local SharedPreferences list
-/// - Before showing notification, code is checked against processed list
-/// - Once code is shown/used, it's marked as processed
-/// - Prevents duplicate notifications on app restart or SMS re-scan
-/// - Use clearProcessedCodes() for debugging/testing to reset list
+/// Users must manually enter sponsorship codes - no automatic SMS reading
 class SponsorshipSmsListener {
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
-  StreamSubscription<AndroidSMSMessage>? _smsSubscription;
+  // DISABLED: StreamSubscription<AndroidSMSMessage>? _smsSubscription;
   Timer? _healthCheckTimer;
 
   // Regex to match sponsorship codes with ANY custom prefix
@@ -45,9 +43,19 @@ class SponsorshipSmsListener {
   static const String _storageKeyTimestamp = 'pending_sponsorship_code_timestamp';
   static const String _processedCodesKey = 'processed_sponsorship_codes';
 
-  /// Initialize SMS listener
+  /// Initialize SMS listener - DISABLED for Play Store compliance
   /// Call this on app startup
   Future<void> initialize() async {
+    print('[SponsorshipSMS] ⚠️ SMS listener DISABLED - Play Store compliance (SDK 35+)');
+    print('[SponsorshipSMS] ℹ️ Users must manually enter sponsorship codes');
+    print('[SponsorshipSMS] ℹ️ Only notifications system is initialized');
+
+    // Initialize local notifications only (for manual code entry notifications)
+    await _initializeNotifications();
+
+    print('[SponsorshipSMS] ✅ Notifications initialized (SMS reading disabled)');
+
+    /* DISABLED CODE - Play Store Compliance
     print('[SponsorshipSMS] 🚀 Initializing sponsorship SMS listener...');
     print('[SponsorshipSMS] 🔍 DEBUG: Initialize method called');
 
@@ -78,29 +86,22 @@ class SponsorshipSmsListener {
 
     print('[SponsorshipSMS] ✅ Sponsorship SMS listener initialized successfully');
     print('[SponsorshipSMS] 🔍 DEBUG: Full initialization complete - listener should be active');
+    */
   }
 
-  /// Start periodic health check to verify stream is still active
+  /* DISABLED METHODS - Play Store Compliance
+
+  /// Start periodic health check to verify stream is still active - DISABLED
   void _startHealthCheck() {
-    _healthCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      final isActive = _smsSubscription != null && !(_smsSubscription?.isPaused ?? true);
-      print('[SponsorshipSMS] 🏥 Health Check: Stream subscription active = $isActive');
-
-      if (!isActive) {
-        print('[SponsorshipSMS] 🚨 CRITICAL: Stream subscription is not active!');
-        print('[SponsorshipSMS] 🚨 Subscription null: ${_smsSubscription == null}');
-        print('[SponsorshipSMS] 🚨 Subscription paused: ${_smsSubscription?.isPaused}');
-      } else {
-        print('[SponsorshipSMS] ✅ Health Check: Listener is healthy and active');
-      }
-    });
+    // DISABLED: No SMS subscription to check
   }
+  */
 
   /// Dispose resources
   void dispose() {
     _healthCheckTimer?.cancel();
-    _smsSubscription?.cancel();
-    print('[SponsorshipSMS] 🧹 Resources disposed (subscription and health check timer cancelled)');
+    // DISABLED: _smsSubscription?.cancel();
+    print('[SponsorshipSMS] 🧹 Resources disposed (health check timer cancelled)');
   }
 
   /// Initialize local notifications
@@ -172,125 +173,23 @@ class SponsorshipSmsListener {
     }
   }
 
-  /// Request SMS permission from user using permission_handler
-  /// This will show the system permission dialog if not granted
+  /* DISABLED METHODS - Play Store Compliance
+
+  /// Request SMS permission - DISABLED
   Future<bool> _requestSmsPermission() async {
-    try {
-      print('[SponsorshipSMS] 📋 Checking SMS permission...');
-      print('[SponsorshipSMS] 🔍 DEBUG: Checking current SMS permission status');
-
-      // Check current permission status
-      final smsStatus = await Permission.sms.status;
-      print('[SponsorshipSMS] 🔍 DEBUG: Current SMS permission status: $smsStatus');
-
-      // If already granted, return true
-      if (smsStatus.isGranted) {
-        print('[SponsorshipSMS] ✅ SMS permission already granted');
-        return true;
-      }
-
-      // If permanently denied, can't request again
-      if (smsStatus.isPermanentlyDenied) {
-        print('[SponsorshipSMS] 🚨 CRITICAL: SMS permission permanently denied by user');
-        print('[SponsorshipSMS] ℹ️ User must enable SMS permission in Settings manually');
-        return false;
-      }
-
-      // Request permission - this will show dialog
-      print('[SponsorshipSMS] 🔍 DEBUG: Requesting SMS permission from user (will show dialog)');
-      final newStatus = await Permission.sms.request();
-      print('[SponsorshipSMS] 🔍 DEBUG: Permission request result: $newStatus');
-
-      if (newStatus.isGranted) {
-        print('[SponsorshipSMS] ✅ SMS permission granted by user');
-        return true;
-      } else if (newStatus.isDenied) {
-        print('[SponsorshipSMS] ⚠️ User denied SMS permission');
-        return false;
-      } else if (newStatus.isPermanentlyDenied) {
-        print('[SponsorshipSMS] 🚨 User permanently denied SMS permission');
-        return false;
-      }
-
-      print('[SponsorshipSMS] ⚠️ SMS permission not granted - skipping listener');
-      return false;
-    } catch (e, stackTrace) {
-      print('[SponsorshipSMS] ❌ Permission error (silently ignored): $e');
-      print('[SponsorshipSMS] 🔍 DEBUG: Stack trace: $stackTrace');
-      // Silently fail to prevent crash
-      return false;
-    }
+    return false; // Always return false - feature disabled
   }
 
-  /// Start listening for incoming SMS messages
+  /// Start listening for incoming SMS messages - DISABLED
   Future<void> _startListening() async {
-    try {
-      print('[SponsorshipSMS] 🎧 Setting up SMS listener using stream...');
-      print('[SponsorshipSMS] 🔍 DEBUG: About to call AndroidSMSReader.observeIncomingMessages()');
-
-      // Use android_sms_reader's streaming API for real-time SMS
-      _smsSubscription = AndroidSMSReader.observeIncomingMessages().listen(
-        (AndroidSMSMessage message) async {
-          print('[SponsorshipSMS] 📱🔔 REAL-TIME SMS RECEIVED from ${message.address}');
-          print('[SponsorshipSMS] 📱🔔 Message body: ${message.body}');
-          print('[SponsorshipSMS] 🔍 DEBUG: Processing SMS in listener callback');
-          await _processSmsMessage(message.body);
-        },
-        onError: (error, stackTrace) {
-          print('[SponsorshipSMS] ❌ SMS stream error: $error');
-          print('[SponsorshipSMS] 🔍 DEBUG: Error stack trace: $stackTrace');
-        },
-        onDone: () {
-          print('[SponsorshipSMS] ⚠️ SMS stream closed/completed unexpectedly');
-        },
-        cancelOnError: false, // Keep listening even if there's an error
-      );
-
-      print('[SponsorshipSMS] 👂 SMS stream listener started successfully');
-      print('[SponsorshipSMS] 🔍 DEBUG: Stream subscription created: ${_smsSubscription != null}');
-      print('[SponsorshipSMS] 🔍 DEBUG: Stream subscription is active: ${_smsSubscription?.isPaused == false}');
-    } catch (e, stackTrace) {
-      print('[SponsorshipSMS] ❌ Failed to start SMS listener: $e');
-      print('[SponsorshipSMS] 🔍 DEBUG: Stack trace: $stackTrace');
-    }
+    print('[SponsorshipSMS] ⚠️ SMS listening DISABLED - Play Store compliance');
   }
 
-  /// Check recent SMS for sponsorship codes (deferred deep linking)
-  /// Useful when app is installed after SMS was received
+  /// Check recent SMS for sponsorship codes - DISABLED
   Future<void> _checkRecentSms() async {
-    try {
-      // Get SMS from last 7 days
-      final cutoffDate = DateTime.now().subtract(const Duration(days: 7));
-
-      // Fetch recent messages (last 100 should be enough for 7 days)
-      final messages = await AndroidSMSReader.fetchMessages(
-        type: AndroidSMSType.inbox,
-        count: 100,
-      );
-
-      // Filter by date (last 7 days)
-      final recentMessages = messages.where(
-        (msg) => msg.date >= cutoffDate.millisecondsSinceEpoch
-      ).toList();
-
-      print('[SponsorshipSMS] 🔍 Checking ${recentMessages.length} recent SMS (last 7 days)');
-
-      for (var message in recentMessages) {
-        final body = message.body;
-
-        // Check if message contains sponsorship code
-        if (_containsSponsorshipKeywords(body)) {
-          await _processSmsMessage(body);
-          print('[SponsorshipSMS] ✅ Found sponsorship code in recent SMS');
-          break; // Only process first match
-        }
-      }
-
-      print('[SponsorshipSMS] ✅ Recent SMS check completed');
-    } catch (e) {
-      print('[SponsorshipSMS] ❌ Error checking recent SMS: $e');
-    }
+    print('[SponsorshipSMS] ⚠️ Recent SMS check DISABLED - Play Store compliance');
   }
+  */
 
   /// Check if SMS contains sponsorship-related keywords
   /// Enhanced to detect custom sponsor prefix SMS messages
@@ -535,30 +434,13 @@ class SponsorshipSmsListener {
     }
   }
 
-  /// Debug: List recent SMS messages
+  /* DISABLED METHODS - Play Store Compliance
+
+  /// Debug: List recent SMS messages - DISABLED
   Future<void> debugListRecentSms() async {
-    try {
-      final messages = await AndroidSMSReader.fetchMessages(
-        type: AndroidSMSType.inbox,
-        count: 10,
-      );
-
-      print('[SponsorshipSMS] 📱 Debug: Recent SMS (${messages.length} total)');
-      for (var i = 0; i < messages.length; i++) {
-        final msg = messages[i];
-        final preview = msg.body.substring(0, msg.body.length > 50 ? 50 : msg.body.length);
-        print('  ${i + 1}. ${msg.address}: $preview...');
-
-        // Check if contains code
-        if (_codeRegex.hasMatch(msg.body)) {
-          final code = _codeRegex.firstMatch(msg.body)?.group(0);
-          print('     ✅ Contains code: $code');
-        }
-      }
-    } catch (e) {
-      print('[SponsorshipSMS] ❌ Debug list error: $e');
-    }
+    print('[SponsorshipSMS] ⚠️ debugListRecentSms DISABLED - Play Store compliance');
   }
+  */
 
   /// Test code extraction with sample SMS
   static String? testCodeExtraction(String smsBody) {

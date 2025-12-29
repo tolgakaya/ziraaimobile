@@ -68,13 +68,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     super.dispose();
   }
 
-  /// Initialize OTP SMS listener and subscribe to auto-fill stream
+  /// Initialize OTP SMS listener using Google SMS Retriever API
+  /// NO PERMISSIONS REQUIRED - Fully compliant with Play Store policies
   Future<void> _initializeOtpSmsListener() async {
     try {
-      print('[OTP_SCREEN] 🎧 Initializing OTP SMS auto-fill...');
+      print('[OTP_SCREEN] 🎧 Initializing SMS Retriever API...');
 
-      // Initialize listener (will request SMS permission if needed)
+      // Initialize SMS Retriever API (no permissions needed!)
       await _otpSmsListener.initialize();
+
+      // Request SMS code - starts 5-minute listening window
+      await _otpSmsListener.requestSmsCode();
 
       // Subscribe to OTP code stream
       _otpSmsSubscription = _otpSmsListener.otpCodeStream.listen((otpCode) {
@@ -82,16 +86,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         _autoFillOtp(otpCode);
       });
 
-      // Also check recent SMS for codes (in case SMS arrived before screen opened)
-      final recentCode = await _otpSmsListener.checkRecentSmsForOtp();
-      if (recentCode != null && mounted) {
-        print('[OTP_SCREEN] 📱 Found OTP in recent SMS: $recentCode');
-        _autoFillOtp(recentCode);
-      }
+      // Print backend integration instructions
+      _otpSmsListener.printBackendInstructions();
 
-      print('[OTP_SCREEN] ✅ OTP SMS auto-fill initialized');
+      print('[OTP_SCREEN] ✅ SMS Retriever API initialized successfully');
     } catch (e) {
-      print('[OTP_SCREEN] ❌ Failed to initialize OTP SMS listener: $e');
+      print('[OTP_SCREEN] ❌ Failed to initialize SMS Retriever API: $e');
     }
   }
 
