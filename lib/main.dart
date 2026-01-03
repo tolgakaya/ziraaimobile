@@ -15,6 +15,7 @@ import 'core/services/navigation_service.dart';
 import 'core/services/install_referrer_service.dart';
 import 'core/services/sms_referral_service.dart';
 import 'core/services/sponsorship_sms_listener.dart';
+import 'core/services/otp_sms_listener.dart';
 import 'core/security/token_manager.dart';
 // ✅ REMOVED: dealer_invitation_sms_listener - switched to backend API integration
 import 'dart:async';
@@ -72,6 +73,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // Initialize sponsorship SMS listener for automatic code detection
     _initializeSponsorshipSmsListener();
+
+    // Initialize OTP SMS listener for automatic code extraction (SMS Retriever API)
+    _initializeOtpSmsListener();
 
     // ✅ REMOVED: Dealer invitation SMS listener - switched to backend API integration
     // Dealer invitations are now checked via backend API in login/register screens
@@ -184,6 +188,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       print('❌ Stack trace: ${StackTrace.current}');  // ✅ Added stack trace for debugging
       // Don't block app startup if SMS listener fails
       // Silently ignore errors to prevent crashes
+    }
+  }
+
+  /// Get app signature hash for backend SMS integration
+  /// This ONLY gets the hash - does NOT start listening
+  /// The actual SMS listener will be started by CodeAutoFill mixin in OTP screen
+  Future<void> _initializeOtpSmsListener() async {
+    try {
+      print('📲 Main: Getting app signature hash for backend...');
+
+      // Get app signature hash WITHOUT starting listener
+      final hash = await OtpSmsListener().getAppSignature();
+
+      print('✅ Main: App Signature Hash: $hash');
+      print('⚠️ Backend must include this hash in SMS: <#> $hash');
+    } catch (e) {
+      print('❌ Main: Failed to get app signature: $e');
+      // Don't block app startup if hash retrieval fails
     }
   }
 

@@ -709,7 +709,11 @@ class _TokenInterceptor extends Interceptor {
     return path.contains('/auth/login') ||
            path.contains('/auth/register') ||
            path.contains('/auth/refresh-token') ||
-           path.contains('/auth/forgot-password');
+           path.contains('/auth/forgot-password') ||
+           path.contains('/auth/request-phone-otp') ||
+           path.contains('/auth/verify-phone-otp') ||
+           path.contains('/auth/register-phone') ||
+           path.contains('/auth/verify-phone-register');
   }
 }
 

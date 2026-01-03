@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
+
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -55,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _validateAndLogin() {
+  void _validateAndLogin() async {
     // Double-tap protection: Prevent multiple rapid taps
     final now = DateTime.now();
     if (_isProcessing) {
@@ -81,7 +82,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final phone = _phoneController.text.trim();
       print('📱 Requesting OTP for: $phone');
 
-      // Dispatch OTP request event
+      // Dispatch OTP request event to backend
+      // NOTE: SMS Retriever listener will be started in OTP screen via CodeAutoFill mixin
       context.read<AuthBloc>().add(
         PhoneLoginOtpRequested(mobilePhone: phone),
       );
@@ -94,6 +96,8 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
   }
+
+
 
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) {

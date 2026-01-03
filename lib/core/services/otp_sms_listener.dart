@@ -101,7 +101,7 @@ class OtpSmsListener {
       print('[OTP_SMS] 🎧 Starting SMS Retriever API listener...');
 
       // Listen for SMS code (works for 5 minutes per request)
-      await SmsAutoFill().listenForCode;
+      await SmsAutoFill().listenForCode();
 
       print('[OTP_SMS] 👂 SMS Retriever API listener started (active for 5 minutes)');
     } catch (e) {
@@ -113,19 +113,14 @@ class OtpSmsListener {
   /// Call this when user reaches OTP screen
   Future<void> requestSmsCode() async {
     try {
-      print('[OTP_SMS] 📲 Requesting SMS code (5-minute window)...');
+      print('[OTP_SMS] 📲 Starting SMS code listener (5-minute window)...');
 
-      // This automatically extracts codes from SMS
-      final code = await SmsAutoFill().hint;
+      // Start listening for SMS code
+      await SmsAutoFill().listenForCode();
 
-      if (code != null && code.isNotEmpty) {
-        print('[OTP_SMS] ✅ SMS code received: $code');
-        _otpCodeController.add(code);
-      } else {
-        print('[OTP_SMS] ℹ️ No SMS code available');
-      }
+      print('[OTP_SMS] 👂 SMS listener active - waiting for code...');
     } catch (e) {
-      print('[OTP_SMS] ❌ Error requesting SMS code: $e');
+      print('[OTP_SMS] ❌ Error starting SMS listener: $e');
     }
   }
 

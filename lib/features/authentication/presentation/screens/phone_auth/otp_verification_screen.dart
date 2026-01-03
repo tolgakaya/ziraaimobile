@@ -18,7 +18,8 @@ import '../../../../sponsorship/presentation/screens/farmer/sponsorship_redempti
 import '../../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../../../../dealer/data/dealer_api_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../../../../../core/services/otp_sms_listener.dart';
+
+import 'package:sms_autofill/sms_autofill.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String mobilePhone;
@@ -36,7 +37,7 @@ class OtpVerificationScreen extends StatefulWidget {
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
-class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+class _OtpVerificationScreenState extends State<OtpVerificationScreen> with CodeAutoFill {
   final List<TextEditingController> _otpControllers = List.generate(
     6,
     (_) => TextEditingController(),
@@ -46,8 +47,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   String? _otpError;
   int _resendCountdown = 60;
   bool _canResend = false;
-  StreamSubscription<String>? _otpSmsSubscription;
-  final _otpSmsListener = OtpSmsListener();
+
+
+  @override
+  void codeUpdated() {
+    // This is called automatically when SMS code is received
+    if (code != null && code!.isNotEmpty) {
+      print('[OTP_SCREEN] 📱 SMS code received via CodeAutoFill: $code');
+      _autoFillOtp(code!);
+    }
+  }
 
   @override
   void initState() {
@@ -58,7 +67,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   @override
   void dispose() {
-    _otpSmsSubscription?.cancel();
+    cancel(); // Stop SMS listener
     for (var controller in _otpControllers) {
       controller.dispose();
     }
@@ -72,26 +81,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   /// NO PERMISSIONS REQUIRED - Fully compliant with Play Store policies
   Future<void> _initializeOtpSmsListener() async {
     try {
-      print('[OTP_SCREEN] 🎧 Initializing SMS Retriever API...');
-
-      // Initialize SMS Retriever API (no permissions needed!)
-      await _otpSmsListener.initialize();
-
-      // Request SMS code - starts 5-minute listening window
-      await _otpSmsListener.requestSmsCode();
-
-      // Subscribe to OTP code stream
-      _otpSmsSubscription = _otpSmsListener.otpCodeStream.listen((otpCode) {
-        print('[OTP_SCREEN] 📱 Received OTP code from SMS: $otpCode');
-        _autoFillOtp(otpCode);
-      });
-
-      // Print backend integration instructions
-      _otpSmsListener.printBackendInstructions();
-
-      print('[OTP_SCREEN] ✅ SMS Retriever API initialized successfully');
+      print('[OTP_SCREEN] 🎧 Starting SMS Retriever via CodeAutoFill mixin...');
+      
+      // Start listening for SMS code via CodeAutoFill mixin ONLY
+      // This triggers the 5-minute listening window
+      // NO service-level listenForCode() call - mixin handles everything
+      listenForCode();
+      
+      print('[OTP_SCREEN] ✅ SMS Retriever active - codeUpdated() will be called when SMS arrives');
     } catch (e) {
-      print('[OTP_SCREEN] ❌ Failed to initialize SMS Retriever API: $e');
+      print('[OTP_SCREEN] ❌ Failed to start SMS listener: $e');
     }
   }
 
