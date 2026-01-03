@@ -35,7 +35,7 @@ android {
         applicationId = "com.ziraai.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 35  // Updated to Android 15 (API 35)
-        versionCode = 6  // Manually set to 6 for production release
+        versionCode = 10  // Manually set to 10 for production release (with SMS Retriever API)
         versionName = "1.1.0"
     }
 

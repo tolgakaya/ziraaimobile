@@ -18,7 +18,8 @@ import '../../../../sponsorship/presentation/screens/farmer/sponsorship_redempti
 import '../../../../dealer/presentation/screens/pending_invitations_screen.dart';
 import '../../../../dealer/data/dealer_api_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../../../../../core/services/otp_sms_listener.dart';
+
+import 'package:sms_autofill/sms_autofill.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String mobilePhone;
@@ -36,7 +37,7 @@ class OtpVerificationScreen extends StatefulWidget {
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
-class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+class _OtpVerificationScreenState extends State<OtpVerificationScreen> with CodeAutoFill {
   final List<TextEditingController> _otpControllers = List.generate(
     6,
     (_) => TextEditingController(),
@@ -46,8 +47,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   String? _otpError;
   int _resendCountdown = 60;
   bool _canResend = false;
-  StreamSubscription<String>? _otpSmsSubscription;
-  final _otpSmsListener = OtpSmsListener();
+
+
+  @override
+  void codeUpdated() {
+    // This is called automatically when SMS code is received
+    if (code != null && code!.isNotEmpty) {
+      print('[OTP_SCREEN] 📱 SMS code received via CodeAutoFill: $code');
+      _autoFillOtp(code!);
+    }
+  }
 
   @override
   void initState() {
@@ -58,7 +67,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   @override
   void dispose() {
-    _otpSmsSubscription?.cancel();
+    cancel(); // Stop SMS listener
     for (var controller in _otpControllers) {
       controller.dispose();
     }
@@ -68,30 +77,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     super.dispose();
   }
 
-  /// Initialize OTP SMS listener and subscribe to auto-fill stream
+  /// Initialize OTP SMS listener using Google SMS Retriever API
+  /// NO PERMISSIONS REQUIRED - Fully compliant with Play Store policies
   Future<void> _initializeOtpSmsListener() async {
     try {
-      print('[OTP_SCREEN] 🎧 Initializing OTP SMS auto-fill...');
-
-      // Initialize listener (will request SMS permission if needed)
-      await _otpSmsListener.initialize();
-
-      // Subscribe to OTP code stream
-      _otpSmsSubscription = _otpSmsListener.otpCodeStream.listen((otpCode) {
-        print('[OTP_SCREEN] 📱 Received OTP code from SMS: $otpCode');
-        _autoFillOtp(otpCode);
-      });
-
-      // Also check recent SMS for codes (in case SMS arrived before screen opened)
-      final recentCode = await _otpSmsListener.checkRecentSmsForOtp();
-      if (recentCode != null && mounted) {
-        print('[OTP_SCREEN] 📱 Found OTP in recent SMS: $recentCode');
-        _autoFillOtp(recentCode);
-      }
-
-      print('[OTP_SCREEN] ✅ OTP SMS auto-fill initialized');
+      print('[OTP_SCREEN] 🎧 Starting SMS Retriever via CodeAutoFill mixin...');
+      
+      // Start listening for SMS code via CodeAutoFill mixin ONLY
+      // This triggers the 5-minute listening window
+      // NO service-level listenForCode() call - mixin handles everything
+      listenForCode();
+      
+      print('[OTP_SCREEN] ✅ SMS Retriever active - codeUpdated() will be called when SMS arrives');
     } catch (e) {
-      print('[OTP_SCREEN] ❌ Failed to initialize OTP SMS listener: $e');
+      print('[OTP_SCREEN] ❌ Failed to start SMS listener: $e');
     }
   }
 
@@ -160,10 +159,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void _validateAndSubmit() {
     final otp = _otpControllers.map((c) => c.text).join();
 
+    print('🔍 DEBUG: _validateAndSubmit called with OTP: $otp');
+    print('🔍 DEBUG: Current AuthBloc state: ${context.read<AuthBloc>().state}');
+
     if (otp.length != 6) {
       setState(() {
         _otpError = '6 haneli kodu tam girin';
       });
+      print('❌ DEBUG: OTP length validation failed');
       return;
     }
 
@@ -172,12 +175,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       setState(() {
         _otpError = 'Geçersiz kod formatı';
       });
+      print('❌ DEBUG: OTP parse failed');
       return;
     }
 
     setState(() => _otpError = null);
 
+    print('✅ DEBUG: Validation passed, sending event to AuthBloc');
+    print('🔍 DEBUG: isRegistration: ${widget.isRegistration}, mobilePhone: ${widget.mobilePhone}, code: $otpCode');
+
     if (widget.isRegistration) {
+      print('📤 DEBUG: Sending PhoneRegisterOtpVerifyRequested event');
       context.read<AuthBloc>().add(
         PhoneRegisterOtpVerifyRequested(
           mobilePhone: widget.mobilePhone,
@@ -186,6 +194,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         ),
       );
     } else {
+      print('📤 DEBUG: Sending PhoneLoginOtpVerifyRequested event');
       context.read<AuthBloc>().add(
         PhoneLoginOtpVerifyRequested(
           mobilePhone: widget.mobilePhone,
@@ -193,6 +202,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         ),
       );
     }
+
+    print('✅ DEBUG: Event sent to AuthBloc');
   }
 
   void _resendOtp() {

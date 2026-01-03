@@ -1,16 +1,23 @@
 import 'dart:async';
-import 'package:android_sms_reader/android_sms_reader.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:sms_autofill/sms_autofill.dart';
 
-/// OTP SMS auto-fill service
-/// Listens for incoming SMS with OTP verification codes and auto-fills OTP screen
+/// OTP SMS auto-fill service using Google SMS Retriever API
+/// NO PERMISSIONS REQUIRED - Fully compliant with Google Play Store policies
 ///
 /// Features:
-/// - Real-time SMS listening for OTP codes
-/// - Code extraction: 6-digit numeric codes
-/// - Automatic field population
-/// - Works for both login and registration flows
+/// - Zero-permission SMS reading via SMS Retriever API
+/// - Automatic code extraction (4-6 digit codes)
 /// - Stream-based notification to UI
+/// - Google Play Store compliant
+///
+/// Backend Integration Required:
+/// SMS messages MUST include an 11-character hash code at the end:
+/// Example: "Your ZiraAI verification code is 123456 <#> FA+9qCvUeDn"
+///
+/// How to get the hash code:
+/// 1. Build and install the app on a device
+/// 2. Call getAppSignature() method
+/// 3. Add this hash to your backend SMS template
 ///
 /// Usage:
 /// 1. Initialize in app startup: OtpSmsListener().initialize()
@@ -21,201 +28,181 @@ class OtpSmsListener {
   factory OtpSmsListener() => _instance;
   OtpSmsListener._internal();
 
-  StreamSubscription<AndroidSMSMessage>? _smsSubscription;
   final _otpCodeController = StreamController<String>.broadcast();
 
   /// Stream that emits OTP codes when received via SMS
   Stream<String> get otpCodeStream => _otpCodeController.stream;
 
-  /// Regex to match 6-digit OTP codes
-  /// Matches patterns like:
-  /// - "Your code is 123456"
-  /// - "Doğrulama kodunuz: 123456"
-  /// - "123456 kodunu kullanın"
-  static final RegExp _otpRegex = RegExp(
-    r'\b(\d{6})\b',
-    caseSensitive: false,
-  );
+  bool _isInitialized = false;
+  String? _cachedAppSignature;
 
   /// Initialize OTP SMS listener
   /// Call this on app startup
   Future<void> initialize() async {
-    print('[OTP_SMS] 🚀 Initializing OTP SMS listener...');
-
-    // Request SMS permission
-    final hasPermission = await _requestSmsPermission();
-    if (!hasPermission) {
-      print('[OTP_SMS] ⚠️ SMS permission denied - manual OTP entry required');
+    if (_isInitialized) {
+      print('[OTP_SMS] ⚠️ Already initialized, skipping...');
       return;
     }
 
-    // Start listening for incoming SMS
-    await _startListening();
+    print('[OTP_SMS] 🚀 Initializing SMS Retriever API...');
 
-    print('[OTP_SMS] ✅ OTP SMS listener initialized successfully');
+    try {
+      // Get and cache app signature for logging
+      _cachedAppSignature = await getAppSignature();
+      print('[OTP_SMS] 📱 App Signature Hash: $_cachedAppSignature');
+      print('[OTP_SMS] ⚠️ IMPORTANT: Add this hash to your backend SMS template!');
+
+      // Start listening - SMS Retriever API requires no permissions!
+      await _startListening();
+
+      _isInitialized = true;
+      print('[OTP_SMS] ✅ SMS Retriever API initialized successfully');
+    } catch (e) {
+      print('[OTP_SMS] ❌ Initialization error: $e');
+    }
+  }
+
+  /// Get the 11-character hash code for this app
+  /// Backend must include this in SMS messages
+  ///
+  /// Example SMS format:
+  /// "Your ZiraAI code is 123456 <#> FA+9qCvUeDn"
+  Future<String?> getAppSignature() async {
+    try {
+      if (_cachedAppSignature != null) {
+        return _cachedAppSignature;
+      }
+
+      final signature = await SmsAutoFill().getAppSignature;
+      _cachedAppSignature = signature;
+
+      print('[OTP_SMS] 📱 App Signature for SMS: $signature');
+      print('[OTP_SMS] 📋 SMS Template: Your ZiraAI code is {{code}} <#> $signature');
+
+      return signature;
+    } catch (e) {
+      print('[OTP_SMS] ❌ Error getting app signature: $e');
+      return null;
+    }
   }
 
   /// Dispose resources
   void dispose() {
-    _smsSubscription?.cancel();
+    SmsAutoFill().unregisterListener();
     _otpCodeController.close();
-    print('[OTP_SMS] 🧹 OTP SMS listener disposed');
+    _isInitialized = false;
+    print('[OTP_SMS] 🧹 SMS Retriever API listener disposed');
   }
 
-  /// Request SMS permission from user
-  Future<bool> _requestSmsPermission() async {
-    try {
-      print('[OTP_SMS] 📋 Checking SMS permission...');
-
-      // Check current permission status
-      final smsStatus = await Permission.sms.status;
-      print('[OTP_SMS] 🔍 Current SMS permission status: $smsStatus');
-
-      // If already granted, return true
-      if (smsStatus.isGranted) {
-        print('[OTP_SMS] ✅ SMS permission already granted');
-        return true;
-      }
-
-      // If permanently denied, can't request again
-      if (smsStatus.isPermanentlyDenied) {
-        print('[OTP_SMS] 🚨 SMS permission permanently denied');
-        return false;
-      }
-
-      // Request permission - this will show dialog
-      print('[OTP_SMS] 🔍 Requesting SMS permission (will show dialog)');
-      final newStatus = await Permission.sms.request();
-      print('[OTP_SMS] 🔍 Permission result: $newStatus');
-
-      if (newStatus.isGranted) {
-        print('[OTP_SMS] ✅ SMS permission granted by user');
-        return true;
-      }
-
-      print('[OTP_SMS] ⚠️ SMS permission not granted');
-      return false;
-    } catch (e) {
-      print('[OTP_SMS] ❌ Permission error: $e');
-      return false;
-    }
-  }
-
-  /// Start listening for incoming SMS messages
+  /// Start listening for incoming SMS messages via SMS Retriever API
+  /// This method requires NO permissions!
   Future<void> _startListening() async {
     try {
-      print('[OTP_SMS] 🎧 Setting up SMS listener for OTP codes...');
+      print('[OTP_SMS] 🎧 Starting SMS Retriever API listener...');
 
-      // Use android_sms_reader's streaming API for real-time SMS
-      _smsSubscription = AndroidSMSReader.observeIncomingMessages().listen(
-        (AndroidSMSMessage message) async {
-          print('[OTP_SMS] 📱 SMS received from ${message.address}');
-          print('[OTP_SMS] 📱 Message body: ${message.body}');
-          await _processSmsMessage(message.body);
-        },
-        onError: (error) {
-          print('[OTP_SMS] ❌ SMS stream error: $error');
-        },
-        onDone: () {
-          print('[OTP_SMS] ⚠️ SMS stream closed unexpectedly');
-        },
-        cancelOnError: false,
-      );
+      // Listen for SMS code (works for 5 minutes per request)
+      await SmsAutoFill().listenForCode();
 
-      print('[OTP_SMS] 👂 OTP SMS listener started successfully');
+      print('[OTP_SMS] 👂 SMS Retriever API listener started (active for 5 minutes)');
     } catch (e) {
       print('[OTP_SMS] ❌ Failed to start SMS listener: $e');
     }
   }
 
-  /// Process SMS message and extract OTP code
-  Future<void> _processSmsMessage(String messageBody) async {
-    print('[OTP_SMS] 🔎 Processing message for OTP code...');
-
-    // Check if message contains OTP-related keywords (Turkish + English)
-    if (!_containsOtpKeywords(messageBody)) {
-      print('[OTP_SMS] ℹ️ Message does not contain OTP keywords, skipping');
-      return;
-    }
-
-    // Extract OTP code using regex
-    final match = _otpRegex.firstMatch(messageBody);
-    if (match == null) {
-      print('[OTP_SMS] ℹ️ No 6-digit code found in message');
-      return;
-    }
-
-    final otpCode = match.group(1)!;
-    print('[OTP_SMS] ✅ OTP code extracted: $otpCode');
-
-    // Emit code to stream for UI to consume
-    _otpCodeController.add(otpCode);
-    print('[OTP_SMS] 📤 OTP code emitted to stream');
-  }
-
-  /// Check if SMS contains OTP-related keywords
-  bool _containsOtpKeywords(String messageBody) {
-    final keywords = [
-      'doğrulama',
-      'kod',
-      'verification',
-      'code',
-      'otp',
-      'ZiraAI',
-      'ziraai',
-    ];
-
-    final lowerBody = messageBody.toLowerCase();
-    return keywords.any((keyword) => lowerBody.contains(keyword.toLowerCase()));
-  }
-
-  /// Check recent SMS for OTP codes (useful for testing or delayed processing)
-  /// Scans last 5 SMS messages from last 5 minutes
-  Future<String?> checkRecentSmsForOtp() async {
+  /// Request SMS code - triggers 5-minute listening window
+  /// Call this when user reaches OTP screen
+  Future<void> requestSmsCode() async {
     try {
-      print('[OTP_SMS] 🔍 Checking recent SMS for OTP codes...');
+      print('[OTP_SMS] 📲 Starting SMS code listener (5-minute window)...');
 
-      // Get recent messages (last 5)
-      final messages = await AndroidSMSReader.fetchMessages(
-        type: AndroidSMSType.inbox,
-        count: 5,
-      );
+      // Start listening for SMS code
+      await SmsAutoFill().listenForCode();
 
-      // Check messages from last 5 minutes only
-      final cutoffTime = DateTime.now().subtract(const Duration(minutes: 5));
+      print('[OTP_SMS] 👂 SMS listener active - waiting for code...');
+    } catch (e) {
+      print('[OTP_SMS] ❌ Error starting SMS listener: $e');
+    }
+  }
 
-      for (var message in messages) {
-        final messageDate = DateTime.fromMillisecondsSinceEpoch(message.date);
+  /// Get OTP code from current SMS input field (TextField integration)
+  /// This provides real-time code extraction as SMS arrives
+  Future<String?> getOtpFromSms() async {
+    try {
+      print('[OTP_SMS] 🔍 Getting OTP from SMS...');
 
-        // Skip old messages
-        if (messageDate.isBefore(cutoffTime)) {
-          continue;
-        }
+      final code = await SmsAutoFill().hint;
 
-        final body = message.body;
-
-        // Check if contains OTP keywords
-        if (_containsOtpKeywords(body)) {
-          final match = _otpRegex.firstMatch(body);
-          if (match != null) {
-            final otpCode = match.group(1)!;
-            print('[OTP_SMS] ✅ Found OTP code in recent SMS: $otpCode');
-            return otpCode;
-          }
-        }
+      if (code != null && code.isNotEmpty) {
+        print('[OTP_SMS] ✅ OTP code extracted: $code');
+        return code;
       }
 
-      print('[OTP_SMS] ℹ️ No recent OTP codes found');
+      print('[OTP_SMS] ℹ️ No OTP code found');
       return null;
     } catch (e) {
-      print('[OTP_SMS] ❌ Error checking recent SMS: $e');
+      print('[OTP_SMS] ❌ Error getting OTP: $e');
       return null;
     }
   }
 
-  /// Test OTP extraction with sample SMS
-  static String? testOtpExtraction(String smsBody) {
-    final match = _otpRegex.firstMatch(smsBody);
-    return match?.group(1);
+  /// Get formatted phone number for SMS autofill
+  /// This helps pre-fill the phone number field
+  Future<String?> getPhoneHint() async {
+    try {
+      final phone = await SmsAutoFill().hint;
+      return phone;
+    } catch (e) {
+      print('[OTP_SMS] ❌ Error getting phone hint: $e');
+      return null;
+    }
+  }
+
+  /// Manually extract OTP from SMS body (for custom formats)
+  /// This is useful if backend SMS format doesn't match standard patterns
+  String? extractOtpFromSms(String smsBody) {
+    // Match 4-6 digit codes
+    final otpRegex = RegExp(r'\b(\d{4,6})\b');
+    final match = otpRegex.firstMatch(smsBody);
+
+    if (match != null) {
+      final code = match.group(1)!;
+      print('[OTP_SMS] ✅ Extracted OTP: $code from SMS: $smsBody');
+      return code;
+    }
+
+    print('[OTP_SMS] ⚠️ No OTP code found in SMS: $smsBody');
+    return null;
+  }
+
+  /// Print integration instructions for backend team
+  void printBackendInstructions() {
+    print('');
+    print('═══════════════════════════════════════════════════════════');
+    print('  SMS RETRIEVER API - BACKEND INTEGRATION GUIDE');
+    print('═══════════════════════════════════════════════════════════');
+    print('');
+    print('App Signature Hash: $_cachedAppSignature');
+    print('');
+    print('SMS Template Format:');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('Your ZiraAI verification code is {{OTP_CODE}}');
+    print('<#> $_cachedAppSignature');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('');
+    print('Requirements:');
+    print('✓ Message must be under 140 characters');
+    print('✓ Must contain <#> followed by 11-character hash');
+    print('✓ Hash must be on same line or next line after code');
+    print('✓ Code must be 4-6 digits');
+    print('');
+    print('Example Turkish SMS:');
+    print('ZiraAI doğrulama kodunuz: 123456');
+    print('<#> $_cachedAppSignature');
+    print('');
+    print('Example English SMS:');
+    print('Your ZiraAI code is 123456 <#> $_cachedAppSignature');
+    print('');
+    print('═══════════════════════════════════════════════════════════');
+    print('');
   }
 }

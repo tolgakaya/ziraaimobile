@@ -45,6 +45,7 @@ class FarmerBottomNav extends StatelessWidget {
         MaterialPageRoute(
           builder: (context) => const AnalysisHistoryScreen(
             initialFilter: 'active',
+            bottomNavIndex: 2, // ✅ Show Mesajlar tab as active
           ),
         ),
       );

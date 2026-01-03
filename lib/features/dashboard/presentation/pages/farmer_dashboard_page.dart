@@ -388,6 +388,7 @@ class _FarmerDashboardPageState extends State<FarmerDashboardPage> with WidgetsB
         MaterialPageRoute(
           builder: (context) => const AnalysisHistoryScreen(
             initialFilter: 'active',
+            bottomNavIndex: 2, // ✅ Show Mesajlar tab as active
           ),
         ),
       ).then((_) {

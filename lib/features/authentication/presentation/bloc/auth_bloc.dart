@@ -144,18 +144,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     PhoneLoginOtpVerifyRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
+    print('🔷 AuthBloc: PhoneLoginOtpVerifyRequested received');
+    print('🔷 AuthBloc: mobilePhone: ${event.mobilePhone}, code: ${event.code}');
 
+    emit(const AuthLoading());
+    print('🔷 AuthBloc: State changed to AuthLoading');
+
+    print('🔷 AuthBloc: Calling verifyPhoneLoginOtp...');
     final result = await _authRepository.verifyPhoneLoginOtp(
       mobilePhone: event.mobilePhone,
       code: event.code,
     );
+    print('🔷 AuthBloc: verifyPhoneLoginOtp completed');
 
     result.fold(
       (failure) {
+        print('❌ AuthBloc: OTP verification failed: ${failure.message}');
         emit(AuthError(message: failure.message ?? 'OTP verification failed'));
       },
       (user) {
+        print('✅ AuthBloc: OTP verification successful, user: ${user.phoneNumber}');
         emit(AuthAuthenticated(user: user));
       },
     );
