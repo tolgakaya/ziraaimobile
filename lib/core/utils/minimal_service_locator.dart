@@ -41,6 +41,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import '../../features/dealer/data/dealer_api_service.dart';
 import '../../features/dealer/presentation/screens/pending_invitations_screen.dart';
+import '../../features/farmer_invitation/data/api/farmer_invitation_api_service.dart';
 import '../services/notification_signalr_service.dart';
 import '../services/navigation_service.dart';
 import '../services/permission_service.dart';
@@ -340,6 +341,13 @@ Future<void> setupMinimalServiceLocator() async {
   );
 
   print('✅ DEALER: Dealer API service registered successfully!');
+
+  // ✅ FARMER INVITATION API SERVICE
+  getIt.registerLazySingleton<FarmerInvitationApiService>(
+    () => FarmerInvitationApiService(getIt<Dio>()),
+  );
+
+  print('✅ FARMER INVITATION: Farmer invitation API service registered successfully!');
 
   // ✅ NOTIFICATIONS - FlutterLocalNotificationsPlugin for push notifications
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();

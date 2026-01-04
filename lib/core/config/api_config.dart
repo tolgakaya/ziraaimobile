@@ -9,13 +9,28 @@ class ApiConfig {
   // Base URLs for different environments
   static const Map<Environment, String> _baseUrls = {
     Environment.production: 'https://api.ziraai.com',
-    Environment.staging: 'https://ziraai-api-sit.up.railway.app', 
+    Environment.staging: 'https://ziraai-api-sit.up.railway.app',
     Environment.development: 'https://api.ziraai.com',
     Environment.local: 'https://localhost:5001',
   };
-  
+
+  // Deep Link Host URLs for different environments
+  // These are used for deep links (web URLs that open the app)
+  static const Map<Environment, String> _deepLinkHosts = {
+    Environment.production: 'ziraai.com',
+    Environment.staging: 'ziraai-api-sit.up.railway.app',
+    Environment.development: 'ziraai.com',
+    Environment.local: 'localhost:5001',
+  };
+
   // Get current base URL
   static String get baseUrl => _baseUrls[environment]!;
+
+  // Get current deep link host
+  static String get deepLinkHost => _deepLinkHosts[environment]!;
+
+  // Get current deep link base URL (for generating deep links)
+  static String get deepLinkBaseUrl => 'https://$deepLinkHost';
   
   // API Version
   static const String apiVersion = '/api/v1';

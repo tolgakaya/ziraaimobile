@@ -1,21 +1,29 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
+import '../config/api_config.dart';
 
-/// Service to handle deep links for referral, sponsorship, and dealer invitation systems using app_links package
+/// Service to handle deep links for referral, sponsorship, dealer invitation, and farmer invitation systems using app_links package
+///
+/// ENVIRONMENT-AWARE: Deep link hosts are determined by ApiConfig.environment
+/// - Production: ziraai.com
+/// - Staging: ziraai-api-sit.up.railway.app
+/// - Development: ziraai.com
+/// - Local: localhost:5001
+///
 /// Handles links in format:
 /// Referral:
-/// - https://ziraai.com/ref/ZIRA-XXXXXX (Production)
-/// - https://ziraai-api-sit.up.railway.app/ref/ZIRA-XXXXXX (Staging)
+/// - https://{ApiConfig.deepLinkHost}/ref/ZIRA-XXXXXX
 /// - ziraai://ref/ZIRA-XXXXXX (Custom scheme fallback)
 /// Sponsorship:
-/// - https://ziraai.com/redeem/AGRI-XXXXXX (Production)
-/// - https://ziraai-api-sit.up.railway.app/redeem/AGRI-XXXXXX (Staging)
+/// - https://{ApiConfig.deepLinkHost}/redeem/AGRI-XXXXXX
 /// - ziraai://redeem/AGRI-XXXXXX (Custom scheme fallback)
 /// Dealer Invitation:
-/// - https://ziraai.com/dealer-invitation/DEALER-abc123... (Production)
-/// - https://ziraai-api-sit.up.railway.app/dealer-invitation/DEALER-abc123... (Staging)
+/// - https://{ApiConfig.deepLinkHost}/dealer-invitation/DEALER-abc123...
 /// - ziraai://dealer-invitation/DEALER-abc123... (Custom scheme fallback)
+/// Farmer Invitation:
+/// - https://{ApiConfig.deepLinkHost}/farmer-invite/{token} (32-char hex token)
+/// - ziraai://farmer-invite/{token} (Custom scheme fallback)
 class DeepLinkService {
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
@@ -24,6 +32,8 @@ class DeepLinkService {
   final StreamController<String> _sponsorshipCodeController =
       StreamController<String>.broadcast();
   final StreamController<String> _dealerInvitationTokenController =
+      StreamController<String>.broadcast();
+  final StreamController<String> _farmerInvitationTokenController =
       StreamController<String>.broadcast();
 
   /// Stream of referral codes extracted from deep links
@@ -34,6 +44,9 @@ class DeepLinkService {
 
   /// Stream of dealer invitation tokens extracted from deep links
   Stream<String> get dealerInvitationTokenStream => _dealerInvitationTokenController.stream;
+
+  /// Stream of farmer invitation tokens extracted from deep links
+  Stream<String> get farmerInvitationTokenStream => _farmerInvitationTokenController.stream;
 
   /// Initialize deep link handling
   /// This should be called once in main.dart after app startup
@@ -111,7 +124,15 @@ class DeepLinkService {
       return;
     }
 
-    print('⚠️ DeepLink: No referral, sponsorship, or dealer invitation found in link: $link');
+    // Check for farmer invitation token
+    final farmerToken = extractFarmerInvitationToken(link);
+    if (farmerToken != null) {
+      print('✅ DeepLink: Extracted farmer invitation token: $farmerToken');
+      _farmerInvitationTokenController.add(farmerToken);
+      return;
+    }
+
+    print('⚠️ DeepLink: No referral, sponsorship, dealer invitation, or farmer invitation found in link: $link');
   }
 
   /// Extract referral code from deep link
@@ -347,12 +368,92 @@ class DeepLinkService {
     }
   }
 
+  /// Extract farmer invitation token from deep link
+  /// Formats supported (environment-aware):
+  /// - https://{currentEnvironmentHost}/farmer-invite/{token}
+  /// - ziraai://farmer-invite/{token} (Custom scheme fallback)
+  ///
+  /// Uses ApiConfig.deepLinkHost to validate environment-specific hosts
+  /// Returns the 32-character hexadecimal invitation token
+  static String? extractFarmerInvitationToken(String link) {
+    try {
+      final uri = Uri.parse(link);
+      final expectedHost = ApiConfig.deepLinkHost;
+
+      // Handle HTTPS links (Environment-aware)
+      if (uri.scheme == 'https' || uri.scheme == 'http') {
+        // Exact host match for current environment
+        // Also accept 'www.' prefix for production
+        final isValidHost = uri.host == expectedHost ||
+                           uri.host == 'www.$expectedHost' ||
+                           (expectedHost.contains('localhost') && uri.host.contains('localhost')) ||
+                           (expectedHost.contains('127.0.0.1') && uri.host.contains('127.0.0.1'));
+
+        if (isValidHost && uri.pathSegments.isNotEmpty) {
+          // Check if path starts with 'farmer-invite'
+          if (uri.pathSegments.first == 'farmer-invite' && uri.pathSegments.length >= 2) {
+            final token = uri.pathSegments[1]; // 32-char hex token
+            print('✅ DeepLink: Extracted farmer invitation token from ${uri.scheme}://${uri.host}: $token (expected: $expectedHost)');
+            return token.toLowerCase();
+          }
+        } else if (!isValidHost) {
+          print('⚠️ DeepLink: Host mismatch - got ${uri.host}, expected $expectedHost');
+        }
+      }
+
+      // Handle custom scheme (ziraai://farmer-invite/{token})
+      if (uri.scheme == 'ziraai') {
+        if (uri.pathSegments.isNotEmpty) {
+          if (uri.pathSegments.first == 'farmer-invite' && uri.pathSegments.length >= 2) {
+            final token = uri.pathSegments[1];
+            print('✅ DeepLink: Extracted farmer invitation token from custom scheme: $token');
+            return token.toLowerCase();
+          }
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('❌ DeepLink: Error extracting farmer invitation token: $e');
+      return null;
+    }
+  }
+
+  /// Check if a link is a farmer invitation deep link (environment-aware)
+  static bool isFarmerInvitationLink(String link) {
+    try {
+      final uri = Uri.parse(link);
+      final expectedHost = ApiConfig.deepLinkHost;
+
+      // Check HTTPS/HTTP links (environment-aware)
+      if (uri.scheme == 'https' || uri.scheme == 'http') {
+        final isValidHost = uri.host == expectedHost ||
+                           uri.host == 'www.$expectedHost' ||
+                           (expectedHost.contains('localhost') && uri.host.contains('localhost')) ||
+                           (expectedHost.contains('127.0.0.1') && uri.host.contains('127.0.0.1'));
+        return isValidHost &&
+            uri.pathSegments.isNotEmpty &&
+            uri.pathSegments.first == 'farmer-invite';
+      }
+
+      // Check custom scheme
+      if (uri.scheme == 'ziraai') {
+        return uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'farmer-invite';
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Dispose the service
   void dispose() {
     _linkSubscription?.cancel();
     _referralCodeController.close();
     _sponsorshipCodeController.close();
     _dealerInvitationTokenController.close();
+    _farmerInvitationTokenController.close();
     print('📱 DeepLink: Service disposed');
   }
 }

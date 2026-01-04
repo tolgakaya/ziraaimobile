@@ -9,6 +9,7 @@ import 'features/authentication/presentation/screens/splash_screen.dart';
 import 'features/authentication/presentation/screens/phone_auth/phone_number_screen.dart';
 import 'features/sponsorship/presentation/screens/farmer/sponsorship_redemption_screen.dart';
 import 'features/dealer/presentation/screens/dealer_invitation_screen.dart';
+import 'features/farmer_invitation/presentation/screens/farmer_invitation_screen.dart';
 import 'core/services/signalr_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/navigation_service.dart';
@@ -247,6 +248,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         _handleDealerInvitationToken(token);
       }
     });
+
+    // Listen to farmer invitation token stream
+    _deepLinkService.farmerInvitationTokenStream.listen((token) {
+      print('📱 Main: Farmer invitation token received from deep link: $token');
+      if (mounted) {
+        _handleFarmerInvitationToken(token);
+      }
+    });
   }
 
   /// Handle received referral code from deep link
@@ -364,6 +373,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       MaterialPageRoute(
         builder: (_) => DealerInvitationScreen(
           token: token,
+        ),
+      ),
+    );
+  }
+
+  /// Handle received farmer invitation token from deep link
+  void _handleFarmerInvitationToken(String token) {
+    print('📱 Main: Farmer invitation token received from deep link: $token');
+
+    // Use navigator key to access context
+    final context = navigatorKey.currentContext;
+    if (context == null || !mounted) {
+      print('⚠️ Navigator context not ready, will retry after delay');
+
+      // Retry after a short delay to give MaterialApp time to initialize
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _handleFarmerInvitationToken(token);
+        }
+      });
+      return;
+    }
+
+    // Navigate directly to farmer invitation screen with token pre-filled
+    print('🎯 Navigating to farmer invitation screen with token: $token');
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FarmerInvitationScreen(
+          invitationToken: token,
         ),
       ),
     );
